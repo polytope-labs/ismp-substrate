@@ -16,6 +16,8 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 pub mod host;
 mod mmr;
 mod primitives;
@@ -29,6 +31,7 @@ use sp_core::offchain::StorageKind;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use crate::mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex, NodeOf};
 pub use pallet::*;
+use sp_std::prelude::*;
 
 // Definition of the pallet logic, to be aggregated at runtime definition through
 // `construct_runtime`.
@@ -39,8 +42,11 @@ pub mod pallet {
     use crate::mmr::{LeafIndex, Mmr, NodeIndex};
     use crate::primitives::ISMP_ID;
     use frame_support::pallet_prelude::*;
+    use frame_support::traits::UnixTime;
     use frame_system::pallet_prelude::*;
-    use ismp_rust::consensus_client::ConsensusClientId;
+    use ismp_rust::consensus_client::{
+        ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
+    };
     use ismp_rust::host::ChainID;
     use sp_runtime::traits;
 
@@ -92,15 +98,17 @@ pub mod pallet {
             + codec::EncodeLike
             + scale_info::TypeInfo
             + MaxEncodedLen;
+        type TimeProvider: UnixTime;
     }
 
     // Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and
     // method.
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
-    /// Latest MMR Root hash for requests
+    /// Latest MMR Root hash
     #[pallet::storage]
     #[pallet::getter(fn mmr_root_hash)]
     pub type RootHash<T: Config> = StorageValue<_, <T as Config>::Hash, ValueQuery>;
@@ -118,6 +126,52 @@ pub mod pallet {
     #[pallet::getter(fn request_peaks)]
     pub type Nodes<T: Config> =
         StorageMap<_, Identity, NodeIndex, <T as Config>::Hash, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn state_commitments)]
+    pub type StateCommitments<T: Config> =
+        StorageMap<_, Blake2_128Concat, StateMachineHeight, StateCommitment, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn consensus_states)]
+    pub type ConsensusStates<T: Config> =
+        StorageMap<_, Twox64Concat, ConsensusClientId, Vec<u8>, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn frozen_heights)]
+    pub type FrozenHeights<T: Config> =
+        StorageMap<_, Blake2_128Concat, StateMachineId, u64, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn latest_state_height)]
+    pub type LatestStateMachineHeight<T: Config> =
+        StorageMap<_, Blake2_128Concat, StateMachineId, u64, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn state_update_time)]
+    pub type StateMachineUpdateTime<T: Config> =
+        StorageMap<_, Blake2_128Concat, StateMachineHeight, u64, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn consensus_update_time)]
+    pub type ConsensusClientUpdateTime<T: Config> =
+        StorageMap<_, Twox64Concat, ConsensusClientId, u64, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn state_consensus_client)]
+    pub type StateMachineConsensusClient<T: Config> =
+        StorageMap<_, Blake2_128Concat, StateMachineId, ConsensusClientId, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn request_commitments)]
+    /// No hashing, just insert raw key in storage
+    pub type RequestCommitments<T: Config> = StorageMap<_, Identity, Vec<u8>, Vec<u8>, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn response_commitments)]
+    /// No hashing, just insert raw key in storage
+    pub type ResponseCommitments<T: Config> =
+        StorageMap<_, Identity, Vec<u8>, Vec<u8>, OptionQuery>;
 
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
     #[pallet::hooks]
