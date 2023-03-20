@@ -1,11 +1,7 @@
 use crate::router::Router;
-use crate::state_machines::{
-    ARBITRUM_STATE_MACHINE_ID, BASE_STATE_MACHINE_ID, ETHEREUM_STATE_MACHINE_ID,
-    GNOSIS_STATE_MACHINE_ID, OPTIMISM_STATE_MACHINE_ID,
-};
 use crate::{
     Config, ConsensusClientUpdateTime, ConsensusStates, FrozenHeights, LatestStateMachineHeight,
-    RequestCommitments, ResponseCommitments, StateCommitments, StateMachineUpdateTime,
+    RequestAcks, StateCommitments, StateMachineUpdateTime,
 };
 use alloc::format;
 use alloc::string::ToString;
@@ -13,12 +9,11 @@ use core::time::Duration;
 use frame_support::traits::UnixTime;
 use ismp_rust::consensus_client::{
     ConsensusClient, ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
-    ETHEREUM_CONSENSUS_CLIENT_ID, GNOSIS_CONSENSUS_CLIENT_ID,
 };
 use ismp_rust::error::Error;
 use ismp_rust::host::{ChainID, ISMPHost};
-use ismp_rust::paths::{RequestPath, ResponsePath};
-use ismp_rust::router::{IISMPRouter, Request, Response};
+use ismp_rust::paths::RequestPath;
+use ismp_rust::router::{IISMPRouter, Request};
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
@@ -86,28 +81,16 @@ impl<T: Config> ISMPHost for Host<T> {
     fn request_commitment(&self, req: &Request) -> Result<Vec<u8>, Error> {
         let key = RequestPath {
             dest_chain: req.dest_chain,
+            source_chain: req.source_chain,
             nonce: 0,
         }
         .to_string()
         .as_bytes()
         .to_vec();
-        RequestCommitments::<T>::get(key).ok_or_else(|| Error::RequestCommitmentNotFound {
+        RequestAcks::<T>::get(key).ok_or_else(|| Error::RequestCommitmentNotFound {
             nonce: req.nonce,
             source: req.source_chain,
             dest: req.dest_chain,
-        })
-    }
-
-    fn response_commitment(&self, res: &Response) -> Result<Vec<u8>, Error> {
-        let key = ResponsePath {
-            dest_chain: res.request.source_chain,
-            nonce: res.request.nonce,
-        }
-        .to_string()
-        .as_bytes()
-        .to_vec();
-        ResponseCommitments::<T>::get(key).ok_or_else(|| {
-            Error::ImplementationSpecific("Response commitment not found".to_string())
         })
     }
 
@@ -158,23 +141,6 @@ impl<T: Config> ISMPHost for Host<T> {
 
     fn delay_period(&self, _id: StateMachineId) -> Duration {
         Duration::from_secs(5 * 60)
-    }
-
-    fn client_id_from_state_id(&self, id: StateMachineId) -> Result<ConsensusClientId, Error> {
-        if id == ETHEREUM_STATE_MACHINE_ID
-            || id == ARBITRUM_STATE_MACHINE_ID
-            || id == BASE_STATE_MACHINE_ID
-            || id == OPTIMISM_STATE_MACHINE_ID
-        {
-            Ok(ETHEREUM_CONSENSUS_CLIENT_ID)
-        } else if id == GNOSIS_STATE_MACHINE_ID {
-            Ok(GNOSIS_CONSENSUS_CLIENT_ID)
-        } else {
-            Err(Error::ImplementationSpecific(format!(
-                "Consensus client not found for state id {}",
-                id
-            )))
-        }
     }
 
     fn ismp_router(&self) -> Box<dyn IISMPRouter> {

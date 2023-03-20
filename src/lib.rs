@@ -22,7 +22,6 @@ pub mod host;
 mod mmr;
 mod primitives;
 mod router;
-pub mod state_machines;
 
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
@@ -159,15 +158,16 @@ pub mod pallet {
         StorageMap<_, Twox64Concat, ConsensusClientId, u64, OptionQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn request_commitments)]
+    #[pallet::getter(fn request_acks)]
+    /// Acknowledgements for receipt of requests
     /// No hashing, just insert raw key in storage
-    pub type RequestCommitments<T: Config> = StorageMap<_, Identity, Vec<u8>, Vec<u8>, OptionQuery>;
+    pub type RequestAcks<T: Config> = StorageMap<_, Identity, Vec<u8>, Vec<u8>, OptionQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn response_commitments)]
+    #[pallet::getter(fn response_acks)]
+    /// Acknowledgements for receipt of responses
     /// No hashing, just insert raw key in storage
-    pub type ResponseCommitments<T: Config> =
-        StorageMap<_, Identity, Vec<u8>, Vec<u8>, OptionQuery>;
+    pub type ResponseAcks<T: Config> = StorageMap<_, Identity, Vec<u8>, Vec<u8>, OptionQuery>;
 
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
     #[pallet::hooks]
@@ -222,14 +222,18 @@ pub mod pallet {
             height: u64,
         },
         ResponseReceived {
-            /// Chain that this reponse will be routed to
+            /// Chain that this response will be routed to
             dest_chain: ChainID,
+            /// Source Chain for this response
+            source_chain: ChainID,
             /// Nonce for the request which this response is for
             request_nonce: u64,
         },
         RequestReceived {
-            /// Chain that this reponse will be routed to
+            /// Chain that this request will be routed to
             dest_chain: ChainID,
+            /// Source Chain for request
+            source_chain: ChainID,
             /// Request nonce
             request_nonce: u64,
         },
