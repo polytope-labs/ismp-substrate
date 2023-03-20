@@ -22,6 +22,7 @@ pub mod host;
 mod mmr;
 mod primitives;
 mod router;
+pub mod state_machines;
 
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
@@ -156,11 +157,6 @@ pub mod pallet {
     #[pallet::getter(fn consensus_update_time)]
     pub type ConsensusClientUpdateTime<T: Config> =
         StorageMap<_, Twox64Concat, ConsensusClientId, u64, OptionQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn state_consensus_client)]
-    pub type StateMachineConsensusClient<T: Config> =
-        StorageMap<_, Blake2_128Concat, StateMachineId, ConsensusClientId, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn request_commitments)]

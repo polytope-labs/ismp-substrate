@@ -1,8 +1,11 @@
 use crate::router::Router;
+use crate::state_machines::{
+    ARBITRUM_STATE_MACHINE_ID, BASE_STATE_MACHINE_ID, ETHEREUM_STATE_MACHINE_ID,
+    GNOSIS_STATE_MACHINE_ID, OPTIMISM_STATE_MACHINE_ID,
+};
 use crate::{
     Config, ConsensusClientUpdateTime, ConsensusStates, FrozenHeights, LatestStateMachineHeight,
-    RequestCommitments, ResponseCommitments, StateCommitments, StateMachineConsensusClient,
-    StateMachineUpdateTime,
+    RequestCommitments, ResponseCommitments, StateCommitments, StateMachineUpdateTime,
 };
 use alloc::format;
 use alloc::string::ToString;
@@ -10,6 +13,7 @@ use core::time::Duration;
 use frame_support::traits::UnixTime;
 use ismp_rust::consensus_client::{
     ConsensusClient, ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
+    ETHEREUM_CONSENSUS_CLIENT_ID, GNOSIS_CONSENSUS_CLIENT_ID,
 };
 use ismp_rust::error::Error;
 use ismp_rust::host::{ChainID, ISMPHost};
@@ -153,13 +157,24 @@ impl<T: Config> ISMPHost for Host<T> {
     }
 
     fn delay_period(&self, _id: StateMachineId) -> Duration {
-        Duration::from_secs(15 * 60 * 60)
+        Duration::from_secs(5 * 60)
     }
 
     fn client_id_from_state_id(&self, id: StateMachineId) -> Result<ConsensusClientId, Error> {
-        StateMachineConsensusClient::<T>::get(id).ok_or_else(|| {
-            Error::ImplementationSpecific("Consensus client not found for state id".to_string())
-        })
+        if id == ETHEREUM_STATE_MACHINE_ID
+            || id == ARBITRUM_STATE_MACHINE_ID
+            || id == BASE_STATE_MACHINE_ID
+            || id == OPTIMISM_STATE_MACHINE_ID
+        {
+            Ok(ETHEREUM_CONSENSUS_CLIENT_ID)
+        } else if id == GNOSIS_STATE_MACHINE_ID {
+            Ok(GNOSIS_CONSENSUS_CLIENT_ID)
+        } else {
+            Err(Error::ImplementationSpecific(format!(
+                "Consensus client not found for state id {}",
+                id
+            )))
+        }
     }
 
     fn ismp_router(&self) -> Box<dyn IISMPRouter> {
