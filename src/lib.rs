@@ -292,20 +292,30 @@ pub struct RequestResponseLog<T: Config> {
 }
 
 impl<T: Config> Pallet<T> {
-    pub fn request_leaf_index_offchain_key(dest_chain: ChainID, nonce: u64) -> Vec<u8> {
+    pub fn request_leaf_index_offchain_key(
+        source_chain: ChainID,
+        dest_chain: ChainID,
+        nonce: u64,
+    ) -> Vec<u8> {
         (
             T::INDEXING_PREFIX,
             "Requests/leaf_indices",
+            source_chain,
             dest_chain,
             nonce,
         )
             .encode()
     }
 
-    pub fn response_leaf_index_offchain_key(dest_chain: ChainID, nonce: u64) -> Vec<u8> {
+    pub fn response_leaf_index_offchain_key(
+        source_chain: ChainID,
+        dest_chain: ChainID,
+        nonce: u64,
+    ) -> Vec<u8> {
         (
             T::INDEXING_PREFIX,
             "Responses/leaf_indices",
+            source_chain,
             dest_chain,
             nonce,
         )
@@ -346,11 +356,16 @@ impl<T: Config> Pallet<T> {
         None
     }
 
-    pub fn get_leaf_index(dest_chain: ChainID, nonce: u64, is_req: bool) -> Option<LeafIndex> {
+    pub fn get_leaf_index(
+        source_chain: ChainID,
+        dest_chain: ChainID,
+        nonce: u64,
+        is_req: bool,
+    ) -> Option<LeafIndex> {
         let key = if is_req {
-            Self::request_leaf_index_offchain_key(dest_chain, nonce)
+            Self::request_leaf_index_offchain_key(source_chain, dest_chain, nonce)
         } else {
-            Self::response_leaf_index_offchain_key(dest_chain, nonce)
+            Self::response_leaf_index_offchain_key(source_chain, dest_chain, nonce)
         };
         if let Some(elem) = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &key) {
             return LeafIndex::decode(&mut &*elem).ok();
