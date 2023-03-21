@@ -82,7 +82,7 @@ impl<T: Config> ISMPHost for Host<T> {
         let key = RequestPath {
             dest_chain: req.dest_chain,
             source_chain: req.source_chain,
-            nonce: 0,
+            nonce: req.nonce,
         }
         .to_string()
         .as_bytes()
