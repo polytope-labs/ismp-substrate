@@ -37,3 +37,10 @@ std = [
 ]
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 
+
+[workspace]
+resolver = "2"
+
+members = [
+    "rpc"
+]
