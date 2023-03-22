@@ -42,5 +42,6 @@ runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 resolver = "2"
 
 members = [
-    "rpc"
+    "rpc",
+    "runtime-api"
 ]
