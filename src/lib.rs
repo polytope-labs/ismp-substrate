@@ -25,12 +25,14 @@ pub mod primitives;
 mod router;
 
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
-use ismp_rust::host::ChainID;
+use frame_support::{log::debug, RuntimeDebug};
+use ismp_rust::host::{ChainID, ISMPHost};
 use ismp_rust::router::{Request, Response};
 use sp_core::offchain::StorageKind;
-// Re-export pallet items so that they can be accessed from the crate namespace.
+use crate::host::Host;
 use crate::mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex, NodeOf};
+use ismp_rust::messaging::Message;
+// Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 use sp_std::prelude::*;
 
@@ -48,6 +50,7 @@ pub mod pallet {
     use ismp_rust::consensus_client::{
         ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
     };
+    use ismp_rust::handlers::handle_incoming_message;
     use ismp_rust::host::ChainID;
     use sp_runtime::traits;
 
@@ -204,7 +207,38 @@ pub mod pallet {
     }
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {}
+    impl<T: Config> Pallet<T> {
+        /// Handles consensus messages
+        #[pallet::weight(0)]
+        pub fn handle_ismp_messages(
+            origin: OriginFor<T>,
+            messages: Vec<Message>,
+        ) -> DispatchResult {
+            // Define a host
+            let host = Host::<T>::default();
+            for message in messages {
+                match &message {
+                    Message::Consensus(msg) => {
+                        // check difference between last
+                        if let Ok(consensus_update_time) =
+                            host.consensus_update_time(msg.consensus_client_id)
+                        {
+                            let elapsed_time = host.host_timestamp() - consensus_update_time;
+                            if host.delay_period(msg.consensus_client_id) > elapsed_time {
+                                debug!(target: "ismp_rust", "Delay Not Elapsed");
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+                    _ => {}
+                }
+                let res = handle_incoming_message(&host, message);
+            }
+
+            Ok(())
+        }
+    }
 
     /// Events are a simple means of reporting specific conditions and
     /// circumstances that have happened that users, Dapps and/or chain explorers would find
@@ -236,6 +270,12 @@ pub mod pallet {
             /// Request nonce
             request_nonce: u64,
         },
+    }
+
+    #[pallet::error]
+    pub enum Error<T> {
+        /// Invalid Message enum variant
+        CannotHandleConsensusMessage,
     }
 }
 
