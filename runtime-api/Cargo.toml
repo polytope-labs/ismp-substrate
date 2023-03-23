@@ -10,8 +10,9 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
-pallet-ismp = { path = "../" }
+pallet-ismp = { path = "..", default-features = false }
 ismp-rust = { git = "ssh://git@github.com/polytope-labs/ismp-rust.git", branch = "main", default-features = false }
+serde = { version = "1.0.136", features = ["derive"], optional = true }
 
 [dependencies.codec]
 package = "parity-scale-codec"
@@ -21,4 +22,4 @@ default-features = false
 
 [features]
 default = ['std']
-std = ['sp-api/std', 'sp-std/std', 'codec/std']
+std = ['sp-api/std', 'sp-std/std', 'codec/std', "pallet-ismp/std", "ismp-rust/std", "serde"]

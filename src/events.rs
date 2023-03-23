@@ -30,37 +30,35 @@ pub enum Event {
     },
 }
 
-impl<T: Config> From<PalletEvent<T>> for Event {
-    fn from(value: PalletEvent<T>) -> Self {
-        match value {
-            PalletEvent::StateMachineUpdated {
-                state_machine_id,
-                latest_height,
-                previous_height,
-            } => Self::StateMachineUpdated {
-                state_machine_id,
-                latest_height,
-                previous_height,
-            },
-            PalletEvent::Response {
-                dest_chain,
-                source_chain,
-                request_nonce,
-            } => Self::Response {
-                dest_chain,
-                source_chain,
-                request_nonce,
-            },
-            PalletEvent::Request {
-                dest_chain,
-                source_chain,
-                request_nonce,
-            } => Self::Request {
-                dest_chain,
-                source_chain,
-                request_nonce,
-            },
-            _ => unreachable!(),
-        }
+pub fn to_core_protocol_events<T: Config>(event: PalletEvent<T>) -> Option<Event> {
+    match event {
+        PalletEvent::StateMachineUpdated {
+            state_machine_id,
+            latest_height,
+            previous_height,
+        } => Some(Event::StateMachineUpdated {
+            state_machine_id,
+            latest_height,
+            previous_height,
+        }),
+        PalletEvent::Response {
+            dest_chain,
+            source_chain,
+            request_nonce,
+        } => Some(Event::Response {
+            dest_chain,
+            source_chain,
+            request_nonce,
+        }),
+        PalletEvent::Request {
+            dest_chain,
+            source_chain,
+            request_nonce,
+        } => Some(Event::Request {
+            dest_chain,
+            source_chain,
+            request_nonce,
+        }),
+        _ => None,
     }
 }
