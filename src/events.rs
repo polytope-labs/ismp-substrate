@@ -4,6 +4,7 @@ use ismp_rust::consensus_client::StateMachineId;
 use ismp_rust::host::ChainID;
 
 #[derive(codec::Encode, codec::Decode)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub enum Event {
     /// Event to be emitted when the challenge period for a state machine update has elapsed
     StateMachineUpdated {

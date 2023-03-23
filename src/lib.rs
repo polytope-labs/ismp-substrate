@@ -150,12 +150,6 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, StateMachineId, u64, OptionQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn previous_state_height)]
-    /// The immediate past state machine height that was accepted
-    pub type PreviousStateMachineHeight<T: Config> =
-        StorageMap<_, Blake2_128Concat, StateMachineId, u64, OptionQuery>;
-
-    #[pallet::storage]
     #[pallet::getter(fn consensus_update_time)]
     pub type ConsensusClientUpdateTime<T: Config> =
         StorageMap<_, Twox64Concat, ConsensusClientId, u64, OptionQuery>;
