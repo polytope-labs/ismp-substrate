@@ -57,8 +57,10 @@ impl<T: Config> ConsensusClient for ConsensusState<T> {
             });
         }
 
+        //TODO: confirm the key to use to verify membership
         self.verify_membership(host, trusted_consensus_state, proof.clone())?;
 
+        //TODO: confirm how to construct the intermediate states
         let mut intermediate_states = vec![];
 
         let intermediate_state = IntermediateState {
