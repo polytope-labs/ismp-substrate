@@ -48,6 +48,7 @@ pub mod pallet {
         ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
     };
     use ismp_rust::host::ChainID;
+    use ismp_rust::messaging::CreateConsensusClient
     use sp_runtime::traits;
 
     /// Our pallet's configuration trait. All our types and constants go in here. If the
@@ -99,6 +100,9 @@ pub mod pallet {
             + scale_info::TypeInfo
             + MaxEncodedLen;
         type TimeProvider: UnixTime;
+
+        /// The admin origin type
+        type AdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
     // Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and
@@ -207,7 +211,24 @@ pub mod pallet {
     }
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {}
+    impl<T: Config> Pallet<T> {
+        /// Handle creation of consensus clients
+        #[pallet::weight(0)]
+        pub fn create_consensus_client(origin: T::AdminOrigin, message: CreateConsensusClient) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            let host = Host::<T>::default();
+            
+            // Store the initial state for the consensus client
+            host.store_consensus_state(message.consensus_client_id, message.consensus_state);
+
+            // Store all intermedite state machine commitments
+            for intermediate_state in message.state_machine_commitments {
+                host.store_state_machine_commitment(intermediate_state.height, intermediate_state.commitment);
+            }
+
+            Ok(())
+        }
+    }
 
     /// Events are a simple means of reporting specific conditions and
     /// circumstances that have happened that users, Dapps and/or chain explorers would find
