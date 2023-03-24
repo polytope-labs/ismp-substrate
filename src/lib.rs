@@ -158,11 +158,6 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, StateMachineId, u64, OptionQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn frozen_consensus_heights)]
-    pub type FrozenConsensusHeights<T: Config> =
-        StorageMap<_, Blake2_128Concat, ConsensusClientId, u64, OptionQuery>;
-
-    #[pallet::storage]
     #[pallet::getter(fn latest_state_height)]
     /// The latest accepted state machine height
     pub type LatestStateMachineHeight<T: Config> =

@@ -9,7 +9,7 @@ use ismp_rust::host::ISMPHost;
 use std::time::Duration;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
 
-const ETHEREUM_CONSENSUS_CLIENT_ID:u64 = 0;
+const ETHEREUM_CONSENSUS_CLIENT_ID: u64 = 0;
 
 #[derive(Debug, Encode, Decode, Clone)]
 pub struct ConsensusState {
@@ -20,13 +20,13 @@ pub struct ConsensusState {
 #[derive(Encode, Decode)]
 pub struct Misbehaviour {
     pub update_1: LightClientUpdate,
-    pub update_2: LightClientUpdate
+    pub update_2: LightClientUpdate,
 }
 
 #[derive(Encode, Decode)]
 pub enum BeaconMessage {
     ConsensusUpdate(LightClientUpdate),
-    Misbehaviour(Misbehaviour)
+    Misbehaviour(Misbehaviour),
 }
 
 // Unbonding period for relay chains in days
@@ -45,22 +45,24 @@ impl ConsensusClient for ConsensusState {
     ) -> Result<(Vec<u8>, Vec<IntermediateState>), Error> {
         //TODO: create proper error type for it in ISMP Rust
 
-        let beacon_message = BeaconMessage::decode(&mut &proof[..]).map_err(|_| Error::CannotHandleConsensusMessage)?;
+        let beacon_message = BeaconMessage::decode(&mut &proof[..])
+            .map_err(|_| Error::CannotHandleConsensusMessage)?;
 
         let light_client_update;
         if let BeaconMessage::ConsensusUpdate(update) = beacon_message {
-           light_client_update = update.clone();
+            light_client_update = update.clone();
         } else {
             //TODO: we still need to handle misbehaviour
             return Err(Error::CannotHandleConsensusMessage);
         }
 
-        let light_client_state = LightClientState::decode(&mut &trusted_consensus_state[..]).map_err(|_| Error::CannotHandleConsensusMessage)?;
+        let light_client_state = LightClientState::decode(&mut &trusted_consensus_state[..])
+            .map_err(|_| Error::CannotHandleConsensusMessage)?;
 
         let height = light_client_update.execution_payload.block_number;
         // Ensure consensus client is not frozen
         let is_frozen = if let Some(frozen_height) = self.frozen_height {
-           height >= frozen_height
+            height >= frozen_height
         } else {
             false
         };
@@ -77,16 +79,32 @@ impl ConsensusClient for ConsensusState {
             // return the right error, need to update ismp_rust
         }
 
-        let no_codec_light_client_state = light_client_state.try_into().map_err(|_| Error::CannotHandleConsensusMessage)?;
-        let no_codec_light_client_update = light_client_update.clone().try_into().map_err(|_| Error::CannotHandleConsensusMessage)?;
+        let no_codec_light_client_state = light_client_state
+            .try_into()
+            .map_err(|_| Error::CannotHandleConsensusMessage)?;
+        let no_codec_light_client_update = light_client_update
+            .clone()
+            .try_into()
+            .map_err(|_| Error::CannotHandleConsensusMessage)?;
 
-        let new_light_client_state = sync_committee_verifier::verify_sync_committee_attestation
-            (no_codec_light_client_state, no_codec_light_client_update).map_err(|_| Error::ConsensusProofVerificationFailed {id: self.consensus_id()})?;
+        let new_light_client_state = sync_committee_verifier::verify_sync_committee_attestation(
+            no_codec_light_client_state,
+            no_codec_light_client_update,
+        )
+        .map_err(|_| Error::ConsensusProofVerificationFailed {
+            id: self.consensus_id(),
+        })?;
 
         let mut intermediate_states = vec![];
 
         let commitment_root = light_client_update.execution_payload.state_root.clone();
-        let intermediate_state = construct_intermediate_state(1, self.consensus_id(), height, timestamp, commitment_root);
+        let intermediate_state = construct_intermediate_state(
+            1,
+            self.consensus_id(),
+            height,
+            timestamp,
+            commitment_root,
+        );
 
         intermediate_states.push(intermediate_state);
 
@@ -124,25 +142,31 @@ impl ConsensusClient for ConsensusState {
     }
 }
 
-fn construct_intermediate_state(state_id: u64, consensus_client_id: u64, height: u64, timestamp: u64, commitment_root: Vec<u8>) -> IntermediateState {
+fn construct_intermediate_state(
+    state_id: u64,
+    consensus_client_id: u64,
+    height: u64,
+    timestamp: u64,
+    commitment_root: Vec<u8>,
+) -> IntermediateState {
     let state_machine_id = StateMachineId {
         state_id,
-        consensus_client: consensus_client_id
+        consensus_client: consensus_client_id,
     };
 
     let state_machine_height = StateMachineHeight {
         id: state_machine_id,
-        height
+        height,
     };
 
     let state_commitment = StateCommitment {
         timestamp,
-        commitment_root
+        commitment_root,
     };
 
     let intermediate_state = IntermediateState {
         height: state_machine_height,
-        commitment: state_commitment
+        commitment: state_commitment,
     };
 
     intermediate_state
