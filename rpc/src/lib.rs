@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::generic::BlockId;
-use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
+use sp_runtime::traits::Block as BlockT;
 use std::collections::HashMap;
 use std::{fmt::Display, sync::Arc};
 
@@ -202,7 +202,7 @@ where
         })
     }
 
-    fn query_state_proof(&self, height: u32, keys: Vec<Vec<u8>>) -> Result<Proof> {
+    fn query_state_proof(&self, _height: u32, _keys: Vec<Vec<u8>>) -> Result<Proof> {
         unimplemented!()
     }
 
@@ -223,8 +223,21 @@ where
 
     fn query_events(
         &self,
-        _block_numbers: Vec<BlockNumberOrHash<Block::Hash>>,
+        block_numbers: Vec<BlockNumberOrHash<Block::Hash>>,
     ) -> Result<HashMap<String, Vec<pallet_ismp::events::Event>>> {
-        todo!()
+        let api = self.client.runtime_api();
+        let mut events = HashMap::new();
+        for block_number_or_hash in block_numbers {
+            let at = match block_number_or_hash {
+                BlockNumberOrHash::Hash(block_hash) => BlockId::Hash(block_hash),
+                BlockNumberOrHash::Number(block_number) => BlockId::Number(block_number.into()),
+            };
+
+            let temp = api.block_events(&at).ok().flatten().ok_or_else(|| {
+                runtime_error_into_rpc_error("[ibc_rpc]: failed to read block events")
+            })?;
+            events.insert(block_number_or_hash.to_string(), temp);
+        }
+        Ok(events)
     }
 }
