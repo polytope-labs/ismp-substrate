@@ -6,7 +6,7 @@ use ismp_rust::consensus_client::{
 use ismp_rust::error::Error;
 use ismp_rust::host::ISMPHost;
 use ismp_rust::messaging::Proof;
-use std::time::Duration;
+use core::time::Duration;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
 
 #[derive(Debug, Encode, Decode, Clone)]
