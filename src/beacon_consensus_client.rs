@@ -52,7 +52,7 @@ impl ConsensusClient for ConsensusState {
         let light_client_state = LightClientState::decode(&mut &trusted_consensus_state[..])
             .map_err(|_| Error::CannotHandleConsensusMessage)?;
 
-        let height = light_client_update.execution_payload.block_number;
+        let height = light_client_update.finalized_header.slot;
         // Ensure consensus client is not frozen
         let is_frozen = if let Some(frozen_height) = self.frozen_height {
             light_client_update.finalized_header.slot >= frozen_height
