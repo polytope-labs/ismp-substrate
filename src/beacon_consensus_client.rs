@@ -1,15 +1,10 @@
 use codec::{Decode, Encode};
 use frame_support::traits::UnixTime;
-use ismp_rust::consensus_client::{
-    ConsensusClient, ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight,
-    StateMachineId,
-};
+use ismp_rust::consensus_client::{ConsensusClient, ConsensusClientId, ETHEREUM_CONSENSUS_CLIENT_ID, IntermediateState, StateCommitment, StateMachineHeight, StateMachineId};
 use ismp_rust::error::Error;
 use ismp_rust::host::ISMPHost;
 use std::time::Duration;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
-
-const ETHEREUM_CONSENSUS_CLIENT_ID: u64 = 0;
 
 #[derive(Debug, Encode, Decode, Clone)]
 pub struct ConsensusState {
@@ -29,10 +24,11 @@ pub enum BeaconMessage {
     Misbehaviour(Misbehaviour),
 }
 
-// Unbonding period for relay chains in days
+// TODO:  Unbonding period for ethereum
 const UNBONDING_PERIOD: u64 = 14;
 // number of seconds in a day
 const DAY: u64 = 24 * 60 * 60;
+const EXECUTION_PAYLOAD_STATE_ID:u64 = 1;
 
 pub struct EthConsensusClient;
 
@@ -48,13 +44,10 @@ impl ConsensusClient for ConsensusState {
         let beacon_message = BeaconMessage::decode(&mut &proof[..])
             .map_err(|_| Error::CannotHandleConsensusMessage)?;
 
-        let light_client_update;
-        if let BeaconMessage::ConsensusUpdate(update) = beacon_message {
-            light_client_update = update.clone();
-        } else {
-            //TODO: we still need to handle misbehaviour
-            return Err(Error::CannotHandleConsensusMessage);
-        }
+        let light_client_update = match beacon_message {
+            BeaconMessage::ConsensusUpdate(update) => update.clone(),
+            _ => return Err(Error::CannotHandleConsensusMessage)
+        };
 
         let light_client_state = LightClientState::decode(&mut &trusted_consensus_state[..])
             .map_err(|_| Error::CannotHandleConsensusMessage)?;
@@ -62,7 +55,7 @@ impl ConsensusClient for ConsensusState {
         let height = light_client_update.execution_payload.block_number;
         // Ensure consensus client is not frozen
         let is_frozen = if let Some(frozen_height) = self.frozen_height {
-            height >= frozen_height
+            light_client_update.finalized_header.slot >= frozen_height
         } else {
             false
         };
@@ -99,7 +92,7 @@ impl ConsensusClient for ConsensusState {
 
         let commitment_root = light_client_update.execution_payload.state_root.clone();
         let intermediate_state = construct_intermediate_state(
-            1,
+            EXECUTION_PAYLOAD_STATE_ID,
             self.consensus_id(),
             height,
             timestamp,
