@@ -210,7 +210,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Handles consensus messages
         #[pallet::weight(0)]
-        pub fn handle_ismp_messages(
+        pub fn handle(
             origin: OriginFor<T>,
             messages: Vec<Message>,
         ) -> DispatchResult {
