@@ -24,14 +24,14 @@ pub mod mmr;
 pub mod primitives;
 mod router;
 
+use crate::host::Host;
+use crate::mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex, NodeOf};
 use codec::{Decode, Encode};
 use frame_support::{log::debug, RuntimeDebug};
 use ismp_rust::host::{ChainID, ISMPHost};
+use ismp_rust::messaging::Message;
 use ismp_rust::router::{Request, Response};
 use sp_core::offchain::StorageKind;
-use crate::host::Host;
-use crate::mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex, NodeOf};
-use ismp_rust::messaging::Message;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 use sp_std::prelude::*;
@@ -210,10 +210,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Handles consensus messages
         #[pallet::weight(0)]
-        pub fn handle(
-            origin: OriginFor<T>,
-            messages: Vec<Message>,
-        ) -> DispatchResult {
+        pub fn handle(origin: OriginFor<T>, messages: Vec<Message>) -> DispatchResult {
             // Define a host
             let host = Host::<T>::default();
             for message in messages {
@@ -226,6 +223,7 @@ pub mod pallet {
                             let elapsed_time = host.host_timestamp() - consensus_update_time;
                             if host.delay_period(msg.consensus_client_id) > elapsed_time {
                                 debug!(target: "ismp_rust", "Delay Not Elapsed");
+                                continue;
                             }
                         } else {
                             continue;
