@@ -50,7 +50,7 @@ pub mod pallet {
     use ismp_rust::consensus_client::{
         ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
     };
-    use ismp_rust::handlers::handle_incoming_message;
+    use ismp_rust::handlers::{handle_incoming_message, MessageResult};
     use ismp_rust::host::ChainID;
     use sp_runtime::traits;
 
@@ -232,6 +232,31 @@ pub mod pallet {
                     _ => {}
                 }
                 let res = handle_incoming_message(&host, message);
+                if let Ok(msg_result) = res {
+                    match msg_result {
+                        MessageResult::ConsensusMessage(consensus_update_result) => {
+                            consensus_update_result
+                                .state_updates
+                                .insert((StateMachineHeight {
+                                    id: StateMachineId {
+                                        state_id: (),
+                                        consensus_client: consensus_update_result
+                                            .consensus_client_id,
+                                    },
+                                    height: (),
+                                }, StateMachineHeight {
+                                    id: StateMachineId {
+                                        state_id: (),
+                                        consensus_client: consensus_update_result
+                                            .consensus_client_id,
+                                    },
+                                    height: (),
+                                }));
+                        }
+                        MessageResult::Request(_req_res_result) => (),
+                        MessageResult::Response(_req_res_result) => (),
+                    }
+                }
             }
 
             Ok(())

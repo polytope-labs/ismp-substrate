@@ -133,4 +133,8 @@ impl<T: Config> ISMPHost for Host<T> {
     fn ismp_router(&self) -> Box<dyn IISMPRouter> {
         Box::new(Router::<T>::default())
     }
+
+    fn store_latest_commitment_height(&self, height: StateMachineHeight) -> Result<(), Error> {
+        Ok(())
+    }
 }
