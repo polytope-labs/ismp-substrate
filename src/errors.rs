@@ -6,9 +6,11 @@ use sp_std::prelude::*;
 
 #[derive(Clone, Debug, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
 pub enum HandlingError {
-    DelayNotElapsed {
+    ChallengePeriodNotElapsed {
         update_time: u64,
         current_time: u64,
+        delay_period: Option<u64>,
+        consensus_client_id: Option<ConsensusClientId>,
     },
     ConsensusStateNotFound {
         id: ConsensusClientId,
@@ -55,9 +57,11 @@ impl From<ismp_rust::error::Error> for HandlingError {
             IsmpError::DelayNotElapsed {
                 current_time,
                 update_time,
-            } => HandlingError::DelayNotElapsed {
+            } => HandlingError::ChallengePeriodNotElapsed {
                 update_time: update_time.as_secs(),
                 current_time: current_time.as_secs(),
+                delay_period: None,
+                consensus_client_id: None,
             },
             IsmpError::ConsensusStateNotFound { id } => {
                 HandlingError::ConsensusStateNotFound { id }

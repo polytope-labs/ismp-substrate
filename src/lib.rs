@@ -175,6 +175,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn consensus_update_results)]
     /// Consensus update results still in challenge period
+    /// Set contains a tuple of previous height and latest height
     pub type ConsensusUpdateResults<T: Config> = StorageMap<
         _,
         Twox64Concat,
@@ -241,6 +242,14 @@ pub mod pallet {
                             let elapsed_time = host.host_timestamp() - consensus_update_time;
                             if host.delay_period(msg.consensus_client_id) > elapsed_time {
                                 debug!(target: "ismp-rust", "Challenge period: Cannot handle consensus message for {:?}", msg.consensus_client_id);
+                                errors.push(HandlingError::ChallengePeriodNotElapsed {
+                                    update_time: consensus_update_time.as_secs(),
+                                    current_time: host.host_timestamp().as_secs(),
+                                    delay_period: Some(
+                                        host.delay_period(msg.consensus_client_id).as_secs(),
+                                    ),
+                                    consensus_client_id: Some(msg.consensus_client_id),
+                                });
                                 continue;
                             }
                         } else {
