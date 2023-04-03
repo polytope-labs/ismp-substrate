@@ -18,6 +18,7 @@
 
 extern crate alloc;
 
+mod errors;
 pub mod events;
 pub mod host;
 pub mod mmr;
@@ -42,8 +43,10 @@ use sp_std::prelude::*;
 pub mod pallet {
     // Import various types used to declare pallet in scope.
     use super::*;
+    use crate::errors::HandlingError;
     use crate::mmr::{LeafIndex, Mmr, NodeIndex};
     use crate::primitives::ISMP_ID;
+    use alloc::collections::BTreeSet;
     use frame_support::pallet_prelude::*;
     use frame_support::traits::UnixTime;
     use frame_system::pallet_prelude::*;
@@ -169,6 +172,17 @@ pub mod pallet {
     /// No hashing, just insert raw key in storage
     pub type ResponseAcks<T: Config> = StorageMap<_, Identity, Vec<u8>, Vec<u8>, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn consensus_update_results)]
+    /// Consensus update results still in challenge period
+    pub type ConsensusUpdateResults<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        ConsensusClientId,
+        BTreeSet<(StateMachineHeight, StateMachineHeight)>,
+        OptionQuery,
+    >;
+
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -208,12 +222,16 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Handles consensus messages
+        /// Handles ismp messages
         #[pallet::weight(0)]
+        #[pallet::call_index(0)]
         pub fn handle(origin: OriginFor<T>, messages: Vec<Message>) -> DispatchResult {
+            let _ = ensure_signed(origin)?;
             // Define a host
             let host = Host::<T>::default();
+            let mut errors: Vec<HandlingError> = vec![];
             for message in messages {
+                // Check that delay period is satisfied for consensus client before accepting any new update
                 match &message {
                     Message::Consensus(msg) => {
                         // check difference between last
@@ -222,41 +240,53 @@ pub mod pallet {
                         {
                             let elapsed_time = host.host_timestamp() - consensus_update_time;
                             if host.delay_period(msg.consensus_client_id) > elapsed_time {
-                                debug!(target: "ismp_rust", "Delay Not Elapsed");
+                                debug!(target: "ismp-rust", "Challenge period: Cannot handle consensus message for {:?}", msg.consensus_client_id);
                                 continue;
                             }
-                        } else {
-                            continue;
                         }
                     }
                     _ => {}
                 }
-                let res = handle_incoming_message(&host, message);
-                if let Ok(msg_result) = res {
-                    match msg_result {
-                        MessageResult::ConsensusMessage(consensus_update_result) => {
-                            consensus_update_result
-                                .state_updates
-                                .insert((StateMachineHeight {
-                                    id: StateMachineId {
-                                        state_id: (),
-                                        consensus_client: consensus_update_result
-                                            .consensus_client_id,
-                                    },
-                                    height: (),
-                                }, StateMachineHeight {
-                                    id: StateMachineId {
-                                        state_id: (),
-                                        consensus_client: consensus_update_result
-                                            .consensus_client_id,
-                                    },
-                                    height: (),
-                                }));
+                match handle_incoming_message(&host, message) {
+                    Ok(MessageResult::ConsensusMessage(res)) => {
+                        // Deposit events for previous update result that has passed the challenge period
+                        if let Some(pending_updates) =
+                            ConsensusUpdateResults::<T>::get(res.consensus_client_id)
+                        {
+                            for (prev_height, latest_height) in pending_updates.into_iter() {
+                                Self::deposit_event(Event::<T>::StateMachineUpdated {
+                                    state_machine_id: latest_height.id,
+                                    latest_height: latest_height.height,
+                                    previous_height: prev_height.height,
+                                })
+                            }
                         }
-                        MessageResult::Request(_req_res_result) => (),
-                        MessageResult::Response(_req_res_result) => (),
+
+                        // Store the new update result that have just entered the challenge period
+                        ConsensusUpdateResults::<T>::insert(
+                            res.consensus_client_id,
+                            res.state_updates,
+                        );
+                    }
+                    Ok(MessageResult::Request(res)) => Self::deposit_event(Event::<T>::Request {
+                        dest_chain: res.dest_chain,
+                        source_chain: res.source_chain,
+                        request_nonce: res.nonce,
+                    }),
+                    Ok(MessageResult::Response(res)) => Self::deposit_event(Event::<T>::Response {
+                        dest_chain: res.dest_chain,
+                        source_chain: res.source_chain,
+                        request_nonce: res.nonce,
+                    }),
+                    Err(err) => {
+                        errors.push(err.into());
                     }
                 }
+            }
+
+            if !errors.is_empty() {
+                debug!(target: "ismp-rust", "Handling Errors {:?}", errors);
+                Self::deposit_event(Event::<T>::HandlingErrors { errors })
             }
 
             Ok(())
@@ -293,13 +323,13 @@ pub mod pallet {
             /// Request nonce
             request_nonce: u64,
         },
+        HandlingErrors {
+            errors: Vec<HandlingError>,
+        },
     }
 
     #[pallet::error]
-    pub enum Error<T> {
-        /// Invalid Message enum variant
-        CannotHandleConsensusMessage,
-    }
+    pub enum Error<T> {}
 }
 
 impl<T: Config> Pallet<T> {

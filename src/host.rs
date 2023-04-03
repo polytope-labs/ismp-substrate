@@ -135,6 +135,7 @@ impl<T: Config> ISMPHost for Host<T> {
     }
 
     fn store_latest_commitment_height(&self, height: StateMachineHeight) -> Result<(), Error> {
+        LatestStateMachineHeight::<T>::insert(height.id, height.height);
         Ok(())
     }
 }
