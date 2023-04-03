@@ -243,6 +243,9 @@ pub mod pallet {
                                 debug!(target: "ismp-rust", "Challenge period: Cannot handle consensus message for {:?}", msg.consensus_client_id);
                                 continue;
                             }
+                        } else {
+                            // If we can't find a previous update time for the consensus client we don't process it
+                            continue;
                         }
                     }
                     _ => {}

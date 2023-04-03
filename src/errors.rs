@@ -2,6 +2,7 @@ use codec::{Decode, Encode};
 use ismp_rust::consensus_client::{ConsensusClientId, StateMachineHeight};
 use ismp_rust::error::Error as IsmpError;
 use ismp_rust::host::ChainID;
+use sp_std::prelude::*;
 
 #[derive(Clone, Debug, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
 pub enum HandlingError {
