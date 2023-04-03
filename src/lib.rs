@@ -280,16 +280,9 @@ pub mod pallet {
                             res.state_updates,
                         );
                     }
-                    Ok(MessageResult::Request(res)) => Self::deposit_event(Event::<T>::Request {
-                        dest_chain: res.dest_chain,
-                        source_chain: res.source_chain,
-                        request_nonce: res.nonce,
-                    }),
-                    Ok(MessageResult::Response(res)) => Self::deposit_event(Event::<T>::Response {
-                        dest_chain: res.dest_chain,
-                        source_chain: res.source_chain,
-                        request_nonce: res.nonce,
-                    }),
+                    Ok(_) => {
+                        // Do nothing, event has been deposited in ismp router
+                    }
                     Err(err) => {
                         errors.push(err.into());
                     }
