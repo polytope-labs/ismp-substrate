@@ -13,12 +13,13 @@ jobs:
       - name: Add ssh-agent
         run: |
           eval `ssh-agent -s`
-          ssh-add - <<< '${{ secrets.GH_TOKEN }}'
+          ssh-add - <<< '${{ secrets.SSH_KEY }}'
 
       - name: Checkout sources
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_TOKEN }}
+          submodules: recursive
 
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@nightly
@@ -46,12 +47,13 @@ jobs:
       - name: Add ssh-agent
         run: |
           eval `ssh-agent -s`
-          ssh-add - <<< '${{ secrets.GH_TOKEN }}'
+          ssh-add - <<< '${{ secrets.SSH_KEY }}'
 
       - name: Checkout sources
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_TOKEN }}
+          submodules: recursive
 
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@nightly
