@@ -161,11 +161,7 @@ impl ConsensusClient for ConsensusState {
         proof: &Proof,
     ) -> Result<(), Error> {
         // the raw account data stored in the state proof:
-        let contract_account = derive_contract_account(&key, proof, commitment).map_err(|_| {
-            Error::ImplementationSpecific(format!(
-                "Could not generate contract account to verify membership"
-            ))
-        });
+        let contract_account = derive_contract_account(&key, proof, commitment)?;
 
         Ok(())
     }
@@ -178,11 +174,7 @@ impl ConsensusClient for ConsensusState {
         proof: &Proof,
     ) -> Result<(), Error> {
         // the raw account data stored in the state proof:
-        let contract_account = derive_contract_account(&key, proof, commitment).map_err(|_| {
-            Error::ImplementationSpecific(format!(
-                "Could not generate contract account to verify non membership"
-            ))
-        });
+        let contract_account = derive_contract_account(&key, proof, commitment)?;
 
         Ok(())
     }
