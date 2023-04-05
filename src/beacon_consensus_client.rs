@@ -1,5 +1,6 @@
 use codec::{Decode, Encode};
 use core::time::Duration;
+use ethabi::Token;
 use ismp_rust::{
     consensus_client::{
         ConsensusClient, ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight,
@@ -9,9 +10,7 @@ use ismp_rust::{
     host::ISMPHost,
     messaging::Proof,
 };
-use patricia_merkle_trie::{keccak::KeccakHasher,
-    EIP1186Layout, StorageProof,
-};
+use patricia_merkle_trie::{keccak::KeccakHasher, EIP1186Layout, StorageProof};
 use primitive_types::{H256, U256};
 use rlp::{Decodable, Rlp};
 use rlp_derive::RlpDecodable;
@@ -37,8 +36,11 @@ pub enum BeaconMessage {
     Misbehaviour(Misbehaviour),
 }
 
-const SLOT: u8 = 1;
-const _CONTRACT_ADDRESS: &'static str = "0x0000";
+// Slot for requests map
+const REQ_SLOT: u8 = 1;
+// Slot for responses map
+const _RESP_SLOT: u8 = 2;
+const CONTRACT_ADDRESS: &'static str = "0x0000";
 #[derive(Encode, Decode, Clone)]
 pub struct EvmStateProof {
     pub contract_account_proof: Vec<Vec<u8>>,
@@ -122,7 +124,7 @@ impl ConsensusClient for ConsensusState {
                 ))
             })?;
 
-        let _new_light_client_state = sync_committee_verifier::verify_sync_committee_attestation(
+        let new_light_client_state = sync_committee_verifier::verify_sync_committee_attestation(
             no_codec_light_client_state,
             no_codec_light_client_update,
         )
@@ -141,7 +143,17 @@ impl ConsensusClient for ConsensusState {
 
         intermediate_states.push(intermediate_state);
 
-        Ok((proof.clone(), intermediate_states))
+        let encoded_new_light_client_state: LightClientState =
+            new_light_client_state.clone().try_into().map_err(|_| {
+                Error::ImplementationSpecific(format!(
+                    "Cannot convert light client state {:?} to codec type",
+                    new_light_client_state
+                ))
+            })?;
+
+        let new_proof = encoded_new_light_client_state.encode().to_vec();
+
+        Ok((new_proof, intermediate_states))
     }
 
     fn consensus_id(&self) -> ConsensusClientId {
@@ -162,7 +174,7 @@ impl ConsensusClient for ConsensusState {
         let evm_state_proof = decode_evm_state_proof(proof)?;
         // the raw account data stored in the state proof:
         let contract_account =
-            derive_contract_account_from_proof(&key, evm_state_proof.clone(), commitment.clone())?;
+            derive_contract_account_from_proof(evm_state_proof.clone(), commitment.clone())?;
         let result = generate_result_from_proof_db(key.clone(), commitment, evm_state_proof)?
             .ok_or_else(|| {
                 Error::ImplementationSpecific(format!("There is no DB value from key {:?}", key,))
@@ -188,7 +200,7 @@ impl ConsensusClient for ConsensusState {
         let evm_state_proof = decode_evm_state_proof(proof)?;
 
         let _contract_account =
-            derive_contract_account_from_proof(&key, evm_state_proof.clone(), commitment.clone())?;
+            derive_contract_account_from_proof(evm_state_proof.clone(), commitment.clone())?;
 
         let result = generate_result_from_proof_db(key.clone(), commitment, evm_state_proof)?;
 
@@ -233,7 +245,6 @@ fn decode_evm_state_proof(proof: &Proof) -> Result<EvmStateProof, Error> {
 }
 
 fn derive_contract_account_from_proof(
-    key: &Vec<u8>,
     evm_state_proof: EvmStateProof,
     commitment: Vec<u8>,
 ) -> Result<Account, Error> {
@@ -241,6 +252,13 @@ fn derive_contract_account_from_proof(
         StorageProof::new(evm_state_proof.contract_account_proof).into_memory_db::<KeccakHasher>();
     let root = H256::from_slice(&commitment[..]);
     let trie = TrieDBBuilder::<EIP1186Layout<KeccakHasher>>::new(&db, &root).build();
+    let contract_address = CONTRACT_ADDRESS.parse().map_err(|_| {
+        Error::ImplementationSpecific(format!(
+            "An error occurred when trying to parse contract address {:?}",
+            CONTRACT_ADDRESS
+        ))
+    })?;
+    let key = ethabi::encode(&[Token::String(contract_address)]);
     let result = trie
         .get(&key)
         .map_err(|_| {
@@ -264,25 +282,12 @@ fn derive_contract_account_from_proof(
     Ok(contract_account)
 }
 
-// Generates a left padded slot bytes from slot value
-fn generate_slot_bytes() -> [u8; 32] {
-    let slot_bytes = SLOT.to_le_bytes();
-    let mut byte_array = [0u8; 32];
-
-    let start_index = byte_array.len() - slot_bytes.len();
-    byte_array[start_index..].copy_from_slice(&slot_bytes);
-
-    byte_array
-}
-
 // Generates slot index for the key based using Keccak 256
-fn generate_slot_index(key: [u8; 32], index: [u8; 32]) -> [u8; 32] {
-    let mut data = Vec::with_capacity(64);
-    data.extend_from_slice(&key);
-    data.extend_from_slice(&index);
+fn generate_slot_index(key: [u8; 32], slot: u8) -> [u8; 32] {
+    let input = ethabi::encode(&[Token::Int(U256::from(slot)), Token::FixedBytes(key.to_vec())]);
 
     let mut hasher = Keccak::v256();
-    hasher.update(&data);
+    hasher.update(&input);
 
     let mut result = [0u8; 32];
     hasher.finalize(&mut result);
@@ -296,7 +301,6 @@ fn generate_result_from_proof_db(
     evm_state_proof: EvmStateProof,
 ) -> Result<Option<DBValue>, Error> {
     // generate slot index for key
-    let slot_bytes = generate_slot_bytes();
     let maybe_key_bytes: Result<[u8; 32], _> = key.clone().try_into();
 
     let key_bytes: [u8; 32] = match maybe_key_bytes {
@@ -309,7 +313,7 @@ fn generate_result_from_proof_db(
         }
     };
 
-    let slot_index_for_key = generate_slot_index(key_bytes, slot_bytes);
+    let slot_index_for_key = generate_slot_index(key_bytes, REQ_SLOT);
 
     // ProofDB using key proof
     let proof_db = StorageProof::new(evm_state_proof.actual_key_proof.clone())
