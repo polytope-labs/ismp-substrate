@@ -1,6 +1,5 @@
 use codec::{Decode, Encode};
 use core::time::Duration;
-use hex_literal::hex;
 use ismp_rust::{
     consensus_client::{
         ConsensusClient, ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight,
@@ -10,8 +9,7 @@ use ismp_rust::{
     host::ISMPHost,
     messaging::Proof,
 };
-use patricia_merkle_trie::{
-    keccak::{keccak_256, KeccakHasher},
+use patricia_merkle_trie::{keccak::KeccakHasher,
     EIP1186Layout, StorageProof,
 };
 use primitive_types::{H256, U256};
@@ -19,7 +17,7 @@ use rlp::{Decodable, Rlp};
 use rlp_derive::RlpDecodable;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
 use tiny_keccak::{Hasher, Keccak};
-use trie_db::{Trie, TrieDBBuilder};
+use trie_db::{DBValue, Trie, TrieDBBuilder};
 
 #[derive(Debug, Encode, Decode, Clone)]
 pub struct ConsensusState {
@@ -40,7 +38,7 @@ pub enum BeaconMessage {
 }
 
 const SLOT: u8 = 1;
-const CONTRACT_ADDRESS: &'static str = "0x0000";
+const _CONTRACT_ADDRESS: &'static str = "0x0000";
 #[derive(Encode, Decode, Clone)]
 pub struct EvmStateProof {
     pub contract_account_proof: Vec<Vec<u8>>,
@@ -50,10 +48,10 @@ pub struct EvmStateProof {
 /// The ethereum account stored in the global state trie.
 #[derive(RlpDecodable, Debug)]
 struct Account {
-    nonce: u64,
-    balance: U256,
+    _nonce: u64,
+    _balance: U256,
     storage_root: H256,
-    code_hash: H256,
+    _code_hash: H256,
 }
 
 // TODO:  Unbonding period for ethereum
@@ -165,36 +163,7 @@ impl ConsensusClient for ConsensusState {
         // the raw account data stored in the state proof:
         let contract_account =
             derive_contract_account_from_proof(&key, evm_state_proof.clone(), commitment.clone())?;
-
-        // generate slot index for key
-        let slot_bytes = generate_slot_bytes();
-        let maybe_key_bytes: Result<[u8; 32], _> = key.clone().try_into();
-
-        let key_bytes: [u8; 32] = match maybe_key_bytes {
-            Ok(array) => array,
-            Err(_) => {
-                return Err(Error::ImplementationSpecific(format!(
-                    "key must have exactly 32 elements {:?}",
-                    &key
-                )))
-            }
-        };
-
-        let slot_index_for_key = generate_slot_index(key_bytes, slot_bytes);
-
-        // ProofDB using key proof
-        let proof_db = StorageProof::new(evm_state_proof.actual_key_proof.clone())
-            .into_memory_db::<KeccakHasher>();
-        let root = H256::from_slice(&commitment[..]);
-        let trie = TrieDBBuilder::<EIP1186Layout<KeccakHasher>>::new(&proof_db, &root).build();
-        let result = trie
-            .get(&slot_index_for_key)
-            .map_err(|_| {
-                Error::ImplementationSpecific(format!(
-                    "An error occurred when trying to derive DB Value from key {:?}",
-                    key
-                ))
-            })?
+        let result = generate_result_from_proof_db(key.clone(), commitment, evm_state_proof)?
             .ok_or_else(|| {
                 Error::ImplementationSpecific(format!("There is no DB value from key {:?}", key,))
             })?;
@@ -216,10 +185,16 @@ impl ConsensusClient for ConsensusState {
         commitment: Vec<u8>,
         proof: &Proof,
     ) -> Result<(), Error> {
-        // the raw account data stored in the state proof:
         let evm_state_proof = decode_evm_state_proof(proof)?;
-        let contract_account =
-            derive_contract_account_from_proof(&key, evm_state_proof, commitment)?;
+
+        let _contract_account =
+            derive_contract_account_from_proof(&key, evm_state_proof.clone(), commitment.clone())?;
+
+        let result = generate_result_from_proof_db(key.clone(), commitment, evm_state_proof)?;
+
+        if result.is_some() {
+            return Err(Error::ImplementationSpecific(format!("membership is present in {:?}", key)))
+        }
 
         Ok(())
     }
@@ -313,4 +288,41 @@ fn generate_slot_index(key: [u8; 32], index: [u8; 32]) -> [u8; 32] {
     hasher.finalize(&mut result);
 
     result
+}
+
+fn generate_result_from_proof_db(
+    key: Vec<u8>,
+    commitment: Vec<u8>,
+    evm_state_proof: EvmStateProof,
+) -> Result<Option<DBValue>, Error> {
+    // generate slot index for key
+    let slot_bytes = generate_slot_bytes();
+    let maybe_key_bytes: Result<[u8; 32], _> = key.clone().try_into();
+
+    let key_bytes: [u8; 32] = match maybe_key_bytes {
+        Ok(array) => array,
+        Err(_) => {
+            return Err(Error::ImplementationSpecific(format!(
+                "key must have exactly 32 elements {:?}",
+                &key
+            )))
+        }
+    };
+
+    let slot_index_for_key = generate_slot_index(key_bytes, slot_bytes);
+
+    // ProofDB using key proof
+    let proof_db = StorageProof::new(evm_state_proof.actual_key_proof.clone())
+        .into_memory_db::<KeccakHasher>();
+    let root = H256::from_slice(&commitment[..]);
+    let trie = TrieDBBuilder::<EIP1186Layout<KeccakHasher>>::new(&proof_db, &root).build();
+
+    let result = trie.get(&slot_index_for_key).map_err(|_| {
+        Error::ImplementationSpecific(format!(
+            "An error occurred when trying to derive DB Value from key {:?}",
+            key
+        ))
+    })?;
+
+    Ok(result)
 }
