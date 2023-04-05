@@ -19,6 +19,7 @@ use rlp::{Decodable, Rlp};
 use rlp_derive::RlpDecodable;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
 use trie_db::{Trie, TrieDBBuilder};
+use tiny_keccak::{Hasher, Keccak};
 
 #[derive(Debug, Encode, Decode, Clone)]
 pub struct ConsensusState {
@@ -40,7 +41,7 @@ pub enum BeaconMessage {
 
 const SLOT: u8 = 1;
 const CONTRACT_ADDRESS: &'static str = "0x0000";
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone)]
 pub struct EvmStateProof {
     pub contract_account_proof: Vec<Vec<u8>>,
     pub actual_key_proof: Vec<Vec<u8>>,
@@ -160,8 +161,50 @@ impl ConsensusClient for ConsensusState {
         commitment: Vec<u8>,
         proof: &Proof,
     ) -> Result<(), Error> {
+        let evm_state_proof = decode_evm_state_proof(proof)?;
         // the raw account data stored in the state proof:
-        let contract_account = derive_contract_account(&key, proof, commitment)?;
+        let contract_account = derive_contract_account_from_proof(&key, evm_state_proof.clone(), commitment.clone())?;
+
+        // generate slot index for key
+        let slot_bytes = generate_slot_bytes();
+        let maybe_key_bytes: Result<[u8; 32], _> = key.clone().try_into();
+
+        let key_bytes: [u8; 32] = match maybe_key_bytes {
+            Ok(array) => array,
+            Err(_) =>  {
+                return Err(Error::ImplementationSpecific(format!("key must have exactly 32 elements {:?}", &key)));
+            }
+        };
+
+        let slot_index_for_key = generate_slot_index(key_bytes,  slot_bytes);
+
+        // ProofDB using key proof
+        let proof_db =
+            StorageProof::new(evm_state_proof.actual_key_proof.clone()).into_memory_db::<KeccakHasher>();
+        let root = H256::from_slice(&commitment[..]);
+        let trie = TrieDBBuilder::<EIP1186Layout<KeccakHasher>>::new(&proof_db, &root).build();
+        let result = trie.get(&slot_index_for_key).map_err(|_| {
+            Error::ImplementationSpecific(format!(
+                "An error occurred when trying to derive DB Value from key {:?}",
+                key
+            ))
+        })?;
+
+        if result.is_none() {
+            return Err(Error::ImplementationSpecific(format!(
+                "There is no DB value from key {:?}",
+                key
+            )))
+        }
+        let result = result.unwrap();
+
+
+        if result != contract_account.storage_root.0.to_vec() {
+            return Err(Error::ImplementationSpecific(format!(
+                "Could not verify membership {:?}",
+                key
+            )))
+        }
 
         Ok(())
     }
@@ -174,7 +217,8 @@ impl ConsensusClient for ConsensusState {
         proof: &Proof,
     ) -> Result<(), Error> {
         // the raw account data stored in the state proof:
-        let contract_account = derive_contract_account(&key, proof, commitment)?;
+        let evm_state_proof = decode_evm_state_proof(proof)?;
+        let contract_account = derive_contract_account_from_proof(&key, evm_state_proof, commitment)?;
 
         Ok(())
     }
@@ -203,15 +247,20 @@ fn construct_intermediate_state(
     intermediate_state
 }
 
-fn derive_contract_account(
-    key: &Vec<u8>,
-    proof: &Proof,
-    commitment: Vec<u8>,
-) -> Result<Account, Error> {
+fn decode_evm_state_proof(proof: &Proof) -> Result<EvmStateProof, Error>  {
     let proof_vec = proof.proof.clone();
     let evm_state_proof = EvmStateProof::decode(&mut &proof_vec[..]).map_err(|_| {
         Error::ImplementationSpecific(format!("Cannot decode evm state proof {:?}", proof_vec))
     })?;
+
+    Ok(evm_state_proof)
+}
+
+fn derive_contract_account_from_proof(
+    key: &Vec<u8>,
+    evm_state_proof: EvmStateProof,
+    commitment: Vec<u8>,
+) -> Result<Account, Error> {
 
     let db =
         StorageProof::new(evm_state_proof.contract_account_proof).into_memory_db::<KeccakHasher>();
@@ -241,4 +290,30 @@ fn derive_contract_account(
     })?;
 
     Ok(contract_account)
+}
+
+// Generates a left padded slot bytes from slot value
+fn generate_slot_bytes() -> [u8; 32] {
+    let slot_bytes = SLOT.to_le_bytes();
+    let mut byte_array = [0u8; 32];
+
+    let start_index = byte_array.len() - slot_bytes.len();
+    byte_array[start_index..].copy_from_slice(&slot_bytes);
+
+    byte_array
+}
+
+// Generates slot index for the key based using Keccak 256
+fn generate_slot_index(key: [u8; 32], index: [u8;32]) -> [u8; 32] {
+    let mut data = Vec::with_capacity(64);
+    data.extend_from_slice(&key);
+    data.extend_from_slice(&index);
+
+    let mut hasher = Keccak::v256();
+    hasher.update(&data);
+
+    let mut result = [0u8; 32];
+    hasher.finalize(&mut result);
+
+    result
 }
