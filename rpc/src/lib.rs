@@ -9,11 +9,11 @@ use jsonrpsee::{
 };
 
 use codec::Encode;
-use ismp_runtime_api::{IsmpRuntimeApi, LeafIndexQuery};
-use ismp_rust::{
+use ismp_rs::{
     consensus_client::ConsensusClientId,
     router::{Request, Response},
 };
+use ismp_runtime_api::{IsmpRuntimeApi, LeafIndexQuery};
 use pallet_ismp::mmr::{Leaf, LeafIndex};
 use sc_client_api::{BlockBackend, ProofProvider};
 use serde::{Deserialize, Serialize};

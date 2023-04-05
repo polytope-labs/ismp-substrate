@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
 
-use ismp_rust::{
+use ismp_rs::{
     consensus_client::ConsensusClientId,
     host::ChainID,
     router::{Request, Response},
