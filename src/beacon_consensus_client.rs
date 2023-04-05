@@ -1,15 +1,17 @@
 use codec::{Decode, Encode};
 use core::time::Duration;
 use ethabi::Token;
-use ismp_rust::{
+use ismp_rs::{
     consensus_client::{
         ConsensusClient, ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight,
-        StateMachineId, ETHEREUM_CONSENSUS_CLIENT_ID,
+        StateMachineId,
     },
     error::Error,
     host::ISMPHost,
     messaging::Proof,
 };
+use ismp_rs::consensus_client::Hash;
+use ismp_rs::router::{RequestResponse, Request};
 use patricia_merkle_trie::{keccak::KeccakHasher, EIP1186Layout, StorageProof};
 use primitive_types::{H256, U256};
 use rlp::{Decodable, Rlp};
@@ -17,6 +19,7 @@ use rlp_derive::RlpDecodable;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
 use tiny_keccak::{Hasher, Keccak};
 use trie_db::{DBValue, Trie, TrieDBBuilder};
+use crate::primitives::ETHEREUM_CONSENSUS_CLIENT_ID;
 
 #[derive(Debug, Encode, Decode, Clone)]
 pub struct ConsensusState {
@@ -63,7 +66,7 @@ const DAY: u64 = 24 * 60 * 60;
 const EXECUTION_PAYLOAD_STATE_ID: u64 = 1;
 
 impl ConsensusClient for ConsensusState {
-    fn verify(
+    fn verify_consensus(
         &self,
         host: &dyn ISMPHost,
         trusted_consensus_state: Vec<u8>,
@@ -95,18 +98,18 @@ impl ConsensusClient for ConsensusState {
         };
 
         if is_frozen {
-            return Err(Error::FrozenConsensusClient { id: self.consensus_id() })
+            return Err(Error::FrozenConsensusClient { id: ETHEREUM_CONSENSUS_CLIENT_ID })
         }
 
         // check that the client hasn't elapsed unbonding period
         let timestamp = light_client_update.execution_payload.timestamp;
-        if host.host_timestamp() - host.consensus_update_time(self.consensus_id())? >=
+        if host.timestamp() - host.consensus_update_time(ETHEREUM_CONSENSUS_CLIENT_ID)? >=
             self.unbonding_period()
         {
             return Err(Error::ImplementationSpecific(format!(
                 "Unbonding period elapsed for host {:?} and consensus id {:?}",
                 host.host(),
-                self.consensus_id()
+                ETHEREUM_CONSENSUS_CLIENT_ID
             )))
         }
 
@@ -128,18 +131,19 @@ impl ConsensusClient for ConsensusState {
             no_codec_light_client_state,
             no_codec_light_client_update,
         )
-        .map_err(|_| Error::ConsensusProofVerificationFailed { id: self.consensus_id() })?;
+        .map_err(|_| Error::ConsensusProofVerificationFailed { id: ETHEREUM_CONSENSUS_CLIENT_ID })?;
 
         let mut intermediate_states = vec![];
 
-        let commitment_root = light_client_update.execution_payload.state_root.clone();
+        let state_root = light_client_update.execution_payload.state_root.clone();
         let intermediate_state = construct_intermediate_state(
             EXECUTION_PAYLOAD_STATE_ID,
-            self.consensus_id(),
+            ETHEREUM_CONSENSUS_CLIENT_ID,
             height,
             timestamp,
-            commitment_root,
-        );
+            state_root,
+            vec![]
+        )?;
 
         intermediate_states.push(intermediate_state);
 
@@ -156,10 +160,6 @@ impl ConsensusClient for ConsensusState {
         Ok((new_proof, intermediate_states))
     }
 
-    fn consensus_id(&self) -> ConsensusClientId {
-        ETHEREUM_CONSENSUS_CLIENT_ID
-    }
-
     fn unbonding_period(&self) -> Duration {
         Duration::from_secs(UNBONDING_PERIOD * DAY)
     }
@@ -167,11 +167,12 @@ impl ConsensusClient for ConsensusState {
     fn verify_membership(
         &self,
         _host: &dyn ISMPHost,
-        key: Vec<u8>,
-        commitment: Vec<u8>,
+        item: RequestResponse,
+        commitment: Hash,
         proof: &Proof,
     ) -> Result<(), Error> {
         let evm_state_proof = decode_evm_state_proof(proof)?;
+        let key= handle_request_response(item);
         // the raw account data stored in the state proof:
         let contract_account =
             derive_contract_account_from_proof(evm_state_proof.clone(), commitment.clone())?;
@@ -193,12 +194,13 @@ impl ConsensusClient for ConsensusState {
     fn verify_non_membership(
         &self,
         _host: &dyn ISMPHost,
-        key: Vec<u8>,
-        commitment: Vec<u8>,
+        item: RequestResponse,
+        commitment: Hash,
         proof: &Proof,
     ) -> Result<(), Error> {
         let evm_state_proof = decode_evm_state_proof(proof)?;
 
+        let key= handle_request_response(item);
         let _contract_account =
             derive_contract_account_from_proof(evm_state_proof.clone(), commitment.clone())?;
 
@@ -211,6 +213,11 @@ impl ConsensusClient for ConsensusState {
         Ok(())
     }
 
+    fn verify_state_proof(&self, _host: &dyn ISMPHost, _key: Vec<u8>, _root: Hash, _proof: &Proof) -> Result<Vec<u8>, Error> {
+        todo!()
+    }
+
+
     fn is_frozen(&self, _host: &dyn ISMPHost, _id: ConsensusClientId) -> Result<bool, Error> {
         todo!()
     }
@@ -221,18 +228,19 @@ fn construct_intermediate_state(
     consensus_client_id: u64,
     height: u64,
     timestamp: u64,
-    commitment_root: Vec<u8>,
-) -> IntermediateState {
+    state_root: Vec<u8>,
+    ismp_root: Vec<u8>,
+) -> Result<IntermediateState, Error> {
     let state_machine_id = StateMachineId { state_id, consensus_client: consensus_client_id };
 
     let state_machine_height = StateMachineHeight { id: state_machine_id, height };
 
-    let state_commitment = StateCommitment { timestamp, commitment_root };
+    let state_commitment = StateCommitment { timestamp, ismp_root: convert_vec_to_array(state_root)?.into(), state_root: convert_vec_to_array(ismp_root)?.into() };
 
     let intermediate_state =
         IntermediateState { height: state_machine_height, commitment: state_commitment };
 
-    intermediate_state
+    Ok(intermediate_state)
 }
 
 fn decode_evm_state_proof(proof: &Proof) -> Result<EvmStateProof, Error> {
@@ -244,9 +252,55 @@ fn decode_evm_state_proof(proof: &Proof) -> Result<EvmStateProof, Error> {
     Ok(evm_state_proof)
 }
 
+fn handle_request_response(item: RequestResponse) -> Vec<u8> {
+    let mut key = vec![];
+    match item {
+        RequestResponse::Request(request) => {
+            // Access the Pequest value inside the request variable
+            match request {
+                Request::Post(value) => {
+                    key = value.encode().to_vec();
+                },
+                Request::Get(value) => {
+                    key = value.encode().to_vec();
+                }
+            };
+        }
+        RequestResponse::Response(response) => {
+            // Access the Pequest value inside the request variable
+           match response.request {
+                Request::Post(value) => {
+                    key = value.encode().to_vec();
+                },
+                Request::Get(value) => {
+                    key = value.encode().to_vec();
+                }
+            };
+        }
+    }
+
+    key
+}
+
+fn convert_vec_to_array(vec: Vec<u8>) -> Result<[u8; 32], Error> {
+    if vec.len() != 32 {
+        return Err(Error::ImplementationSpecific(format!(
+            "Input vector must have exactly 32 elements {:?}",
+            vec
+        )))
+    }
+
+    let mut array = [0u8; 32];
+
+    // copy the vector elements to the array
+    array.copy_from_slice(&vec);
+
+    Ok(array)
+}
+
 fn derive_contract_account_from_proof(
     evm_state_proof: EvmStateProof,
-    commitment: Vec<u8>,
+    commitment: Hash,
 ) -> Result<Account, Error> {
     let db =
         StorageProof::new(evm_state_proof.contract_account_proof).into_memory_db::<KeccakHasher>();
@@ -297,7 +351,7 @@ fn generate_slot_index(key: [u8; 32], slot: u8) -> [u8; 32] {
 
 fn generate_result_from_proof_db(
     key: Vec<u8>,
-    commitment: Vec<u8>,
+    commitment: Hash,
     evm_state_proof: EvmStateProof,
 ) -> Result<Option<DBValue>, Error> {
     // generate slot index for key
