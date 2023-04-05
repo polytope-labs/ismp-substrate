@@ -256,7 +256,6 @@ fn handle_request_response(item: RequestResponse) -> Vec<u8> {
     let mut key = vec![];
     match item {
         RequestResponse::Request(request) => {
-            // Access the Pequest value inside the request variable
             match request {
                 Request::Post(value) => {
                     key = value.encode().to_vec();
@@ -267,7 +266,6 @@ fn handle_request_response(item: RequestResponse) -> Vec<u8> {
             };
         }
         RequestResponse::Response(response) => {
-            // Access the Pequest value inside the request variable
            match response.request {
                 Request::Post(value) => {
                     key = value.encode().to_vec();
