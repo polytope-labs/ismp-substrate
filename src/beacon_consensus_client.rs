@@ -1,7 +1,11 @@
 use codec::{Decode, Encode};
-use ismp_rust::consensus_client::{ConsensusClient, ConsensusClientId, ETHEREUM_CONSENSUS_CLIENT_ID, IntermediateState, StateCommitment, StateMachineHeight, StateMachineId};
+use ismp_rust::consensus_client::{
+    ConsensusClient, ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight,
+    StateMachineId, ETHEREUM_CONSENSUS_CLIENT_ID,
+};
 use ismp_rust::error::Error;
 use ismp_rust::host::ISMPHost;
+use ismp_rust::messaging::Proof;
 use std::time::Duration;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
 
@@ -27,7 +31,7 @@ pub enum BeaconMessage {
 const UNBONDING_PERIOD: u64 = 14;
 // number of seconds in a day
 const DAY: u64 = 24 * 60 * 60;
-const EXECUTION_PAYLOAD_STATE_ID:u64 = 1;
+const EXECUTION_PAYLOAD_STATE_ID: u64 = 1;
 
 impl ConsensusClient for ConsensusState {
     fn verify(
@@ -36,20 +40,32 @@ impl ConsensusClient for ConsensusState {
         trusted_consensus_state: Vec<u8>,
         proof: Vec<u8>,
     ) -> Result<(Vec<u8>, Vec<IntermediateState>), Error> {
-        let beacon_message = BeaconMessage::decode(&mut &proof[..])
-            .map_err(|_| Error::ImplementationSpecific(format!("Cannot decode beacon message {:?}", proof)))?;
+        let beacon_message = BeaconMessage::decode(&mut &proof[..]).map_err(|_| {
+            Error::ImplementationSpecific(format!("Cannot decode beacon message {:?}", proof))
+        })?;
 
         let light_client_update = match beacon_message {
             BeaconMessage::ConsensusUpdate(update) => update.clone(),
-            _ => return Err(Error::CannotHandleConsensusMessage)
+            _ => return Err(Error::CannotHandleConsensusMessage),
         };
 
         let light_client_state = LightClientState::decode(&mut &trusted_consensus_state[..])
-            .map_err(|_| Error::ImplementationSpecific(format!("Cannot decode trusted consensus state {:?}", trusted_consensus_state)))?;
+            .map_err(|_| {
+                Error::ImplementationSpecific(format!(
+                    "Cannot decode trusted consensus state {:?}",
+                    trusted_consensus_state
+                ))
+            })?;
 
         let height = light_client_update.finalized_header.slot;
         // Ensure consensus client is not frozen
-        if host.host_timestamp() - host.consensus_update_time(self.consensus_id())? >=  self.unbonding_period() {
+        let is_frozen = if let Some(frozen_height) = self.frozen_height {
+            light_client_update.finalized_header.slot >= frozen_height
+        } else {
+            false
+        };
+
+        if is_frozen {
             return Err(Error::FrozenConsensusClient {
                 id: self.consensus_id(),
             });
@@ -57,17 +73,29 @@ impl ConsensusClient for ConsensusState {
 
         // check that the client hasn't elapsed unbonding period
         let timestamp = light_client_update.execution_payload.timestamp;
-        if self.unbonding_period() > Duration::from_secs(timestamp) {
-            // return the right error, need to update ismp_rust
+        if host.host_timestamp() - host.consensus_update_time(self.consensus_id())?
+            >= self.unbonding_period()
+        {
+            return Err(Error::ImplementationSpecific(format!(
+                "Unbonding period elapsed for host {:?} and consensus id {:?}",
+                host.host(),
+                self.consensus_id()
+            )));
         }
 
-        let no_codec_light_client_state = light_client_state.clone()
-            .try_into()
-            .map_err(|_| Error::ImplementationSpecific(format!("Cannot convert light client state {:?} to no codec type", light_client_state)))?;
-        let no_codec_light_client_update = light_client_update
-            .clone()
-            .try_into()
-            .map_err(|_|  Error::ImplementationSpecific(format!("Cannot convert light client update {:?} to no codec type", light_client_update)))?;
+        let no_codec_light_client_state = light_client_state.clone().try_into().map_err(|_| {
+            Error::ImplementationSpecific(format!(
+                "Cannot convert light client state {:?} to no codec type",
+                light_client_state
+            ))
+        })?;
+        let no_codec_light_client_update =
+            light_client_update.clone().try_into().map_err(|_| {
+                Error::ImplementationSpecific(format!(
+                    "Cannot convert light client update {:?} to no codec type",
+                    light_client_update
+                ))
+            })?;
 
         let _new_light_client_state = sync_committee_verifier::verify_sync_committee_attestation(
             no_codec_light_client_state,
@@ -106,6 +134,7 @@ impl ConsensusClient for ConsensusState {
         _host: &dyn ISMPHost,
         _key: Vec<u8>,
         _commitment: Vec<u8>,
+        _proof: &Proof,
     ) -> Result<(), Error> {
         todo!()
     }
@@ -115,6 +144,7 @@ impl ConsensusClient for ConsensusState {
         _host: &dyn ISMPHost,
         _key: Vec<u8>,
         _commitment: Vec<u8>,
+        _proof: &Proof,
     ) -> Result<(), Error> {
         todo!()
     }
