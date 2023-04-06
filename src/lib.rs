@@ -114,9 +114,6 @@ pub mod pallet {
             + scale_info::TypeInfo
             + MaxEncodedLen;
         type TimeProvider: UnixTime;
-
-        /// The admin origin type
-        type AdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
     // Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and
