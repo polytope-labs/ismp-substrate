@@ -24,6 +24,7 @@ pub mod host;
 pub mod mmr;
 pub mod primitives;
 mod router;
+mod consensus_client;
 
 use crate::{
     host::Host,

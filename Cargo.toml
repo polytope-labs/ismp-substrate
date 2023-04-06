@@ -20,6 +20,9 @@ ismp-rs = { git = "ssh://git@github.com/polytope-labs/ismp-rust.git", branch = "
 mmr-lib = { package = "ckb-merkle-mountain-range", version = "0.5.2", default-features = false }
 serde = { version = "1.0.136", features = ["derive"], optional = true }
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "into", "display"] }
+sync-committee-primitives = { git="https://github.com/polytope-labs/sync-committee-rs", branch="main", default-features = false }
+sync-committee-prover = { git="https://github.com/polytope-labs/sync-committee-rs", branch="main", default-features = false }
+sync-committee-verifier = { git="https://github.com/polytope-labs/sync-committee-rs", branch="main", default-features = false }
 
 [features]
 default = ["std"]
