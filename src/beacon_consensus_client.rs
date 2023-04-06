@@ -1,7 +1,10 @@
 use crate::primitives::ETHEREUM_CONSENSUS_CLIENT_ID;
 use codec::{Decode, Encode};
 use core::time::Duration;
-use ethabi::Token;
+use ethabi::{
+    ethereum_types::{H160, H256, U256},
+    Token,
+};
 use hash256_std_hasher::Hash256StdHasher;
 use hash_db::Hasher;
 use hex_literal::hex;
@@ -15,7 +18,6 @@ use ismp_rs::{
     router::RequestResponse,
 };
 use patricia_merkle_trie::{EIP1186Layout, StorageProof};
-use ethabi::ethereum_types::{H160, H256, U256};
 use rlp::Rlp;
 use rlp_derive::RlpDecodable;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
