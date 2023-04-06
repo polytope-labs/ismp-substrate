@@ -47,8 +47,11 @@ pub mod pallet {
     use ismp_rust::consensus_client::{
         ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
     };
-    use ismp_rust::host::ChainID;
-    use ismp_rust::messaging::CreateConsensusClient
+    use ismp_rust::messaging::Message;
+    use ismp_rust::{
+        host::ChainID,
+        messaging::Message
+    };
     use sp_runtime::traits;
 
     /// Our pallet's configuration trait. All our types and constants go in here. If the
@@ -214,19 +217,32 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Handle creation of consensus clients
         #[pallet::weight(0)]
-        pub fn create_consensus_client(origin: T::AdminOrigin, message: CreateConsensusClient) -> DispatchResult {
+        #[pallet::call_index[0]]
+        pub fn create_consensus_client(origin: OriginFor<T>, message: Message) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             let host = Host::<T>::default();
-            
-            // Store the initial state for the consensus client
-            host.store_consensus_state(message.consensus_client_id, message.consensus_state);
+            let mut errors: Vec<HandlingError> = vec![];
 
-            // Store all intermedite state machine commitments
-            for intermediate_state in message.state_machine_commitments {
-                host.store_state_machine_commitment(intermediate_state.height, intermediate_state.commitment);
+            match message {
+                Message::CreateConsensusClient(create_consensus_client_message) => {
+                    // Store the initial state for the consensus client
+                    host.store_consensus_state(create_consensus_client_message.consensus_client_id, create_consensus_client_message.consensus_state);
+
+                     // Store all intermedite state machine commitments
+                    for intermediate_state in create_consensus_client_message.state_machine_commitments {
+                        host.store_state_machine_commitment(intermediate_state.height, intermediate_state.commitment);
+                    }
+
+                    Ok(())
+                },
+                _ => {
+
+                }
             }
+            
+           
 
-            Ok(())
+           
         }
     }
 
