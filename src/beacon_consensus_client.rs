@@ -53,9 +53,9 @@ pub enum BeaconMessage {
     Misbehaviour(Misbehaviour),
 }
 
-// Slot for requests map
+// Slot index for requests map
 const REQ_SLOT: u8 = 1;
-// Slot for responses map
+// Slot index for responses map
 const RESP_SLOT: u8 = 2;
 const CONTRACT_ADDRESS: [u8; 20] = hex!("b856af30b938b6f52e5bff365675f358cd52f91b");
 #[derive(Encode, Decode, Clone)]
@@ -161,7 +161,6 @@ impl ConsensusClient for ConsensusState {
         use rlp::Decodable;
         let evm_state_proof = decode_evm_state_proof(proof)?;
         let key = req_res_to_key(host, item);
-        // the raw account data stored in the state proof:
         let root = H256::from_slice(&root.state_root[..]);
         let contract_root =
             get_contract_storage_root(evm_state_proof.contract_account_proof, root.clone())?;
@@ -287,7 +286,6 @@ fn to_bytes_32(vec: Vec<u8>) -> Result<[u8; 32], Error> {
 
     let mut array = [0u8; 32];
 
-    // copy the vector elements to the array
     array.copy_from_slice(&vec);
 
     Ok(array)
@@ -309,7 +307,6 @@ fn get_contract_storage_root(
             Error::ImplementationSpecific("Contract account is not present in proof".to_string())
         })?;
 
-    // the raw account data stored in the state proof:
     let contract_account = <Account as Decodable>::decode(&Rlp::new(&result)).map_err(|_| {
         Error::ImplementationSpecific(format!(
             "Error decoding contract account from key {:?}",
@@ -329,7 +326,6 @@ fn get_value_from_proof(
     root: H256,
     proof: Vec<Vec<u8>>,
 ) -> Result<Option<DBValue>, Error> {
-    // ProofDB using  proof
     let proof_db = StorageProof::new(proof).into_memory_db::<KeccakHasher>();
     let trie = TrieDBBuilder::<EIP1186Layout<KeccakHasher>>::new(&proof_db, &root).build();
 
