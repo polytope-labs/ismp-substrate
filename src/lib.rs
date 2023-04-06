@@ -18,18 +18,26 @@
 
 extern crate alloc;
 
+mod errors;
+pub mod events;
 pub mod host;
-mod mmr;
-mod primitives;
+pub mod mmr;
+pub mod primitives;
 mod router;
 
+use crate::{
+    host::Host,
+    mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex, NodeOf},
+};
 use codec::{Decode, Encode};
-use frame_support::RuntimeDebug;
-use ismp_rust::host::ChainID;
-use ismp_rust::router::{Request, Response};
+use frame_support::{log::debug, RuntimeDebug};
+use ismp_rs::{
+    host::ChainID,
+    messaging::Message,
+    router::{Request, Response},
+};
 use sp_core::offchain::StorageKind;
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use crate::mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex, NodeOf};
 pub use pallet::*;
 use sp_std::prelude::*;
 
@@ -39,18 +47,21 @@ use sp_std::prelude::*;
 pub mod pallet {
     // Import various types used to declare pallet in scope.
     use super::*;
-    use crate::mmr::{LeafIndex, Mmr, NodeIndex};
-    use crate::primitives::ISMP_ID;
-    use frame_support::pallet_prelude::*;
-    use frame_support::traits::UnixTime;
-    use frame_system::pallet_prelude::*;
-    use ismp_rust::consensus_client::{
-        ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
+    use crate::{
+        errors::HandlingError,
+        mmr::{LeafIndex, Mmr, NodeIndex},
+        primitives::ISMP_ID,
     };
-    use ismp_rust::messaging::Message;
-    use ismp_rust::{
+    use alloc::collections::BTreeSet;
+    use frame_support::{pallet_prelude::*, traits::UnixTime};
+    use frame_system::pallet_prelude::*;
+    use ismp_rs::{
+        consensus_client::{
+            ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
+        },
+        handlers::{handle_incoming_message, MessageResult},
         host::ChainID,
-        messaging::Message
+        messaging::Message,
     };
     use sp_runtime::traits;
 
@@ -151,13 +162,9 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn latest_state_height)]
+    /// The latest accepted state machine height
     pub type LatestStateMachineHeight<T: Config> =
         StorageMap<_, Blake2_128Concat, StateMachineId, u64, OptionQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn state_update_time)]
-    pub type StateMachineUpdateTime<T: Config> =
-        StorageMap<_, Blake2_128Concat, StateMachineHeight, u64, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn consensus_update_time)]
@@ -175,6 +182,18 @@ pub mod pallet {
     /// Acknowledgements for receipt of responses
     /// No hashing, just insert raw key in storage
     pub type ResponseAcks<T: Config> = StorageMap<_, Identity, Vec<u8>, Vec<u8>, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn consensus_update_results)]
+    /// Consensus update results still in challenge period
+    /// Set contains a tuple of previous height and latest height
+    pub type ConsensusUpdateResults<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        ConsensusClientId,
+        BTreeSet<(StateMachineHeight, StateMachineHeight)>,
+        OptionQuery,
+    >;
 
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
     #[pallet::hooks]
@@ -202,9 +221,7 @@ pub mod pallet {
             <NumberOfLeaves<T>>::put(leaves);
             <RootHash<T>>::put(root);
 
-            let log = RequestResponseLog::<T> {
-                mmr_root_hash: root,
-            };
+            let log = RequestResponseLog::<T> { mmr_root_hash: root };
 
             let digest = sp_runtime::generic::DigestItem::Consensus(ISMP_ID, log.encode());
             <frame_system::Pallet<T>>::deposit_log(digest);
@@ -215,34 +232,88 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Handle creation of consensus clients
+        /// Handles ismp messages
         #[pallet::weight(0)]
-        #[pallet::call_index[0]]
-        pub fn create_consensus_client(origin: OriginFor<T>, message: Message) -> DispatchResult {
-            let sender = ensure_signed(origin)?;
+        #[pallet::call_index(0)]
+        pub fn handle(origin: OriginFor<T>, messages: Vec<Message>) -> DispatchResult {
+            let _ = ensure_signed(origin)?;
+            // Define a host
             let host = Host::<T>::default();
             let mut errors: Vec<HandlingError> = vec![];
+            for message in messages {
+                match handle_incoming_message(&host, message) {
+                    Ok(MessageResult::ConsensusMessage(res)) => {
+                        // Deposit events for previous update result that has passed the challenge
+                        // period
+                        if let Some(pending_updates) =
+                            ConsensusUpdateResults::<T>::get(res.consensus_client_id)
+                        {
+                            for (prev_height, latest_height) in pending_updates.into_iter() {
+                                Self::deposit_event(Event::<T>::StateMachineUpdated {
+                                    state_machine_id: latest_height.id,
+                                    latest_height: latest_height.height,
+                                    previous_height: prev_height.height,
+                                })
+                            }
+                        }
+
+                        Self::deposit_event(Event::<T>::ChallengePeriodStarted {
+                            consensus_client_id: res.consensus_client_id,
+                            state_machines: res.state_updates.clone(),
+                        });
+
+                        // Store the new update result that have just entered the challenge period
+                        ConsensusUpdateResults::<T>::insert(
+                            res.consensus_client_id,
+                            res.state_updates,
+                        );
+                    }
+                    Ok(_) => {
+                        // Do nothing, event has been deposited in ismp router
+                    }
+                    Err(err) => {
+                        errors.push(err.into());
+                    }
+                }
+            }
+
+            if !errors.is_empty() {
+                debug!(target: "ismp-rust", "Handling Errors {:?}", errors);
+                Self::deposit_event(Event::<T>::HandlingErrors { errors })
+            }
+
+            Ok(())
+        }
+
+        /// Creates consensus clients
+        #[pallet::weight(0)]
+        #[pallet::call_index(1)]
+        pub fn create_consensus_client(origin: OriginFor<T>, message: Message) -> DispatchResult {
+            let sender = <T as Config>::AdminOrigin::ensure_origin(origin)?;
+            let host = Host::<T>::default();
 
             match message {
                 Message::CreateConsensusClient(create_consensus_client_message) => {
                     // Store the initial state for the consensus client
-                    host.store_consensus_state(create_consensus_client_message.consensus_client_id, create_consensus_client_message.consensus_state);
+                    host.store_consensus_state(
+                        create_consensus_client_message.consensus_client_id,
+                        create_consensus_client_message.consensus_state,
+                    );
 
-                     // Store all intermedite state machine commitments
-                    for intermediate_state in create_consensus_client_message.state_machine_commitments {
-                        host.store_state_machine_commitment(intermediate_state.height, intermediate_state.commitment);
+                    // Store all intermedite state machine commitments
+                    for intermediate_state in
+                        create_consensus_client_message.state_machine_commitments
+                    {
+                        host.store_state_machine_commitment(
+                            intermediate_state.height,
+                            intermediate_state.commitment,
+                        );
                     }
 
                     Ok(())
-                },
-                _ => {
-
                 }
+                _ => <Error<T>>::InvalidMessage,
             }
-            
-           
-
-           
         }
     }
 
@@ -254,11 +325,19 @@ pub mod pallet {
     /// it is optional, it is also possible to provide a custom implementation.
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        ConsensusClientUpdated {
-            id: ConsensusClientId,
-            height: u64,
+        /// Event to be emitted when the challenge period for a state machine update has elapsed
+        StateMachineUpdated {
+            state_machine_id: StateMachineId,
+            latest_height: u64,
+            previous_height: u64,
         },
-        ResponseReceived {
+        /// Signifies that a client has begun it's challenge period
+        ChallengePeriodStarted {
+            consensus_client_id: ConsensusClientId,
+            state_machines: BTreeSet<(StateMachineHeight, StateMachineHeight)>,
+        },
+        /// Response was process successfully
+        Response {
             /// Chain that this response will be routed to
             dest_chain: ChainID,
             /// Source Chain for this response
@@ -266,7 +345,8 @@ pub mod pallet {
             /// Nonce for the request which this response is for
             request_nonce: u64,
         },
-        RequestReceived {
+        /// Request processed successfully
+        Request {
             /// Chain that this request will be routed to
             dest_chain: ChainID,
             /// Source Chain for request
@@ -274,6 +354,14 @@ pub mod pallet {
             /// Request nonce
             request_nonce: u64,
         },
+        HandlingErrors {
+            errors: Vec<HandlingError>,
+        },
+    }
+
+    #[pallet::error]
+    pub enum Error<T> {
+        InvalidMessage,
     }
 }
 
@@ -334,14 +422,7 @@ impl<T: Config> Pallet<T> {
         dest_chain: ChainID,
         nonce: u64,
     ) -> Vec<u8> {
-        (
-            T::INDEXING_PREFIX,
-            "Requests/leaf_indices",
-            source_chain,
-            dest_chain,
-            nonce,
-        )
-            .encode()
+        (T::INDEXING_PREFIX, "Requests/leaf_indices", source_chain, dest_chain, nonce).encode()
     }
 
     pub fn response_leaf_index_offchain_key(
@@ -349,14 +430,7 @@ impl<T: Config> Pallet<T> {
         dest_chain: ChainID,
         nonce: u64,
     ) -> Vec<u8> {
-        (
-            T::INDEXING_PREFIX,
-            "Responses/leaf_indices",
-            source_chain,
-            dest_chain,
-            nonce,
-        )
-            .encode()
+        (T::INDEXING_PREFIX, "Responses/leaf_indices", source_chain, dest_chain, nonce).encode()
     }
 
     fn store_leaf_index_offchain(key: Vec<u8>, leaf_index: LeafIndex) {

@@ -1,19 +1,20 @@
-use crate::router::Router;
 use crate::{
+    primitives::ETHEREUM_CONSENSUS_CLIENT_ID,
+    router::{RequestPath, Router},
     Config, ConsensusClientUpdateTime, ConsensusStates, FrozenHeights, LatestStateMachineHeight,
-    RequestAcks, StateCommitments, StateMachineUpdateTime,
+    RequestAcks, StateCommitments,
 };
-use alloc::format;
-use alloc::string::ToString;
+use alloc::{format, string::ToString};
 use core::time::Duration;
 use frame_support::traits::UnixTime;
-use ismp_rust::consensus_client::{
-    ConsensusClient, ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
+use ismp_rs::{
+    consensus_client::{
+        ConsensusClient, ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
+    },
+    error::Error,
+    host::{ChainID, ISMPHost},
+    router::{ISMPRouter, Request},
 };
-use ismp_rust::error::Error;
-use ismp_rust::host::{ChainID, ISMPHost};
-use ismp_rust::paths::RequestPath;
-use ismp_rust::router::{IISMPRouter, Request};
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
@@ -54,19 +55,11 @@ impl<T: Config> ISMPHost for Host<T> {
             })
     }
 
-    fn state_machine_update_time(&self, height: StateMachineHeight) -> Result<Duration, Error> {
-        StateMachineUpdateTime::<T>::get(height)
-            .map(|timestamp| Duration::from_nanos(timestamp))
-            .ok_or_else(|| {
-                Error::ImplementationSpecific(format!("Update time not found for {:?}", height))
-            })
-    }
-
     fn consensus_state(&self, id: ConsensusClientId) -> Result<Vec<u8>, Error> {
         ConsensusStates::<T>::get(id).ok_or_else(|| Error::ConsensusStateNotFound { id })
     }
 
-    fn host_timestamp(&self) -> Duration {
+    fn timestamp(&self) -> Duration {
         <T::TimeProvider as UnixTime>::now()
     }
 
@@ -80,17 +73,17 @@ impl<T: Config> ISMPHost for Host<T> {
 
     fn request_commitment(&self, req: &Request) -> Result<Vec<u8>, Error> {
         let key = RequestPath {
-            dest_chain: req.dest_chain,
-            source_chain: req.source_chain,
-            nonce: req.nonce,
+            dest_chain: req.dest_chain(),
+            source_chain: req.source_chain(),
+            nonce: req.nonce(),
         }
         .to_string()
         .as_bytes()
         .to_vec();
         RequestAcks::<T>::get(key).ok_or_else(|| Error::RequestCommitmentNotFound {
-            nonce: req.nonce,
-            source: req.source_chain,
-            dest: req.dest_chain,
+            nonce: req.nonce(),
+            source: req.source_chain(),
+            dest: req.dest_chain(),
         })
     }
 
@@ -105,15 +98,6 @@ impl<T: Config> ISMPHost for Host<T> {
         timestamp: Duration,
     ) -> Result<(), Error> {
         ConsensusClientUpdateTime::<T>::insert(id, timestamp.as_nanos().saturated_into::<u64>());
-        Ok(())
-    }
-
-    fn store_state_machine_update_time(
-        &self,
-        height: StateMachineHeight,
-        timestamp: Duration,
-    ) -> Result<(), Error> {
-        StateMachineUpdateTime::<T>::insert(height, timestamp.as_nanos().saturated_into::<u64>());
         Ok(())
     }
 
@@ -139,11 +123,19 @@ impl<T: Config> ISMPHost for Host<T> {
         sp_io::hashing::keccak_256(bytes)
     }
 
-    fn delay_period(&self, _id: StateMachineId) -> Duration {
-        Duration::from_secs(5 * 60)
+    fn challenge_period(&self, id: ConsensusClientId) -> Duration {
+        match id {
+            id if id == ETHEREUM_CONSENSUS_CLIENT_ID => Duration::from_secs(30 * 60),
+            _ => Duration::from_secs(15 * 60),
+        }
     }
 
-    fn ismp_router(&self) -> Box<dyn IISMPRouter> {
+    fn ismp_router(&self) -> Box<dyn ISMPRouter> {
         Box::new(Router::<T>::default())
+    }
+
+    fn store_latest_commitment_height(&self, height: StateMachineHeight) -> Result<(), Error> {
+        LatestStateMachineHeight::<T>::insert(height.id, height.height);
+        Ok(())
     }
 }
