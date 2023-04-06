@@ -1,17 +1,17 @@
+use crate::primitives::ETHEREUM_CONSENSUS_CLIENT_ID;
 use codec::{Decode, Encode};
 use core::time::Duration;
 use ethabi::Token;
 use ismp_rs::{
     consensus_client::{
-        ConsensusClient, ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight,
-        StateMachineId,
+        ConsensusClient, ConsensusClientId, Hash, IntermediateState, StateCommitment,
+        StateMachineHeight, StateMachineId,
     },
     error::Error,
     host::ISMPHost,
     messaging::Proof,
+    router::{Request, RequestResponse},
 };
-use ismp_rs::consensus_client::Hash;
-use ismp_rs::router::{RequestResponse, Request};
 use patricia_merkle_trie::{keccak::KeccakHasher, EIP1186Layout, StorageProof};
 use primitive_types::{H256, U256};
 use rlp::{Decodable, Rlp};
@@ -19,7 +19,6 @@ use rlp_derive::RlpDecodable;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
 use tiny_keccak::{Hasher, Keccak};
 use trie_db::{DBValue, Trie, TrieDBBuilder};
-use crate::primitives::ETHEREUM_CONSENSUS_CLIENT_ID;
 
 #[derive(Debug, Encode, Decode, Clone)]
 pub struct ConsensusState {
@@ -131,7 +130,9 @@ impl ConsensusClient for ConsensusState {
             no_codec_light_client_state,
             no_codec_light_client_update,
         )
-        .map_err(|_| Error::ConsensusProofVerificationFailed { id: ETHEREUM_CONSENSUS_CLIENT_ID })?;
+        .map_err(|_| Error::ConsensusProofVerificationFailed {
+            id: ETHEREUM_CONSENSUS_CLIENT_ID,
+        })?;
 
         let mut intermediate_states = vec![];
 
@@ -142,7 +143,7 @@ impl ConsensusClient for ConsensusState {
             height,
             timestamp,
             state_root,
-            vec![]
+            vec![],
         )?;
 
         intermediate_states.push(intermediate_state);
@@ -172,7 +173,7 @@ impl ConsensusClient for ConsensusState {
         proof: &Proof,
     ) -> Result<(), Error> {
         let evm_state_proof = decode_evm_state_proof(proof)?;
-        let key= handle_request_response(item);
+        let key = handle_request_response(item);
         // the raw account data stored in the state proof:
         let contract_account =
             derive_contract_account_from_proof(evm_state_proof.clone(), commitment.clone())?;
@@ -200,7 +201,7 @@ impl ConsensusClient for ConsensusState {
     ) -> Result<(), Error> {
         let evm_state_proof = decode_evm_state_proof(proof)?;
 
-        let key= handle_request_response(item);
+        let key = handle_request_response(item);
         let _contract_account =
             derive_contract_account_from_proof(evm_state_proof.clone(), commitment.clone())?;
 
@@ -213,10 +214,15 @@ impl ConsensusClient for ConsensusState {
         Ok(())
     }
 
-    fn verify_state_proof(&self, _host: &dyn ISMPHost, _key: Vec<u8>, _root: Hash, _proof: &Proof) -> Result<Vec<u8>, Error> {
+    fn verify_state_proof(
+        &self,
+        _host: &dyn ISMPHost,
+        _key: Vec<u8>,
+        _root: Hash,
+        _proof: &Proof,
+    ) -> Result<Vec<u8>, Error> {
         todo!()
     }
-
 
     fn is_frozen(&self, _host: &dyn ISMPHost, _id: ConsensusClientId) -> Result<bool, Error> {
         todo!()
@@ -235,7 +241,11 @@ fn construct_intermediate_state(
 
     let state_machine_height = StateMachineHeight { id: state_machine_id, height };
 
-    let state_commitment = StateCommitment { timestamp, ismp_root: convert_vec_to_array(state_root)?.into(), state_root: convert_vec_to_array(ismp_root)?.into() };
+    let state_commitment = StateCommitment {
+        timestamp,
+        ismp_root: convert_vec_to_array(state_root)?.into(),
+        state_root: convert_vec_to_array(ismp_root)?.into(),
+    };
 
     let intermediate_state =
         IntermediateState { height: state_machine_height, commitment: state_commitment };
@@ -259,17 +269,17 @@ fn handle_request_response(item: RequestResponse) -> Vec<u8> {
             match request {
                 Request::Post(value) => {
                     key = value.encode().to_vec();
-                },
+                }
                 Request::Get(value) => {
                     key = value.encode().to_vec();
                 }
             };
         }
         RequestResponse::Response(response) => {
-           match response.request {
+            match response.request {
                 Request::Post(value) => {
                     key = value.encode().to_vec();
-                },
+                }
                 Request::Get(value) => {
                     key = value.encode().to_vec();
                 }

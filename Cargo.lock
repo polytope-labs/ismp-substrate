@@ -1032,6 +1032,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethabi"
+version = "18.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7413c5f74cc903ea37386a8965a936cbeb334bd270862fdece542c1b2dcbc898"
+dependencies = [
+ "ethereum-types",
+ "hex",
+ "once_cell",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha3",
+ "thiserror",
+ "uint",
+]
+
+[[package]]
+name = "ethbloom"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c22d4b5885b6aa2fe5e8b9329fb8d232bf739e434e6b87347c63bdd00c120f60"
+dependencies = [
+ "crunchy",
+ "fixed-hash",
+ "impl-rlp",
+ "impl-serde",
+ "tiny-keccak",
+]
+
+[[package]]
 name = "ethereum-consensus"
 version = "0.1.1"
 source = "git+https://github.com/polytope-labs/ethereum-consensus?rev=d3fe0ad76613b52cdfbdea7c317ecdc35f271e4f#d3fe0ad76613b52cdfbdea7c317ecdc35f271e4f"
@@ -1055,6 +1085,20 @@ dependencies = [
  "ssz-rs",
  "tokio",
  "tokio-stream",
+]
+
+[[package]]
+name = "ethereum-types"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d215cbf040552efcbe99a38372fe80ab9d00268e20012b79fcd0f073edd8ee"
+dependencies = [
+ "ethbloom",
+ "fixed-hash",
+ "impl-rlp",
+ "impl-serde",
+ "primitive-types",
+ "uint",
 ]
 
 [[package]]
@@ -2534,6 +2578,7 @@ version = "0.1.0"
 dependencies = [
  "ckb-merkle-mountain-range",
  "derive_more",
+ "ethabi",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -2557,6 +2602,7 @@ dependencies = [
  "sync-committee-primitives",
  "sync-committee-prover",
  "sync-committee-verifier",
+ "tiny-keccak",
  "trie-db",
 ]
 
@@ -2649,7 +2695,7 @@ checksum = "9f746c4065a8fa3fe23974dd82f15431cc8d40779821001404d10d2e79ca7d79"
 [[package]]
 name = "patricia-merkle-trie"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/patricia-merkle-trie?branch=main#bc624c1595aff64d577217873ba58ec50040a107"
+source = "git+https://github.com/polytope-labs/patricia-merkle-trie?rev=aeadd9d24b447c8b8bb52321c1a1aa411c97e9b5#aeadd9d24b447c8b8bb52321c1a1aa411c97e9b5"
 dependencies = [
  "hash-db",
  "hash256-std-hasher",
