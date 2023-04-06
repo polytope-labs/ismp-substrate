@@ -20,11 +20,11 @@ extern crate alloc;
 
 mod errors;
 pub mod events;
+mod consensus_client;
 pub mod host;
 pub mod mmr;
 pub mod primitives;
 mod router;
-mod consensus_client;
 
 use crate::{
     host::Host,
@@ -156,6 +156,11 @@ pub mod pallet {
     #[pallet::getter(fn frozen_heights)]
     pub type FrozenHeights<T: Config> =
         StorageMap<_, Blake2_128Concat, StateMachineId, u64, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn frozen_consensus_heights)]
+    pub type FrozenConsensusHeights<T: Config> =
+        StorageMap<_, Blake2_128Concat, ConsensusClientId, u64, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn latest_state_height)]
