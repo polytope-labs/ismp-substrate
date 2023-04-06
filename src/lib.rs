@@ -34,7 +34,7 @@ use frame_support::{log::debug, RuntimeDebug};
 use ismp_rs::{
     host::ChainID,
     messaging::Message,
-    router::{Request, Response},
+    router::{Request, Response}
 };
 use sp_core::offchain::StorageKind;
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -59,7 +59,7 @@ pub mod pallet {
         consensus_client::{
             ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
         },
-        handlers::{handle_incoming_message, MessageResult},
+        handlers::{handle_incoming_message, create_consensus_client, MessageResult},
         host::ChainID,
         messaging::Message,
     };
@@ -289,28 +289,7 @@ pub mod pallet {
             let sender = <T as Config>::AdminOrigin::ensure_origin(origin)?;
             let host = Host::<T>::default();
 
-            match message {
-                Message::CreateConsensusClient(create_consensus_client_message) => {
-                    // Store the initial state for the consensus client
-                    host.store_consensus_state(
-                        create_consensus_client_message.consensus_client_id,
-                        create_consensus_client_message.consensus_state,
-                    );
-
-                    // Store all intermedite state machine commitments
-                    for intermediate_state in
-                        create_consensus_client_message.state_machine_commitments
-                    {
-                        host.store_state_machine_commitment(
-                            intermediate_state.height,
-                            intermediate_state.commitment,
-                        );
-                    }
-
-                    Ok(())
-                }
-                _ => <Error<T>>::InvalidMessage,
-            }
+            create_consensus_client(&host, message)
         }
     }
 
