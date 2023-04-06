@@ -20,7 +20,7 @@ extern crate alloc;
 
 mod errors;
 pub mod events;
-mod consensus_client;
+mod beacon_consensus_client;
 pub mod host;
 pub mod mmr;
 pub mod primitives;
