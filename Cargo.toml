@@ -23,6 +23,14 @@ derive_more = { version = "0.99.17", default-features = false, features = ["from
 sync-committee-primitives = { git="https://github.com/polytope-labs/sync-committee-rs", branch="main", default-features = false }
 sync-committee-prover = { git="https://github.com/polytope-labs/sync-committee-rs", branch="main", default-features = false }
 sync-committee-verifier = { git="https://github.com/polytope-labs/sync-committee-rs", branch="main", default-features = false }
+patricia-merkle-trie = {git ="https://github.com/polytope-labs/patricia-merkle-trie", branch="main", default-features=false }
+trie-db = { version= "0.24.0", default-features = false }
+hash-db = { version = "0.15.2", default-features = false }
+rlp = { version = "0.5.1", default-features = false }
+hex = "0.4.3"
+hex-literal = "0.3.4"
+primitive-types = { version = "0.12.0", features = ["rlp"] }
+rlp-derive = "0.1.0"
 
 [features]
 default = ["std"]
@@ -39,7 +47,12 @@ std = [
     "ismp-rs/std",
     "mmr-lib/std",
     "sp-api/std",
-    "serde"
+    "serde",
+    "patricia-merkle-trie/std",
+    "trie-db/std",
+    "hash-db/std",
+    "rlp/std",
+    "primitive-types/std",
 ]
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 
