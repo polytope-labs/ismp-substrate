@@ -16,29 +16,27 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.37", default-features = false }
-ismp-rs = { git = "ssh://git@github.com/polytope-labs/ismp-rust.git", branch = "main", default-features = false }
+ismp-rs = { package = "ismp", git = "ssh://git@github.com/polytope-labs/ismp-rs.git", branch = "main", default-features = false }
 mmr-lib = { package = "ckb-merkle-mountain-range", version = "0.5.2", default-features = false }
 serde = { version = "1.0.136", features = ["derive"], optional = true }
 derive_more = { version = "0.99.17", default-features = false, features = ["from", "into", "display"] }
 sync-committee-primitives = { git="https://github.com/polytope-labs/sync-committee-rs", branch="main", default-features = false }
-sync-committee-prover = { git="https://github.com/polytope-labs/sync-committee-rs", branch="main", default-features = false }
 sync-committee-verifier = { git="https://github.com/polytope-labs/sync-committee-rs", branch="main", default-features = false }
-patricia-merkle-trie = {git ="https://github.com/polytope-labs/patricia-merkle-trie", rev="aeadd9d24b447c8b8bb52321c1a1aa411c97e9b5", default-features=false }
+patricia-merkle-trie = { package = "ethereum-trie", git ="https://github.com/polytope-labs/ethereum-trie", branch = "main", default-features=false }
 trie-db = { version= "0.24.0", default-features = false }
 hash-db = { version = "0.15.2", default-features = false }
 rlp = { version = "0.5.1", default-features = false }
-hex = "0.4.3"
+hex = { version = "0.4.3", default-features = false }
 hex-literal = "0.3.4"
-primitive-types = { version = "0.12.0", features = ["rlp"] }
 rlp-derive = "0.1.0"
-tiny-keccak = { version = "2.0.2", features = ["keccak"],  optional = true }
-ethabi = "18.0.0"
+ethabi = { version = "18.0.0", features = ["rlp"], default-features = false }
+hash256-std-hasher = { version = "0.15.2", default-features = false }
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
-    "frame-benchmarking?/std",
+    "frame-benchmarking/std",
     "frame-support/std",
     "frame-system/std",
     "log/std",
@@ -54,8 +52,11 @@ std = [
     "trie-db/std",
     "hash-db/std",
     "rlp/std",
-    "primitive-types/std",
-    "tiny-keccak"
+    "ethabi/std",
+    "hash256-std-hasher/std",
+    "hex/std",
+#    "sync-committee-primitives/std",
+#    "sync-committee-verifier/std"
 ]
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 

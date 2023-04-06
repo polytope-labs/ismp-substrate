@@ -2,23 +2,36 @@ use crate::primitives::ETHEREUM_CONSENSUS_CLIENT_ID;
 use codec::{Decode, Encode};
 use core::time::Duration;
 use ethabi::Token;
+use hash256_std_hasher::Hash256StdHasher;
+use hash_db::Hasher;
+use hex_literal::hex;
 use ismp_rs::{
     consensus_client::{
-        ConsensusClient, ConsensusClientId, Hash, IntermediateState, StateCommitment,
-        StateMachineHeight, StateMachineId,
+        ConsensusClient, IntermediateState, StateCommitment, StateMachineHeight, StateMachineId,
     },
     error::Error,
     host::ISMPHost,
     messaging::Proof,
-    router::{Request, RequestResponse},
+    router::RequestResponse,
 };
-use patricia_merkle_trie::{keccak::KeccakHasher, EIP1186Layout, StorageProof};
-use primitive_types::{H256, U256};
-use rlp::{Decodable, Rlp};
+use patricia_merkle_trie::{EIP1186Layout, StorageProof};
+use ethabi::ethereum_types::{H160, H256, U256};
+use rlp::Rlp;
 use rlp_derive::RlpDecodable;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
-use tiny_keccak::{Hasher, Keccak};
 use trie_db::{DBValue, Trie, TrieDBBuilder};
+
+pub struct KeccakHasher;
+
+impl Hasher for KeccakHasher {
+    type Out = H256;
+    type StdHasher = Hash256StdHasher;
+    const LENGTH: usize = 32;
+
+    fn hash(x: &[u8]) -> Self::Out {
+        sp_io::hashing::keccak_256(x).into()
+    }
+}
 
 #[derive(Debug, Encode, Decode, Clone)]
 pub struct ConsensusState {
@@ -41,8 +54,8 @@ pub enum BeaconMessage {
 // Slot for requests map
 const REQ_SLOT: u8 = 1;
 // Slot for responses map
-const _RESP_SLOT: u8 = 2;
-const CONTRACT_ADDRESS: &'static str = "0x0000";
+const RESP_SLOT: u8 = 2;
+const CONTRACT_ADDRESS: [u8; 20] = hex!("b856af30b938b6f52e5bff365675f358cd52f91b");
 #[derive(Encode, Decode, Clone)]
 pub struct EvmStateProof {
     pub contract_account_proof: Vec<Vec<u8>>,
@@ -58,157 +71,111 @@ struct Account {
     _code_hash: H256,
 }
 
-// TODO:  Unbonding period for ethereum
-const UNBONDING_PERIOD: u64 = 14;
-// number of seconds in a day
-const DAY: u64 = 24 * 60 * 60;
+const UNBONDING_PERIOD_HOURS: u64 = 27;
 const EXECUTION_PAYLOAD_STATE_ID: u64 = 1;
 
 impl ConsensusClient for ConsensusState {
     fn verify_consensus(
         &self,
-        host: &dyn ISMPHost,
+        _host: &dyn ISMPHost,
         trusted_consensus_state: Vec<u8>,
-        proof: Vec<u8>,
+        consensus_proof: Vec<u8>,
     ) -> Result<(Vec<u8>, Vec<IntermediateState>), Error> {
-        let beacon_message = BeaconMessage::decode(&mut &proof[..]).map_err(|_| {
-            Error::ImplementationSpecific(format!("Cannot decode beacon message {:?}", proof))
+        let beacon_message = BeaconMessage::decode(&mut &consensus_proof[..]).map_err(|_| {
+            Error::ImplementationSpecific("Cannot decode beacon message".to_string())
         })?;
 
-        let light_client_update = match beacon_message {
-            BeaconMessage::ConsensusUpdate(update) => update.clone(),
-            _ => return Err(Error::CannotHandleConsensusMessage),
-        };
+        match beacon_message {
+            BeaconMessage::ConsensusUpdate(light_client_update) => {
+                let consensus_state = ConsensusState::decode(&mut &trusted_consensus_state[..])
+                    .map_err(|_| {
+                        Error::ImplementationSpecific(
+                            "Cannot decode trusted consensus state".to_string(),
+                        )
+                    })?;
 
-        let light_client_state = LightClientState::decode(&mut &trusted_consensus_state[..])
-            .map_err(|_| {
-                Error::ImplementationSpecific(format!(
-                    "Cannot decode trusted consensus state {:?}",
-                    trusted_consensus_state
-                ))
-            })?;
+                let no_codec_light_client_state =
+                    consensus_state.light_client_state.try_into().map_err(|_| {
+                        Error::ImplementationSpecific(format!(
+                            "Cannot convert light client state to no codec type",
+                        ))
+                    })?;
 
-        let height = light_client_update.finalized_header.slot;
-        // Ensure consensus client is not frozen
-        let is_frozen = if let Some(frozen_height) = self.frozen_height {
-            light_client_update.finalized_header.slot >= frozen_height
-        } else {
-            false
-        };
+                let no_codec_light_client_update =
+                    light_client_update.clone().try_into().map_err(|_| {
+                        Error::ImplementationSpecific(format!(
+                            "Cannot convert light client update to no codec type"
+                        ))
+                    })?;
 
-        if is_frozen {
-            return Err(Error::FrozenConsensusClient { id: ETHEREUM_CONSENSUS_CLIENT_ID })
+                let new_light_client_state =
+                    sync_committee_verifier::verify_sync_committee_attestation(
+                        no_codec_light_client_state,
+                        no_codec_light_client_update,
+                    )
+                    .map_err(|_| Error::ConsensusProofVerificationFailed {
+                        id: ETHEREUM_CONSENSUS_CLIENT_ID,
+                    })?;
+
+                let mut intermediate_states = vec![];
+
+                let state_root = light_client_update.execution_payload.state_root;
+                let intermediate_state = construct_intermediate_state(
+                    EXECUTION_PAYLOAD_STATE_ID,
+                    ETHEREUM_CONSENSUS_CLIENT_ID,
+                    light_client_update.execution_payload.block_number,
+                    light_client_update.execution_payload.timestamp,
+                    state_root,
+                )?;
+
+                intermediate_states.push(intermediate_state);
+
+                let new_consensus_state = ConsensusState {
+                    frozen_height: None,
+                    light_client_state: new_light_client_state.try_into().map_err(|_| {
+                        Error::ImplementationSpecific(format!(
+                            "Cannot convert light client state to codec type"
+                        ))
+                    })?,
+                };
+
+                Ok((new_consensus_state.encode(), intermediate_states))
+            }
+            _ => unimplemented!(),
         }
-
-        // check that the client hasn't elapsed unbonding period
-        let timestamp = light_client_update.execution_payload.timestamp;
-        if host.timestamp() - host.consensus_update_time(ETHEREUM_CONSENSUS_CLIENT_ID)? >=
-            self.unbonding_period()
-        {
-            return Err(Error::ImplementationSpecific(format!(
-                "Unbonding period elapsed for host {:?} and consensus id {:?}",
-                host.host(),
-                ETHEREUM_CONSENSUS_CLIENT_ID
-            )))
-        }
-
-        let no_codec_light_client_state = light_client_state.clone().try_into().map_err(|_| {
-            Error::ImplementationSpecific(format!(
-                "Cannot convert light client state {:?} to no codec type",
-                light_client_state
-            ))
-        })?;
-        let no_codec_light_client_update =
-            light_client_update.clone().try_into().map_err(|_| {
-                Error::ImplementationSpecific(format!(
-                    "Cannot convert light client update {:?} to no codec type",
-                    light_client_update
-                ))
-            })?;
-
-        let new_light_client_state = sync_committee_verifier::verify_sync_committee_attestation(
-            no_codec_light_client_state,
-            no_codec_light_client_update,
-        )
-        .map_err(|_| Error::ConsensusProofVerificationFailed {
-            id: ETHEREUM_CONSENSUS_CLIENT_ID,
-        })?;
-
-        let mut intermediate_states = vec![];
-
-        let state_root = light_client_update.execution_payload.state_root.clone();
-        let intermediate_state = construct_intermediate_state(
-            EXECUTION_PAYLOAD_STATE_ID,
-            ETHEREUM_CONSENSUS_CLIENT_ID,
-            height,
-            timestamp,
-            state_root,
-            vec![],
-        )?;
-
-        intermediate_states.push(intermediate_state);
-
-        let encoded_new_light_client_state: LightClientState =
-            new_light_client_state.clone().try_into().map_err(|_| {
-                Error::ImplementationSpecific(format!(
-                    "Cannot convert light client state {:?} to codec type",
-                    new_light_client_state
-                ))
-            })?;
-
-        let new_proof = encoded_new_light_client_state.encode().to_vec();
-
-        Ok((new_proof, intermediate_states))
     }
 
     fn unbonding_period(&self) -> Duration {
-        Duration::from_secs(UNBONDING_PERIOD * DAY)
+        Duration::from_secs(UNBONDING_PERIOD_HOURS * 60 * 60)
     }
 
     fn verify_membership(
         &self,
-        _host: &dyn ISMPHost,
+        host: &dyn ISMPHost,
         item: RequestResponse,
-        commitment: Hash,
+        root: StateCommitment,
         proof: &Proof,
     ) -> Result<(), Error> {
+        use rlp::Decodable;
         let evm_state_proof = decode_evm_state_proof(proof)?;
-        let key = handle_request_response(item);
+        let key = req_res_to_key(host, item);
         // the raw account data stored in the state proof:
-        let contract_account =
-            derive_contract_account_from_proof(evm_state_proof.clone(), commitment.clone())?;
-        let result = generate_result_from_proof_db(key.clone(), commitment, evm_state_proof)?
+        let root = H256::from_slice(&root.state_root[..]);
+        let contract_root =
+            get_contract_storage_root(evm_state_proof.contract_account_proof, root.clone())?;
+        let value = get_value_from_proof(key, contract_root, evm_state_proof.actual_key_proof)?
             .ok_or_else(|| {
-                Error::ImplementationSpecific(format!("There is no DB value from key {:?}", key,))
+                Error::MembershipProofVerificationFailed(format!("There is no DB value"))
             })?;
 
-        if result != contract_account.storage_root.0.to_vec() {
-            return Err(Error::ImplementationSpecific(format!(
-                "Could not verify membership {:?}",
-                key
+        let value = <bool as Decodable>::decode(&Rlp::new(&value)).map_err(|_| {
+            Error::MembershipProofVerificationFailed("Rlp decode error".to_string())
+        })?;
+
+        if !value {
+            return Err(Error::MembershipProofVerificationFailed(format!(
+                "invalid membership proof"
             )))
-        }
-
-        Ok(())
-    }
-
-    fn verify_non_membership(
-        &self,
-        _host: &dyn ISMPHost,
-        item: RequestResponse,
-        commitment: Hash,
-        proof: &Proof,
-    ) -> Result<(), Error> {
-        let evm_state_proof = decode_evm_state_proof(proof)?;
-
-        let key = handle_request_response(item);
-        let _contract_account =
-            derive_contract_account_from_proof(evm_state_proof.clone(), commitment.clone())?;
-
-        let result = generate_result_from_proof_db(key.clone(), commitment, evm_state_proof)?;
-
-        if result.is_some() {
-            return Err(Error::ImplementationSpecific(format!("membership is present in {:?}", key)))
         }
 
         Ok(())
@@ -218,14 +185,46 @@ impl ConsensusClient for ConsensusState {
         &self,
         _host: &dyn ISMPHost,
         _key: Vec<u8>,
-        _root: Hash,
+        _root: StateCommitment,
         _proof: &Proof,
     ) -> Result<Vec<u8>, Error> {
-        todo!()
+        unimplemented!()
     }
 
-    fn is_frozen(&self, _host: &dyn ISMPHost, _id: ConsensusClientId) -> Result<bool, Error> {
-        todo!()
+    fn verify_non_membership(
+        &self,
+        host: &dyn ISMPHost,
+        item: RequestResponse,
+        root: StateCommitment,
+        proof: &Proof,
+    ) -> Result<(), Error> {
+        let evm_state_proof = decode_evm_state_proof(proof)?;
+
+        let key = req_res_to_key(host, item);
+        let root = H256::from_slice(&root.state_root[..]);
+        let contract_root =
+            get_contract_storage_root(evm_state_proof.contract_account_proof, root)?;
+
+        let result = get_value_from_proof(key, contract_root, evm_state_proof.actual_key_proof)?;
+
+        if result.is_some() {
+            return Err(Error::NonMembershipProofVerificationFailed(
+                "Invalid membership proof".to_string(),
+            ))
+        }
+
+        Ok(())
+    }
+
+    fn is_frozen(&self, consensus_state: &[u8]) -> Result<(), Error> {
+        let consensus_state = ConsensusState::decode(&mut &consensus_state[..]).map_err(|_| {
+            Error::ImplementationSpecific("Cannot decode trusted consensus state".to_string())
+        })?;
+        if consensus_state.frozen_height.is_some() {
+            Err(Error::FrozenConsensusClient { id: ETHEREUM_CONSENSUS_CLIENT_ID })
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -235,7 +234,6 @@ fn construct_intermediate_state(
     height: u64,
     timestamp: u64,
     state_root: Vec<u8>,
-    ismp_root: Vec<u8>,
 ) -> Result<IntermediateState, Error> {
     let state_machine_id = StateMachineId { state_id, consensus_client: consensus_client_id };
 
@@ -243,8 +241,8 @@ fn construct_intermediate_state(
 
     let state_commitment = StateCommitment {
         timestamp,
-        ismp_root: convert_vec_to_array(state_root)?.into(),
-        state_root: convert_vec_to_array(ismp_root)?.into(),
+        ismp_root: [0u8; 32],
+        state_root: to_bytes_32(state_root)?.into(),
     };
 
     let intermediate_state =
@@ -262,35 +260,22 @@ fn decode_evm_state_proof(proof: &Proof) -> Result<EvmStateProof, Error> {
     Ok(evm_state_proof)
 }
 
-fn handle_request_response(item: RequestResponse) -> Vec<u8> {
-    let mut key = vec![];
+fn req_res_to_key(host: &dyn ISMPHost, item: RequestResponse) -> Vec<u8> {
     match item {
         RequestResponse::Request(request) => {
-            match request {
-                Request::Post(value) => {
-                    key = value.encode().to_vec();
-                }
-                Request::Get(value) => {
-                    key = value.encode().to_vec();
-                }
-            };
+            let commitment = host.get_request_commitment(&request);
+            let unhashed = derive_unhashed_map_key(commitment, REQ_SLOT);
+            host.keccak256(&unhashed).to_vec()
         }
         RequestResponse::Response(response) => {
-            match response.request {
-                Request::Post(value) => {
-                    key = value.encode().to_vec();
-                }
-                Request::Get(value) => {
-                    key = value.encode().to_vec();
-                }
-            };
+            let commitment = host.get_response_commitment(&response);
+            let unhashed = derive_unhashed_map_key(commitment, RESP_SLOT);
+            host.keccak256(&unhashed).to_vec()
         }
     }
-
-    key
 }
 
-fn convert_vec_to_array(vec: Vec<u8>) -> Result<[u8; 32], Error> {
+fn to_bytes_32(vec: Vec<u8>) -> Result<[u8; 32], Error> {
     if vec.len() != 32 {
         return Err(Error::ImplementationSpecific(format!(
             "Input vector must have exactly 32 elements {:?}",
@@ -306,89 +291,45 @@ fn convert_vec_to_array(vec: Vec<u8>) -> Result<[u8; 32], Error> {
     Ok(array)
 }
 
-fn derive_contract_account_from_proof(
-    evm_state_proof: EvmStateProof,
-    commitment: Hash,
-) -> Result<Account, Error> {
-    let db =
-        StorageProof::new(evm_state_proof.contract_account_proof).into_memory_db::<KeccakHasher>();
-    let root = H256::from_slice(&commitment[..]);
+fn get_contract_storage_root(
+    contract_account_proof: Vec<Vec<u8>>,
+    root: H256,
+) -> Result<H256, Error> {
+    use rlp::Decodable;
+    let db = StorageProof::new(contract_account_proof).into_memory_db::<KeccakHasher>();
     let trie = TrieDBBuilder::<EIP1186Layout<KeccakHasher>>::new(&db, &root).build();
-    let contract_address = CONTRACT_ADDRESS.parse().map_err(|_| {
-        Error::ImplementationSpecific(format!(
-            "An error occurred when trying to parse contract address {:?}",
-            CONTRACT_ADDRESS
-        ))
-    })?;
-    let key = ethabi::encode(&[Token::String(contract_address)]);
+    let contract_address = H160::from_slice(&CONTRACT_ADDRESS[..]);
+    let key = ethabi::encode(&[Token::Address(contract_address)]);
     let result = trie
         .get(&key)
-        .map_err(|_| {
-            Error::ImplementationSpecific(format!(
-                "An error occurred when trying to derive DB Value from key {:?}",
-                key
-            ))
-        })?
+        .map_err(|_| Error::ImplementationSpecific("Invalid contract account proof".to_string()))?
         .ok_or_else(|| {
-            Error::ImplementationSpecific(format!("There is no DB value from key {:?}", key,))
+            Error::ImplementationSpecific("Contract account is not present in proof".to_string())
         })?;
 
     // the raw account data stored in the state proof:
-    let contract_account = Account::decode(&mut Rlp::new(&result)).map_err(|_| {
+    let contract_account = <Account as Decodable>::decode(&Rlp::new(&result)).map_err(|_| {
         Error::ImplementationSpecific(format!(
             "Error decoding contract account from key {:?}",
             &result
         ))
     })?;
 
-    Ok(contract_account)
+    Ok(contract_account.storage_root)
 }
 
-// Generates slot index for the key based using Keccak 256
-fn generate_slot_index(key: [u8; 32], slot: u8) -> [u8; 32] {
-    let input = ethabi::encode(&[Token::Int(U256::from(slot)), Token::FixedBytes(key.to_vec())]);
-
-    let mut hasher = Keccak::v256();
-    hasher.update(&input);
-
-    let mut result = [0u8; 32];
-    hasher.finalize(&mut result);
-
-    result
+fn derive_unhashed_map_key(key: Vec<u8>, slot: u8) -> Vec<u8> {
+    ethabi::encode(&[Token::FixedBytes(key), Token::Int(U256::from(slot))])
 }
 
-fn generate_result_from_proof_db(
+fn get_value_from_proof(
     key: Vec<u8>,
-    commitment: Hash,
-    evm_state_proof: EvmStateProof,
+    root: H256,
+    proof: Vec<Vec<u8>>,
 ) -> Result<Option<DBValue>, Error> {
-    // generate slot index for key
-    let maybe_key_bytes: Result<[u8; 32], _> = key.clone().try_into();
-
-    let key_bytes: [u8; 32] = match maybe_key_bytes {
-        Ok(array) => array,
-        Err(_) => {
-            return Err(Error::ImplementationSpecific(format!(
-                "key must have exactly 32 elements {:?}",
-                &key
-            )))
-        }
-    };
-
-    let slot_index_for_key = generate_slot_index(key_bytes, REQ_SLOT);
-
-    // ProofDB using key proof
-    let proof_db = StorageProof::new(evm_state_proof.actual_key_proof.clone())
-        .into_memory_db::<KeccakHasher>();
-    let root = H256::from_slice(&commitment[..]);
+    // ProofDB using  proof
+    let proof_db = StorageProof::new(proof).into_memory_db::<KeccakHasher>();
     let trie = TrieDBBuilder::<EIP1186Layout<KeccakHasher>>::new(&proof_db, &root).build();
 
-    let result = trie.get(&slot_index_for_key).map_err(|_| {
-        Error::ImplementationSpecific(format!(
-            "An error occurred when trying to derive DB Value from key {:?}",
-            key
-        ))
-    })?;
-
-    Ok(result)
+    trie.get(&key).map_err(|_| Error::ImplementationSpecific(format!("Error reading proof db")))
 }

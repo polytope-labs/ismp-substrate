@@ -18,9 +18,9 @@
 
 extern crate alloc;
 
+// mod beacon_consensus_client;
 mod errors;
 pub mod events;
-mod beacon_consensus_client;
 pub mod host;
 pub mod mmr;
 pub mod primitives;
