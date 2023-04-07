@@ -1680,7 +1680,7 @@ checksum = "256017f749ab3117e93acb91063009e1f1bb56d03965b14c2c8df4eb02c524d8"
 dependencies = [
  "hermit-abi 0.3.1",
  "io-lifetimes 1.0.10",
- "rustix 0.37.7",
+ "rustix 0.37.8",
  "windows-sys 0.45.0",
 ]
 
@@ -2043,7 +2043,7 @@ version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffc89ccdc6e10d6907450f753537ebc5c5d3460d2e4e62ea74bd571db62c0f9e"
 dependencies = [
- "rustix 0.37.7",
+ "rustix 0.37.8",
 ]
 
 [[package]]
@@ -2109,6 +2109,8 @@ version = "1.5.1"
 source = "git+https://github.com/sigp/milagro_bls#d3fc0a40cfe8b72ccda46ba050ee6786a59ce753"
 dependencies = [
  "amcl",
+ "hex",
+ "lazy_static",
  "rand 0.8.5",
  "zeroize",
 ]
@@ -2848,16 +2850,16 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.37.7"
+version = "0.37.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2aae838e49b3d63e9274e1c01833cc8139d3fec468c3b84688c628f44b1ae11d"
+checksum = "1aef160324be24d31a62147fae491c14d2204a3865c7ca8c3b0d7f7bcb3ea635"
 dependencies = [
  "bitflags",
  "errno 0.3.0",
  "io-lifetimes 1.0.10",
  "libc",
  "linux-raw-sys 0.3.1",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]

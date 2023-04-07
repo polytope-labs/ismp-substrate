@@ -44,6 +44,7 @@ std = [
     "sp-io/std",
     "sp-runtime/std",
     "sp-std/std",
+    "sp-core/std",
     "ismp-rs/std",
     "mmr-lib/std",
     "sp-api/std",
@@ -55,9 +56,10 @@ std = [
     "ethabi/std",
     "hash256-std-hasher/std",
     "hex/std",
-#    "sync-committee-primitives/std",
-#    "sync-committee-verifier/std"
+    "sync-committee-primitives/std",
+    "sync-committee-verifier/std"
 ]
+
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 
 

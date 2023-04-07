@@ -53,15 +53,16 @@ pub enum BeaconMessage {
     Misbehaviour(Misbehaviour),
 }
 
-// Slot index for requests map
+/// Slot index for requests map
 const REQ_SLOT: u8 = 1;
-// Slot index for responses map
+/// Slot index for responses map
 const RESP_SLOT: u8 = 2;
+
 const CONTRACT_ADDRESS: [u8; 20] = hex!("b856af30b938b6f52e5bff365675f358cd52f91b");
 #[derive(Encode, Decode, Clone)]
 pub struct EvmStateProof {
-    pub contract_account_proof: Vec<Vec<u8>>,
-    pub actual_key_proof: Vec<Vec<u8>>,
+    pub contract_proof: Vec<Vec<u8>>,
+    pub storage_proof: Vec<Vec<u8>>,
 }
 
 /// The ethereum account stored in the global state trie.
@@ -73,10 +74,15 @@ struct Account {
     _code_hash: H256,
 }
 
+/// Unbonding period for ethereum after which unstaked validators can withdraw their funds
 const UNBONDING_PERIOD_HOURS: u64 = 27;
+/// State machine id used for the ethereum execution layer.
 const EXECUTION_PAYLOAD_STATE_ID: u64 = 1;
 
-impl ConsensusClient for ConsensusState {
+#[derive(Default, Clone, Debug)]
+pub struct BeaconConsensusClient;
+
+impl ConsensusClient for BeaconConsensusClient {
     fn verify_consensus(
         &self,
         _host: &dyn ISMPHost,
@@ -163,21 +169,11 @@ impl ConsensusClient for ConsensusState {
         let key = req_res_to_key(host, item);
         let root = H256::from_slice(&root.state_root[..]);
         let contract_root =
-            get_contract_storage_root(evm_state_proof.contract_account_proof, root.clone())?;
-        let value = get_value_from_proof(key, contract_root, evm_state_proof.actual_key_proof)?
+            get_contract_storage_root(evm_state_proof.contract_proof, root.clone())?;
+        let _ = get_value_from_proof(key, contract_root, evm_state_proof.storage_proof)?
             .ok_or_else(|| {
                 Error::MembershipProofVerificationFailed(format!("There is no DB value"))
             })?;
-
-        let value = <bool as Decodable>::decode(&Rlp::new(&value)).map_err(|_| {
-            Error::MembershipProofVerificationFailed("Rlp decode error".to_string())
-        })?;
-
-        if !value {
-            return Err(Error::MembershipProofVerificationFailed(format!(
-                "invalid membership proof"
-            )))
-        }
 
         Ok(())
     }
@@ -203,10 +199,9 @@ impl ConsensusClient for ConsensusState {
 
         let key = req_res_to_key(host, item);
         let root = H256::from_slice(&root.state_root[..]);
-        let contract_root =
-            get_contract_storage_root(evm_state_proof.contract_account_proof, root)?;
+        let contract_root = get_contract_storage_root(evm_state_proof.contract_proof, root)?;
 
-        let result = get_value_from_proof(key, contract_root, evm_state_proof.actual_key_proof)?;
+        let result = get_value_from_proof(key, contract_root, evm_state_proof.storage_proof)?;
 
         if result.is_some() {
             return Err(Error::NonMembershipProofVerificationFailed(
