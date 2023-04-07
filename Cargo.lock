@@ -42,7 +42,7 @@ version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcb51a0695d8f838b1ee009b3fbf66bda078cd64590202a864a8f3e8c4315c47"
 dependencies = [
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
  "once_cell",
  "version_check",
 ]
@@ -684,12 +684,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "data-encoding"
-version = "2.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23d8666cb01533c39dde32bcbab8e227b4ed6679b2c925eba05feabea39508fb"
-
-[[package]]
 name = "der"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -859,29 +853,9 @@ dependencies = [
  "ff",
  "generic-array 0.14.7",
  "group",
- "pkcs8",
  "rand_core 0.6.4",
  "sec1",
  "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "enr"
-version = "0.6.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26fa0a0be8915790626d5759eb51fe47435a8eac92c2f212bd2da9aa7f30ea56"
-dependencies = [
- "base64",
- "bs58",
- "bytes",
- "hex",
- "k256",
- "log",
- "rand 0.8.5",
- "rlp",
- "serde",
- "sha3",
  "zeroize",
 ]
 
@@ -937,15 +911,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "error-chain"
-version = "0.12.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d2f06b9cac1506ece98fe3231e3cc9c4410ec3d5b1f24ae1c8946f0742cdefc"
-dependencies = [
- "version_check",
-]
-
-[[package]]
 name = "ethabi"
 version = "18.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -974,16 +939,12 @@ dependencies = [
 [[package]]
 name = "ethereum-consensus"
 version = "0.1.1"
-source = "git+https://github.com/polytope-labs/ethereum-consensus?rev=d3fe0ad76613b52cdfbdea7c317ecdc35f271e4f#d3fe0ad76613b52cdfbdea7c317ecdc35f271e4f"
+source = "git+https://github.com/polytope-labs/ethereum-consensus?branch=main#48335b5c8074d63553ee4681993e294eba947f88"
 dependencies = [
  "bs58",
- "enr",
- "error-chain",
- "getrandom 0.2.8",
  "hashbrown 0.13.2",
  "integer-sqrt",
  "milagro_bls",
- "multiaddr",
  "multihash",
  "rand 0.8.5",
  "sha2 0.9.9",
@@ -1332,15 +1293,13 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c05aeb6a22b8f62540c194aac980f2115af067bfe15a0734d7277a768d396b31"
+checksum = "c85e1d9ab2eadba7e5040d4e09cbd6d072b76a557ad64e797c2cb9d4da21d7e4"
 dependencies = [
  "cfg-if",
- "js-sys",
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -1674,14 +1633,14 @@ dependencies = [
 
 [[package]]
 name = "is-terminal"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "256017f749ab3117e93acb91063009e1f1bb56d03965b14c2c8df4eb02c524d8"
+checksum = "adcf93614601c8129ddf72e2d5633df827ba6551541c6d8c59520a371475be1f"
 dependencies = [
  "hermit-abi 0.3.1",
  "io-lifetimes 1.0.10",
  "rustix 0.37.8",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -2137,23 +2096,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "multiaddr"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c580bfdd8803cce319b047d239559a22f809094aaea4ac13902a1fdcfcd4261"
-dependencies = [
- "arrayref",
- "bs58",
- "byteorder",
- "data-encoding",
- "multihash",
- "percent-encoding",
- "serde",
- "static_assertions",
- "unsigned-varint",
-]
-
-[[package]]
 name = "multihash"
 version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2463,12 +2405,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "percent-encoding"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "478c572c3d73181ff3c2539045f6eb99e5491218eae919370993b890cdbdd98e"
-
-[[package]]
 name = "pin-project-lite"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2656,7 +2592,7 @@ version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
 ]
 
 [[package]]
@@ -2721,7 +2657,7 @@ version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b033d837a7cf162d7993aded9304e30a83213c648b6e389db233191f891e5c2b"
 dependencies = [
- "getrandom 0.2.8",
+ "getrandom 0.2.9",
  "redox_syscall",
  "thiserror",
 ]
@@ -3750,7 +3686,7 @@ dependencies = [
 [[package]]
 name = "ssz-rs"
 version = "0.8.0"
-source = "git+https://github.com/polytope-labs/ssz-rs?rev=2e28a8800787392045fb3f8f1eaef6c65a8600d7#2e28a8800787392045fb3f8f1eaef6c65a8600d7"
+source = "git+https://github.com/polytope-labs/ssz-rs?branch=main#96f9a89ccc56ab2abb4c3a83eaedb415034ada49"
 dependencies = [
  "as-any",
  "bitvec",
@@ -3758,13 +3694,12 @@ dependencies = [
  "num-bigint",
  "sha2 0.9.9",
  "ssz-rs-derive",
- "thiserror",
 ]
 
 [[package]]
 name = "ssz-rs-derive"
 version = "0.8.0"
-source = "git+https://github.com/polytope-labs/ssz-rs?rev=2e28a8800787392045fb3f8f1eaef6c65a8600d7#2e28a8800787392045fb3f8f1eaef6c65a8600d7"
+source = "git+https://github.com/polytope-labs/ssz-rs?branch=main#96f9a89ccc56ab2abb4c3a83eaedb415034ada49"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3852,7 +3787,7 @@ dependencies = [
 [[package]]
 name = "sync-committee-primitives"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/sync-committee-rs?branch=main#508367385f68761410f358dd87d7f636a4df1778"
+source = "git+https://github.com/polytope-labs/sync-committee-rs?branch=main#4e45ae9797198a617abfcbff098253cedc8a1f2e"
 dependencies = [
  "ethereum-consensus",
  "hex-literal",
@@ -3863,7 +3798,7 @@ dependencies = [
 [[package]]
 name = "sync-committee-verifier"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/sync-committee-rs?branch=main#508367385f68761410f358dd87d7f636a4df1778"
+source = "git+https://github.com/polytope-labs/sync-committee-rs?branch=main#4e45ae9797198a617abfcbff098253cedc8a1f2e"
 dependencies = [
  "ethereum-consensus",
  "log",

@@ -1,4 +1,5 @@
 use crate::primitives::ETHEREUM_CONSENSUS_CLIENT_ID;
+use alloc::{format, string::ToString};
 use codec::{Decode, Encode};
 use core::time::Duration;
 use ethabi::{
@@ -20,6 +21,7 @@ use ismp_rs::{
 use patricia_merkle_trie::{EIP1186Layout, StorageProof};
 use rlp::Rlp;
 use rlp_derive::RlpDecodable;
+use sp_std::prelude::*;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
 use trie_db::{DBValue, Trie, TrieDBBuilder};
 
@@ -66,7 +68,7 @@ pub struct EvmStateProof {
 }
 
 /// The ethereum account stored in the global state trie.
-#[derive(RlpDecodable, Debug)]
+#[derive(RlpDecodable)]
 struct Account {
     _nonce: u64,
     _balance: U256,
@@ -79,7 +81,7 @@ const UNBONDING_PERIOD_HOURS: u64 = 27;
 /// State machine id used for the ethereum execution layer.
 const EXECUTION_PAYLOAD_STATE_ID: u64 = 1;
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone)]
 pub struct BeaconConsensusClient;
 
 impl ConsensusClient for BeaconConsensusClient {
@@ -164,7 +166,6 @@ impl ConsensusClient for BeaconConsensusClient {
         root: StateCommitment,
         proof: &Proof,
     ) -> Result<(), Error> {
-        use rlp::Decodable;
         let evm_state_proof = decode_evm_state_proof(proof)?;
         let key = req_res_to_key(host, item);
         let root = H256::from_slice(&root.state_root[..]);
