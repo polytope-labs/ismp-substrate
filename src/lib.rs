@@ -34,7 +34,7 @@ use frame_support::{log::debug, RuntimeDebug};
 use ismp_rs::{
     host::ChainID,
     messaging::Message,
-    router::{Request, Response}
+    router::{Request, Response},
 };
 use sp_core::offchain::StorageKind;
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -59,7 +59,7 @@ pub mod pallet {
         consensus_client::{
             ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
         },
-        handlers::{handle_incoming_message, create_consensus_client, MessageResult},
+        handlers::{create_consensus_client, handle_incoming_message, MessageResult},
         host::ChainID,
         messaging::Message,
     };
@@ -211,7 +211,7 @@ pub mod pallet {
                 Ok((leaves, root)) => (leaves, root),
                 Err(e) => {
                     log::error!(target: "runtime::mmr", "MMR finalize failed: {:?}", e);
-                    return;
+                    return
                 }
             };
 
@@ -423,7 +423,7 @@ impl<T: Config> Pallet<T> {
                     _ => None,
                 },
                 _ => None,
-            };
+            }
         }
         None
     }
@@ -438,7 +438,7 @@ impl<T: Config> Pallet<T> {
                     _ => None,
                 },
                 _ => None,
-            };
+            }
         }
         None
     }
@@ -455,7 +455,7 @@ impl<T: Config> Pallet<T> {
             Self::response_leaf_index_offchain_key(source_chain, dest_chain, nonce)
         };
         if let Some(elem) = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &key) {
-            return LeafIndex::decode(&mut &*elem).ok();
+            return LeafIndex::decode(&mut &*elem).ok()
         }
         None
     }
