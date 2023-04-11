@@ -264,7 +264,7 @@ pub mod pallet {
                             res.consensus_client_id,
                             res.state_updates,
                         );
-                    }
+                    },
                     Ok(_) => {
                         // Do nothing, event has been deposited in ismp router
                     }
@@ -289,7 +289,7 @@ pub mod pallet {
             let sender = <T as Config>::AdminOrigin::ensure_origin(origin)?;
             let host = Host::<T>::default();
 
-            create_consensus_client(&host, message)
+            handle_incoming_message(&host, message)
         }
     }
 
