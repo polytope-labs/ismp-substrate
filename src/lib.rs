@@ -34,7 +34,6 @@ use codec::{Decode, Encode};
 use frame_support::{log::debug, RuntimeDebug};
 use ismp_rs::{
     host::ChainID,
-    messaging::Message,
     router::{Request, Response},
 };
 use sp_core::offchain::StorageKind;
@@ -60,7 +59,7 @@ pub mod pallet {
         consensus_client::{
             ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
         },
-        handlers::{create_consensus_client, handle_incoming_message, MessageResult},
+        handlers::{handle_incoming_message, MessageResult},
         host::ChainID,
         messaging::Message,
     };
@@ -234,43 +233,61 @@ pub mod pallet {
         #[pallet::weight(0)]
         #[pallet::call_index(0)]
         pub fn handle(origin: OriginFor<T>, messages: Vec<Message>) -> DispatchResult {
-            let _ = ensure_signed(origin)?;
+            let _ = ensure_signed(origin.clone())?;
             // Define a host
             let host = Host::<T>::default();
             let mut errors: Vec<HandlingError> = vec![];
+
             for message in messages {
-                match handle_incoming_message(&host, message) {
-                    Ok(MessageResult::ConsensusMessage(res)) => {
-                        // Deposit events for previous update result that has passed the challenge
-                        // period
-                        if let Some(pending_updates) =
-                            ConsensusUpdateResults::<T>::get(res.consensus_client_id)
-                        {
-                            for (prev_height, latest_height) in pending_updates.into_iter() {
-                                Self::deposit_event(Event::<T>::StateMachineUpdated {
-                                    state_machine_id: latest_height.id,
-                                    latest_height: latest_height.height,
-                                    previous_height: prev_height.height,
-                                })
+                match message {
+                    Message::CreateConsensusClient(_) => {
+                        ensure_root(origin.clone())?;
+                        match handle_incoming_message(&host, message) {
+                            Ok(MessageResult::ConsensusClientCreated(_)) => {}
+                            Ok(_) => {}
+                            Err(error) => {
+                                errors.push(error.into());
                             }
                         }
-
-                        Self::deposit_event(Event::<T>::ChallengePeriodStarted {
-                            consensus_client_id: res.consensus_client_id,
-                            state_machines: res.state_updates.clone(),
-                        });
-
-                        // Store the new update result that have just entered the challenge period
-                        ConsensusUpdateResults::<T>::insert(
-                            res.consensus_client_id,
-                            res.state_updates,
-                        );
-                    },
-                    Ok(_) => {
-                        // Do nothing, event has been deposited in ismp router
                     }
-                    Err(err) => {
-                        errors.push(err.into());
+
+                    _ => {
+                        match handle_incoming_message(&host, message) {
+                            Ok(MessageResult::ConsensusMessage(res)) => {
+                                // Deposit events for previous update result that has passed the
+                                // challenge period
+                                if let Some(pending_updates) =
+                                    ConsensusUpdateResults::<T>::get(res.consensus_client_id)
+                                {
+                                    for (prev_height, latest_height) in pending_updates.into_iter()
+                                    {
+                                        Self::deposit_event(Event::<T>::StateMachineUpdated {
+                                            state_machine_id: latest_height.id,
+                                            latest_height: latest_height.height,
+                                            previous_height: prev_height.height,
+                                        })
+                                    }
+                                }
+
+                                Self::deposit_event(Event::<T>::ChallengePeriodStarted {
+                                    consensus_client_id: res.consensus_client_id,
+                                    state_machines: res.state_updates.clone(),
+                                });
+
+                                // Store the new update result that have just entered the challenge
+                                // period
+                                ConsensusUpdateResults::<T>::insert(
+                                    res.consensus_client_id,
+                                    res.state_updates,
+                                );
+                            }
+                            Ok(_) => {
+                                // Do nothing, event has been deposited in ismp router
+                            }
+                            Err(err) => {
+                                errors.push(err.into());
+                            }
+                        }
                     }
                 }
             }
@@ -281,16 +298,6 @@ pub mod pallet {
             }
 
             Ok(())
-        }
-
-        /// Creates consensus clients
-        #[pallet::weight(0)]
-        #[pallet::call_index(1)]
-        pub fn create_consensus_client(origin: OriginFor<T>, message: Message) -> DispatchResult {
-            let sender = <T as Config>::AdminOrigin::ensure_origin(origin)?;
-            let host = Host::<T>::default();
-
-            handle_incoming_message(&host, message)
         }
     }
 
