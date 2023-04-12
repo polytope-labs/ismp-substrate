@@ -1,7 +1,7 @@
 use crate::consensus_clients::beacon_consensus_client::types::{
     Account, EvmStateProof, KeccakHasher, REQ_SLOT, RESP_SLOT,
 };
-use alloc::format;
+use alloc::{format, string::ToString};
 use codec::Decode;
 use ethabi::{
     ethereum_types::{H160, H256, U256},
@@ -16,6 +16,7 @@ use ismp_rs::{
 };
 use patricia_merkle_trie::{EIP1186Layout, StorageProof};
 use rlp::Rlp;
+use sp_std::prelude::*;
 use trie_db::{DBValue, Trie, TrieDBBuilder};
 
 pub fn construct_intermediate_state(

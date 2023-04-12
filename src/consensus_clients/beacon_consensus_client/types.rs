@@ -3,8 +3,8 @@ use codec::{Decode, Encode};
 use ethabi::ethereum_types::{H256, U256};
 use hash256_std_hasher::Hash256StdHasher;
 use hash_db::Hasher;
-use hex_literal::hex;
 use rlp_derive::RlpDecodable;
+use sp_std::prelude::*;
 use sync_committee_primitives::derived_types::{LightClientState, LightClientUpdate};
 
 pub struct KeccakHasher;
@@ -62,7 +62,3 @@ pub(super) struct Account {
     pub storage_root: H256,
     _code_hash: H256,
 }
-
-pub const ISMP_CONTRACT_ADDRESS: [u8; 20] = hex!("b856af30b938b6f52e5bff365675f358cd52f91b");
-/// Unbonding period for ethereum after which unstaked validators can withdraw their funds
-pub const UNBONDING_PERIOD_HOURS: u64 = 27;

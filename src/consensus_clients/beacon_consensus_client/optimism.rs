@@ -1,5 +1,6 @@
 use crate::consensus_clients::{
     beacon_consensus_client::{
+        presets::L2_ORACLE_ADDRESS,
         state_machine_ids::OPTIMISM_ID,
         utils::{
             derive_array_item_key, get_contract_storage_root, get_value_from_proof, to_bytes_32,
@@ -7,12 +8,13 @@ use crate::consensus_clients::{
     },
     consensus_client_ids::ETHEREUM_CONSENSUS_CLIENT_ID,
 };
+use alloc::string::ToString;
 use ethabi::ethereum_types::{H256, U128};
-use hex_literal::hex;
 use ismp_rs::{
     consensus_client::{IntermediateState, StateCommitment, StateMachineHeight, StateMachineId},
     error::Error,
 };
+use sp_std::prelude::*;
 
 #[derive(codec::Encode, codec::Decode)]
 pub struct OptimismPayloadProof {
@@ -38,7 +40,6 @@ pub struct OptimismPayloadProof {
     pub timestamp: u64,
 }
 
-pub(super) const L2_ORACLE_ADDRESS: [u8; 20] = hex!("47bBB9054823f27B9B6A71F5cb0eBc785692FF2E");
 /// Slot for the l2Outputs array in the L2Oracle contract
 pub(super) const L2_OUTPUTS_SLOT: u8 = 3;
 

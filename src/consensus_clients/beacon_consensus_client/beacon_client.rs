@@ -5,11 +5,9 @@ use ethabi::ethereum_types::H256;
 
 use crate::consensus_clients::{
     beacon_consensus_client::{
+        presets::UNBONDING_PERIOD_HOURS,
         state_machine_ids::EXECUTION_LAYER_ID,
-        types::{
-            BeaconClientUpdate, BeaconMessage, ConsensusState, ISMP_CONTRACT_ADDRESS,
-            UNBONDING_PERIOD_HOURS,
-        },
+        types::{BeaconClientUpdate, BeaconMessage, ConsensusState},
         utils::{
             construct_intermediate_state, decode_evm_state_proof, get_contract_storage_root,
             get_value_from_proof, req_res_to_key,
@@ -25,7 +23,9 @@ use ismp_rs::{
     router::RequestResponse,
 };
 
-use crate::consensus_clients::beacon_consensus_client::optimism::verify_optimism_payload;
+use crate::consensus_clients::beacon_consensus_client::{
+    optimism::verify_optimism_payload, presets::ismp_contract_address,
+};
 use sp_std::prelude::*;
 
 #[derive(Default, Clone)]
@@ -122,11 +122,14 @@ impl ConsensusClient for BeaconConsensusClient {
         proof: &Proof,
     ) -> Result<(), Error> {
         let evm_state_proof = decode_evm_state_proof(proof)?;
+        let contract_address = ismp_contract_address(&item).ok_or_else(|| {
+            Error::ImplementationSpecific("Ismp contract address not found".to_string())
+        })?;
         let key = req_res_to_key(host, item);
         let root = H256::from_slice(&root.state_root[..]);
         let contract_root = get_contract_storage_root(
             evm_state_proof.contract_proof,
-            &ISMP_CONTRACT_ADDRESS,
+            &contract_address,
             root.clone(),
         )?;
         let _ = get_value_from_proof(key, contract_root, evm_state_proof.storage_proof)?
@@ -155,14 +158,13 @@ impl ConsensusClient for BeaconConsensusClient {
         proof: &Proof,
     ) -> Result<(), Error> {
         let evm_state_proof = decode_evm_state_proof(proof)?;
-
+        let contract_address = ismp_contract_address(&item).ok_or_else(|| {
+            Error::ImplementationSpecific("Ismp contract address not found".to_string())
+        })?;
         let key = req_res_to_key(host, item);
         let root = H256::from_slice(&root.state_root[..]);
-        let contract_root = get_contract_storage_root(
-            evm_state_proof.contract_proof,
-            &ISMP_CONTRACT_ADDRESS,
-            root,
-        )?;
+        let contract_root =
+            get_contract_storage_root(evm_state_proof.contract_proof, &contract_address, root)?;
 
         let result = get_value_from_proof(key, contract_root, evm_state_proof.storage_proof)?;
 
