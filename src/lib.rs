@@ -244,6 +244,7 @@ pub mod pallet {
                     Message::CreateConsensusClient(_) => {
                         // Skip creating consensus client messages in the handle extrinsic
                         // Consensus clients are created using `create_consensus_client`
+                        ensure!(false, Error::<T>::InvalidMessage);
                     }
 
                     _ => {
@@ -321,6 +322,7 @@ pub mod pallet {
 
                 _ => {
                     // Do not handle none "CreateConsensusClient" message variants in this function
+                    ensure!(false, Error::<T>::InvalidMessage);
                 }
             }
 
