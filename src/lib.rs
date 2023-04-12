@@ -45,6 +45,7 @@ use sp_std::prelude::*;
 // `construct_runtime`.
 #[frame_support::pallet]
 pub mod pallet {
+
     // Import various types used to declare pallet in scope.
     use super::*;
     use crate::{
@@ -233,7 +234,7 @@ pub mod pallet {
         #[pallet::weight(0)]
         #[pallet::call_index(0)]
         pub fn handle(origin: OriginFor<T>, messages: Vec<Message>) -> DispatchResult {
-            let _ = ensure_signed(origin.clone())?;
+            let _ = ensure_signed(origin)?;
             // Define a host
             let host = Host::<T>::default();
             let mut errors: Vec<HandlingError> = vec![];
@@ -241,14 +242,8 @@ pub mod pallet {
             for message in messages {
                 match message {
                     Message::CreateConsensusClient(_) => {
-                        ensure_root(origin.clone())?;
-                        match handle_incoming_message(&host, message) {
-                            Ok(MessageResult::ConsensusClientCreated(_)) => {}
-                            Ok(_) => {}
-                            Err(error) => {
-                                errors.push(error.into());
-                            }
-                        }
+                        // Skip creating consensus client messages in the handle extrinsic
+                        // Consensus clients are created using `create_consensus_client`
                     }
 
                     _ => {
@@ -299,6 +294,43 @@ pub mod pallet {
 
             Ok(())
         }
+
+        /// Create consensus clients
+        #[pallet::weight(0)]
+        #[pallet::call_index(1)]
+        pub fn create_consensus_client(origin: OriginFor<T>, message: Message) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let host = Host::<T>::default();
+            let mut errors: Vec<HandlingError> = vec![];
+
+            match message {
+                Message::CreateConsensusClient(_) => {
+                    match handle_incoming_message(&host, message) {
+                        Ok(MessageResult::ConsensusClientCreated(res)) => {
+                            Self::deposit_event(Event::<T>::ConsensusClientCreated {
+                                consensus_client_id: res.consensus_client_id,
+                            });
+                        }
+                        Ok(_) => {}
+                        Err(error) => {
+                            errors.push(error.into());
+                        }
+                    }
+                }
+
+                _ => {
+                    // Do not handle none "CreateConsensusClient" message variants in this function
+                }
+            }
+
+            if !errors.is_empty() {
+                debug!(target: "ismp-rust", "Handling Errors {:?}", errors);
+                Self::deposit_event(Event::<T>::HandlingErrors { errors })
+            }
+
+            Ok(())
+        }
     }
 
     /// Events are a simple means of reporting specific conditions and
@@ -319,6 +351,10 @@ pub mod pallet {
         ChallengePeriodStarted {
             consensus_client_id: ConsensusClientId,
             state_machines: BTreeSet<(StateMachineHeight, StateMachineHeight)>,
+        },
+        /// Indicates that a consensus client has been created
+        ConsensusClientCreated {
+            consensus_client_id: ConsensusClientId,
         },
         /// Response was process successfully
         Response {
