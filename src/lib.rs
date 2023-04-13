@@ -65,6 +65,7 @@ pub mod pallet {
         messaging::Message,
     };
     use sp_runtime::traits;
+    use crate::router::Receipt;
 
     /// Our pallet's configuration trait. All our types and constants go in here. If the
     /// pallet is dependent on specific other pallets, then their configuration traits
@@ -173,14 +174,14 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn request_acks)]
     /// Acknowledgements for receipt of requests
-    /// No hashing, just insert raw key in storage
-    pub type RequestAcks<T: Config> = StorageMap<_, Identity, Vec<u8>, Vec<u8>, OptionQuery>;
+    /// The key is the request commitment
+    pub type RequestAcks<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Receipt, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn response_acks)]
     /// Acknowledgements for receipt of responses
-    /// No hashing, just insert raw key in storage
-    pub type ResponseAcks<T: Config> = StorageMap<_, Identity, Vec<u8>, Vec<u8>, OptionQuery>;
+    /// The key is the response commitment
+    pub type ResponseAcks<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, Receipt, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn consensus_update_results)]
