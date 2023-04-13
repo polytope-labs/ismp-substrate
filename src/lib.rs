@@ -240,50 +240,43 @@ pub mod pallet {
             let mut errors: Vec<HandlingError> = vec![];
 
             for message in messages {
-                match message {
-                    Message::CreateConsensusClient(_) => {
-                        // Skip creating consensus client messages in the handle extrinsic
-                        // Consensus clients are created using `create_consensus_client`
-                        ensure!(false, Error::<T>::InvalidMessage);
-                    }
+                if matches!(message, Message::CreateConsensusClient(_)) {
+                    Err(Error::<T>::InvalidMessage)?
+                }
 
-                    _ => {
-                        match handle_incoming_message(&host, message) {
-                            Ok(MessageResult::ConsensusMessage(res)) => {
-                                // Deposit events for previous update result that has passed the
-                                // challenge period
-                                if let Some(pending_updates) =
-                                    ConsensusUpdateResults::<T>::get(res.consensus_client_id)
-                                {
-                                    for (prev_height, latest_height) in pending_updates.into_iter()
-                                    {
-                                        Self::deposit_event(Event::<T>::StateMachineUpdated {
-                                            state_machine_id: latest_height.id,
-                                            latest_height: latest_height.height,
-                                            previous_height: prev_height.height,
-                                        })
-                                    }
-                                }
-
-                                Self::deposit_event(Event::<T>::ChallengePeriodStarted {
-                                    consensus_client_id: res.consensus_client_id,
-                                    state_machines: res.state_updates.clone(),
-                                });
-
-                                // Store the new update result that have just entered the challenge
-                                // period
-                                ConsensusUpdateResults::<T>::insert(
-                                    res.consensus_client_id,
-                                    res.state_updates,
-                                );
-                            }
-                            Ok(_) => {
-                                // Do nothing, event has been deposited in ismp router
-                            }
-                            Err(err) => {
-                                errors.push(err.into());
+                match handle_incoming_message(&host, message) {
+                    Ok(MessageResult::ConsensusMessage(res)) => {
+                        // Deposit events for previous update result that has passed the
+                        // challenge period
+                        if let Some(pending_updates) =
+                            ConsensusUpdateResults::<T>::get(res.consensus_client_id)
+                        {
+                            for (prev_height, latest_height) in pending_updates.into_iter() {
+                                Self::deposit_event(Event::<T>::StateMachineUpdated {
+                                    state_machine_id: latest_height.id,
+                                    latest_height: latest_height.height,
+                                    previous_height: prev_height.height,
+                                })
                             }
                         }
+
+                        Self::deposit_event(Event::<T>::ChallengePeriodStarted {
+                            consensus_client_id: res.consensus_client_id,
+                            state_machines: res.state_updates.clone(),
+                        });
+
+                        // Store the new update result that have just entered the challenge
+                        // period
+                        ConsensusUpdateResults::<T>::insert(
+                            res.consensus_client_id,
+                            res.state_updates,
+                        );
+                    }
+                    Ok(_) => {
+                        // Do nothing, event has been deposited in ismp router
+                    }
+                    Err(err) => {
+                        errors.push(err.into());
                     }
                 }
             }
@@ -305,24 +298,19 @@ pub mod pallet {
             let host = Host::<T>::default();
             let mut errors: Vec<HandlingError> = vec![];
 
-            match message {
-                Message::CreateConsensusClient(_) => {
-                    match handle_incoming_message(&host, message) {
-                        Ok(MessageResult::ConsensusClientCreated(res)) => {
-                            Self::deposit_event(Event::<T>::ConsensusClientCreated {
-                                consensus_client_id: res.consensus_client_id,
-                            });
-                        }
-                        Ok(_) => {}
-                        Err(error) => {
-                            errors.push(error.into());
-                        }
-                    }
-                }
+            if !matches!(message, Message::CreateConsensusClient(_)) {
+                Err(Error::<T>::InvalidMessage)?
+            }
 
-                _ => {
-                    // Do not handle none "CreateConsensusClient" message variants in this function
-                    ensure!(false, Error::<T>::InvalidMessage);
+            match handle_incoming_message(&host, message) {
+                Ok(MessageResult::ConsensusClientCreated(res)) => {
+                    Self::deposit_event(Event::<T>::ConsensusClientCreated {
+                        consensus_client_id: res.consensus_client_id,
+                    });
+                }
+                Ok(_) => {}
+                Err(error) => {
+                    errors.push(error.into());
                 }
             }
 
