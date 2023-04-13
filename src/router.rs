@@ -4,17 +4,17 @@ use crate::{
     Config, Event, Pallet, RequestAcks, ResponseAcks,
 };
 use alloc::{format, string::ToString};
-use core::marker::PhantomData;
 use codec::{Decode, Encode};
+use core::marker::PhantomData;
 use ismp_rs::{
     error::Error,
-    host::{ISMPHost},
+    host::ISMPHost,
     router::{ISMPRouter, Request, Response},
 };
 
 #[derive(Encode, Decode, scale_info::TypeInfo)]
 pub enum Receipt {
-    Ok
+    Ok,
 }
 
 #[derive(Clone)]
