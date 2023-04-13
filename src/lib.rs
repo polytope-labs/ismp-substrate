@@ -53,7 +53,7 @@ pub mod pallet {
         mmr::{LeafIndex, Mmr, NodeIndex},
         primitives::ISMP_ID,
     };
-    use alloc::collections::BTreeSet;
+    use alloc::{collections::BTreeSet, string::ToString};
     use frame_support::{pallet_prelude::*, traits::UnixTime};
     use frame_system::pallet_prelude::*;
     use ismp_rs::{
@@ -85,6 +85,7 @@ pub mod pallet {
         /// Each node is stored in the Off-chain DB under key derived from the
         /// [`Self::INDEXING_PREFIX`] and its in-tree index (MMR position).
         const INDEXING_PREFIX: &'static [u8];
+        type AdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// A hasher type for MMR.
         ///
@@ -241,7 +242,10 @@ pub mod pallet {
 
             for message in messages {
                 if matches!(message, Message::CreateConsensusClient(_)) {
-                    Err(Error::<T>::InvalidMessage)?
+                    errors.push(HandlingError::ImplementationSpecific {
+                        msg: "Invalid message for extrinsic".to_string().as_bytes().to_vec(),
+                    });
+                    continue
                 }
 
                 match handle_incoming_message(&host, message) {
@@ -293,31 +297,25 @@ pub mod pallet {
         #[pallet::weight(0)]
         #[pallet::call_index(1)]
         pub fn create_consensus_client(origin: OriginFor<T>, message: Message) -> DispatchResult {
-            ensure_root(origin)?;
+            <T as Config>::AdminOrigin::ensure_origin(origin)?;
 
             let host = Host::<T>::default();
-            let mut errors: Vec<HandlingError> = vec![];
 
             if !matches!(message, Message::CreateConsensusClient(_)) {
                 Err(Error::<T>::InvalidMessage)?
             }
 
-            match handle_incoming_message(&host, message) {
-                Ok(MessageResult::ConsensusClientCreated(res)) => {
-                    Self::deposit_event(Event::<T>::ConsensusClientCreated {
-                        consensus_client_id: res.consensus_client_id,
-                    });
-                }
-                Ok(_) => {}
-                Err(error) => {
-                    errors.push(error.into());
-                }
-            }
+            let result = handle_incoming_message(&host, message)
+                .map_err(|_| Error::<T>::ConsensusClientCreationFailed)?;
 
-            if !errors.is_empty() {
-                debug!(target: "ismp-rust", "Handling Errors {:?}", errors);
-                Self::deposit_event(Event::<T>::HandlingErrors { errors })
-            }
+            let result = match result {
+                MessageResult::ConsensusClientCreated(res) => res,
+                _ => Err(Error::<T>::InvalidMessage)?,
+            };
+
+            Self::deposit_event(Event::<T>::ConsensusClientCreated {
+                consensus_client_id: result.consensus_client_id,
+            });
 
             Ok(())
         }
@@ -343,9 +341,7 @@ pub mod pallet {
             state_machines: BTreeSet<(StateMachineHeight, StateMachineHeight)>,
         },
         /// Indicates that a consensus client has been created
-        ConsensusClientCreated {
-            consensus_client_id: ConsensusClientId,
-        },
+        ConsensusClientCreated { consensus_client_id: ConsensusClientId },
         /// Response was process successfully
         Response {
             /// Chain that this response will be routed to
@@ -364,14 +360,14 @@ pub mod pallet {
             /// Request nonce
             request_nonce: u64,
         },
-        HandlingErrors {
-            errors: Vec<HandlingError>,
-        },
+        /// Some errors handling some ismp messages
+        HandlingErrors { errors: Vec<HandlingError> },
     }
 
     #[pallet::error]
     pub enum Error<T> {
         InvalidMessage,
+        ConsensusClientCreationFailed,
     }
 }
 
