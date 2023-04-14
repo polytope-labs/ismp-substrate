@@ -65,6 +65,10 @@ impl<T: Config> ISMPRouter for Router<T> {
         Ok(())
     }
 
+    fn dispatch_timeout(&self, _request: Request) -> Result<(), Error> {
+        todo!()
+    }
+
     fn write_response(&self, response: Response) -> Result<(), Error> {
         let host = Host::<T>::default();
 
