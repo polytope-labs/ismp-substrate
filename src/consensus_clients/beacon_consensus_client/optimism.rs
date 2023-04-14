@@ -109,7 +109,7 @@ pub(super) fn verify_optimism_payload(
         },
         commitment: StateCommitment {
             timestamp: payload.timestamp,
-            ismp_root: Some([0u8; 32]),
+            ismp_root: None,
             state_root: payload.state_root,
         },
     })

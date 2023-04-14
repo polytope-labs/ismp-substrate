@@ -32,7 +32,7 @@ pub fn construct_intermediate_state(
 
     let state_commitment = StateCommitment {
         timestamp,
-        ismp_root: Some([0u8; 32]),
+        ismp_root: None,
         state_root: to_bytes_32(&state_root[..])?.into(),
     };
 

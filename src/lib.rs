@@ -434,13 +434,6 @@ impl<T: Config> Pallet<T> {
         (T::INDEXING_PREFIX, "Requests/leaf_indices", source_chain, dest_chain, nonce).encode()
     }
 
-    pub fn request_timeout_leaf_index_offchain_key(
-        source_chain: ChainID,
-        dest_chain: ChainID,
-        nonce: u64,
-    ) -> Vec<u8> {
-        (T::INDEXING_PREFIX, "Timeouts/leaf_indices", source_chain, dest_chain, nonce).encode()
-    }
     pub fn response_leaf_index_offchain_key(
         source_chain: ChainID,
         dest_chain: ChainID,
