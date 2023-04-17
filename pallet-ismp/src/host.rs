@@ -118,9 +118,7 @@ impl<T: Config> ISMPHost for Host<T> {
 
     fn consensus_client(&self, id: ConsensusClientId) -> Result<Box<dyn ConsensusClient>, Error> {
         match id {
-            id if id == ETHEREUM_CONSENSUS_CLIENT_ID => {
-                Ok(Box::new(BeaconConsensusClient::default()))
-            }
+            ETHEREUM_CONSENSUS_CLIENT_ID => Ok(Box::new(BeaconConsensusClient::default())),
             _ => Err(Error::ImplementationSpecific(format!(
                 "No consensus client found for consensus id {}",
                 id
