@@ -6,6 +6,7 @@ use crate::consensus_clients::{
     },
     consensus_client_ids::ETHEREUM_CONSENSUS_CLIENT_ID,
 };
+use alloc::string::ToString;
 use ethabi::{
     ethereum_types::{H160, H256, H64, U256},
     Token,
@@ -15,7 +16,7 @@ use ismp_rs::{
     error::Error,
 };
 use rlp_derive::RlpEncodable;
-use alloc::string::ToString;
+use sp_std::prelude::*;
 
 /// https://github.com/OffchainLabs/go-ethereum/blob/8c5b9339ca9043d2b8fb5e35814a64e7e9ff7c9b/core/types/block.go#L70
 #[derive(RlpEncodable, codec::Encode, codec::Decode)]
