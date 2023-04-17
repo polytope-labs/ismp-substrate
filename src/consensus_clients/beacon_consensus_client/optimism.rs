@@ -2,14 +2,15 @@ use crate::consensus_clients::{
     beacon_consensus_client::{
         presets::L2_ORACLE_ADDRESS,
         state_machine_ids::OPTIMISM_ID,
-        utils::{
-            derive_array_item_key, get_contract_storage_root, get_value_from_proof, to_bytes_32,
-        },
+        utils::{get_contract_storage_root, get_value_from_proof, to_bytes_32},
     },
     consensus_client_ids::ETHEREUM_CONSENSUS_CLIENT_ID,
 };
 use alloc::string::ToString;
-use ethabi::ethereum_types::{H256, U128};
+use ethabi::{
+    ethereum_types::{H256, U128, U256},
+    Token,
+};
 use ismp_rs::{
     consensus_client::{IntermediateState, StateCommitment, StateMachineHeight, StateMachineId},
     error::Error,
@@ -42,6 +43,12 @@ pub struct OptimismPayloadProof {
 
 /// Storage layout slot for the l2Outputs array in the L2Oracle contract
 pub(super) const L2_OUTPUTS_SLOT: u8 = 3;
+
+fn derive_array_item_key(slot: u8, index: u64) -> Vec<u8> {
+    let slot_hash = sp_io::hashing::keccak_256(&ethabi::encode(&[Token::Uint(U256::from(slot))]));
+    let slot_index = U256::from_big_endian(&slot_hash[..]) + U256::from(index);
+    <[u8; 32]>::from(slot_index).to_vec()
+}
 
 pub(super) fn verify_optimism_payload(
     payload: OptimismPayloadProof,

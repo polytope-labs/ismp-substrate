@@ -112,12 +112,6 @@ pub(super) fn derive_unhashed_map_key(key: Vec<u8>, slot: u8) -> Vec<u8> {
     ethabi::encode(&[Token::FixedBytes(key), Token::Int(U256::from(slot))])
 }
 
-pub(super) fn derive_array_item_key(slot: u8, index: u64) -> Vec<u8> {
-    let slot_hash = sp_io::hashing::keccak_256(&ethabi::encode(&[Token::Uint(U256::from(slot))]));
-    let slot_index = U256::from_big_endian(&slot_hash[..]) + U256::from(index);
-    <[u8; 32]>::from(slot_index).to_vec()
-}
-
 pub(super) fn get_value_from_proof(
     key: Vec<u8>,
     root: H256,
