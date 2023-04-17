@@ -40,7 +40,7 @@ pub struct OptimismPayloadProof {
     pub timestamp: u64,
 }
 
-/// Slot for the l2Outputs array in the L2Oracle contract
+/// Storage layout slot for the l2Outputs array in the L2Oracle contract
 pub(super) const L2_OUTPUTS_SLOT: u8 = 3;
 
 pub(super) fn verify_optimism_payload(

@@ -1,3 +1,4 @@
+pub mod arbitrum;
 pub mod beacon_client;
 pub mod optimism;
 mod presets;

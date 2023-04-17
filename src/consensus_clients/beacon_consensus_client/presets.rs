@@ -9,6 +9,7 @@ mod mainnet {
     use hex_literal::hex;
 
     pub const L2_ORACLE_ADDRESS: [u8; 20] = hex!("47bBB9054823f27B9B6A71F5cb0eBc785692FF2E");
+    pub const ARB_ROLLUP_CONTRACT: [u8; 20] = hex!("47bBB9054823f27B9B6A71F5cb0eBc785692FF2E");
     /// Contract address on optimism
     pub const ISMP_CONTRACT_ADDRESS_OPTIMISM: [u8; 20] =
         hex!("b856af30b938b6f52e5bff365675f358cd52f91b");
@@ -37,6 +38,7 @@ mod testnet {
     use hex_literal::hex;
 
     pub const L2_ORACLE_ADDRESS: [u8; 20] = hex!("47bBB9054823f27B9B6A71F5cb0eBc785692FF2E");
+    pub const ARB_ROLLUP_CONTRACT: [u8; 20] = hex!("47bBB9054823f27B9B6A71F5cb0eBc785692FF2E");
     /// Contract address on optimism
     pub const ISMP_CONTRACT_ADDRESS_OPTIMISM: [u8; 20] =
         hex!("b856af30b938b6f52e5bff365675f358cd52f91b");

@@ -24,7 +24,8 @@ use ismp_rs::{
 };
 
 use crate::consensus_clients::beacon_consensus_client::{
-    optimism::verify_optimism_payload, presets::ismp_contract_address,
+    arbitrum::verify_arbitrum_payload, optimism::verify_optimism_payload,
+    presets::ismp_contract_address,
 };
 use sp_std::prelude::*;
 
@@ -45,6 +46,7 @@ impl ConsensusClient for BeaconConsensusClient {
         match beacon_message {
             BeaconMessage::ConsensusUpdate(BeaconClientUpdate {
                 optimism_payload,
+                arbitrum_payload,
                 consensus_update,
             }) => {
                 let consensus_state = ConsensusState::decode(&mut &trusted_consensus_state[..])
@@ -92,6 +94,11 @@ impl ConsensusClient for BeaconConsensusClient {
 
                 if let Some(optimism_payload) = optimism_payload {
                     let state = verify_optimism_payload(optimism_payload, &state_root)?;
+                    intermediate_states.push(state)
+                }
+
+                if let Some(arbitrum_payload) = arbitrum_payload {
+                    let state = verify_arbitrum_payload(arbitrum_payload, &state_root)?;
                     intermediate_states.push(state)
                 }
 

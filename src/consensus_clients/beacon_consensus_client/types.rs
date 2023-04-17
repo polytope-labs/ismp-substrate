@@ -1,4 +1,6 @@
-use crate::consensus_clients::beacon_consensus_client::optimism::OptimismPayloadProof;
+use crate::consensus_clients::beacon_consensus_client::{
+    arbitrum::ArbitrumPayloadProof, optimism::OptimismPayloadProof,
+};
 use codec::{Decode, Encode};
 use ethabi::ethereum_types::{H256, U256};
 use hash256_std_hasher::Hash256StdHasher;
@@ -35,6 +37,7 @@ pub struct Misbehaviour {
 pub struct BeaconClientUpdate {
     pub consensus_update: LightClientUpdate,
     pub optimism_payload: Option<OptimismPayloadProof>,
+    pub arbitrum_payload: Option<ArbitrumPayloadProof>,
 }
 
 #[derive(Encode, Decode)]

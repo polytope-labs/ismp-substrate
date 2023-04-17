@@ -29,7 +29,7 @@ rlp = { version = "0.5.1", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 hex-literal = "0.3.4"
 rlp-derive = "0.1.0"
-ethabi = { version = "18.0.0", features = ["rlp"], default-features = false }
+ethabi = { version = "18.0.0", features = ["rlp", "parity-codec"], default-features = false }
 hash256-std-hasher = { version = "0.15.2", default-features = false }
 
 [features]
