@@ -15,6 +15,7 @@ use ismp_rs::{
     error::Error,
 };
 use rlp_derive::RlpEncodable;
+use alloc::string::ToString;
 
 /// https://github.com/OffchainLabs/go-ethereum/blob/8c5b9339ca9043d2b8fb5e35814a64e7e9ff7c9b/core/types/block.go#L70
 #[derive(RlpEncodable, codec::Encode, codec::Decode)]
