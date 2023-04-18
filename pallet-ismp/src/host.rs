@@ -1,6 +1,6 @@
 use crate::{
-    primitives::ConsensusClientProvider, router::Router, Config, ConsensusClientUpdateTime,
-    ConsensusStates, FrozenHeights, LatestStateMachineHeight, RequestAcks, StateCommitments,
+    primitives::ConsensusClientProvider, Config, ConsensusClientUpdateTime, ConsensusStates,
+    FrozenHeights, LatestStateMachineHeight, RequestAcks, StateCommitments,
 };
 use alloc::{format, string::ToString};
 use core::time::Duration;
@@ -125,7 +125,7 @@ where
     }
 
     fn ismp_router(&self) -> Box<dyn ISMPRouter> {
-        Box::new(Router::<T>::default())
+        Box::new(T::IsmpRouter::default())
     }
 
     fn store_latest_commitment_height(&self, height: StateMachineHeight) -> Result<(), Error> {

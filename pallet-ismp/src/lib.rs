@@ -49,7 +49,7 @@ pub mod pallet {
     use crate::{
         errors::HandlingError,
         primitives::{ConsensusClientProvider, ISMP_ID},
-        router::{CustomRouter, Receipt},
+        router::Receipt,
     };
     use alloc::{collections::BTreeSet, string::ToString};
     use frame_support::{pallet_prelude::*, traits::UnixTime};
@@ -62,6 +62,7 @@ pub mod pallet {
         handlers::{handle_incoming_message, MessageResult},
         host::ChainID,
         messaging::Message,
+        router::ISMPRouter,
     };
     use sp_core::H256;
 
@@ -90,7 +91,7 @@ pub mod pallet {
         type TimeProvider: UnixTime;
 
         /// Configurable router that dispatches calls to modules
-        type ModuleRouter: CustomRouter;
+        type IsmpRouter: ISMPRouter + Default;
         /// Provides concrete implementations of consensus clients
         type ConsensusClientProvider: ConsensusClientProvider;
     }

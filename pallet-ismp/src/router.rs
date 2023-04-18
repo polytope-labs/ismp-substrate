@@ -16,31 +16,31 @@ pub enum Receipt {
     Ok,
 }
 
-pub trait CustomRouter {
-    /// Dispatch a request from a module to the ISMP router.
-    /// If request source chain is the host, it should be committed in state as a sha256 hash
-    fn dispatch(request: Request) -> Result<(), Error>;
-
-    /// Dispatch a request timeout from a module to the ISMP router.
-    /// If request source chain is the host, it should be committed in state as a sha256 hash
-    fn dispatch_timeout(request: Request) -> Result<(), Error>;
-
-    /// Provide a response to a previously received request.
-    /// If response source chain is the host, it should be committed in state as a sha256 hash
-    fn write_response(response: Response) -> Result<(), Error>;
+/// The proxy router, This router allows for routing requests & responses from a source chain
+/// to a destination chain.
+#[derive(Clone)]
+pub struct ProxyRouter<T, R> {
+    inner: Option<R>,
+    _phantom: PhantomData<T>,
 }
 
-#[derive(Clone)]
-pub struct Router<T: Config>(PhantomData<T>);
-
-impl<T: Config> Default for Router<T> {
-    fn default() -> Self {
-        Self(PhantomData)
+impl<T, R> ProxyRouter<T, R> {
+    /// Initialize the proxy router with an inner router.
+    pub fn new(router: R) -> Self {
+        Self { inner: Some(router), _phantom: PhantomData }
     }
 }
 
-impl<T: Config> ISMPRouter for Router<T>
+impl<T, R> Default for ProxyRouter<T, R> {
+    fn default() -> Self {
+        Self { inner: None, _phantom: PhantomData }
+    }
+}
+
+impl<T, R> ISMPRouter for ProxyRouter<T, R>
 where
+    T: Config,
+    R: ISMPRouter,
     <T as frame_system::Config>::Hash: From<H256>,
 {
     fn dispatch(&self, request: Request) -> Result<(), Error> {
@@ -76,14 +76,14 @@ where
             // Store a map of request to leaf_index
             Pallet::<T>::store_leaf_index_offchain(offchain_key, leaf_index);
             RequestAcks::<T>::insert(commitment, Receipt::Ok);
-        } else {
-            <T as Config>::ModuleRouter::dispatch(request)?;
+        } else if let Some(ref router) = self.inner {
+            router.dispatch(request)?
         }
 
         Ok(())
     }
 
-    fn dispatch_timeout(&self, request: Request) -> Result<(), Error> {
+    fn dispatch_timeout(&self, _request: Request) -> Result<(), Error> {
         todo!()
     }
 
@@ -121,8 +121,8 @@ where
             });
             Pallet::<T>::store_leaf_index_offchain(offchain_key, leaf_index);
             ResponseAcks::<T>::insert(commitment, Receipt::Ok);
-        } else {
-            <T as Config>::ModuleRouter::write_response(response)?;
+        } else if let Some(ref router) = self.inner {
+            router.write_response(response)?
         }
 
         Ok(())
