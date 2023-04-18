@@ -18,7 +18,7 @@
 //! This allows parachains communicate over ISMP leveraging the relay chain as a consensus oracle.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod consensus_client;
+pub mod consensus;
 
 use cumulus_primitives_core::relay_chain;
 pub use pallet::*;

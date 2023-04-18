@@ -1,3 +1,20 @@
+// Copyright (C) 2023 Polytope Labs.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! The parachain consensus client module
+
 use core::{marker::PhantomData, time::Duration};
 
 use codec::{Decode, Encode};
@@ -24,11 +41,12 @@ use sp_trie::{LayoutV0, StorageProof, Trie, TrieDBBuilder};
 
 use crate::RelayChainOracle;
 
-struct ParachainConsensusClient<T, H>(PhantomData<(T, H)>);
+/// The parachain consensus client implementation for ISMP.
+pub struct ParachainConsensusClient<T, H>(PhantomData<(T, H)>);
 
 /// Information necessary to prove the sibling parachain's finalization to this
 /// parachain.
-#[derive(Encode, Decode)]
+#[derive(Debug, Encode, Decode)]
 pub struct ParachainConsensusProof {
     /// List of para ids contained in the proof
     pub para_ids: Vec<u32>,
@@ -39,13 +57,14 @@ pub struct ParachainConsensusProof {
 }
 
 /// Hashing algorithm for the state proof
-#[derive(Encode, Decode)]
+#[derive(Debug, Encode, Decode)]
 pub enum HashAlgorithm {
     Keccak,
     Blake2,
 }
 
-#[derive(Encode, Decode)]
+/// Holds the relevant data needed for state proof verification
+#[derive(Debug, Encode, Decode)]
 pub struct ParachainStateProof {
     /// Algorithm to use for state proof verification
     pub hasher: HashAlgorithm,
@@ -53,8 +72,8 @@ pub struct ParachainStateProof {
     pub storage_proof: Vec<Vec<u8>>,
 }
 
-/// Membership proof schema
-#[derive(Encode, Decode)]
+/// Holds the relevant data needed for request/response proof verification
+#[derive(Debug, Encode, Decode)]
 pub struct MembershipProof {
     /// Size of the mmr at the time this proof was generated
     pub mmr_size: u64,
@@ -68,7 +87,7 @@ pub struct MembershipProof {
 const PARACHAIN_HEADS_KEY: [u8; 32] =
     hex!("cd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c3");
 
-/// The `ConsensusEngineId` of ISMP.
+/// The `ConsensusEngineId` of ISMP digest in the parachain header.
 pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
 
 /// ConsensusClientId for [`ParachainConsensusClient`]
@@ -80,7 +99,7 @@ const SLOT_DURATION: u64 = 12_000;
 impl<T, H> ConsensusClient for ParachainConsensusClient<T, H>
 where
     H: ISMPHost,
-    T: RelayChainOracle + frame_system::Config,
+    T: frame_system::Config + RelayChainOracle,
     T::BlockNumber: Into<u32>,
     T::Hash: From<H256>,
 {
