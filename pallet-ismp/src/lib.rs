@@ -18,7 +18,6 @@
 
 extern crate alloc;
 
-mod consensus_clients;
 mod errors;
 pub mod events;
 pub mod host;
@@ -47,7 +46,11 @@ pub mod pallet {
 
     // Import various types used to declare pallet in scope.
     use super::*;
-    use crate::{errors::HandlingError, primitives::ISMP_ID, router::Receipt};
+    use crate::{
+        errors::HandlingError,
+        primitives::{ConsensusClientProvider, ISMP_ID},
+        router::{CustomRouter, Receipt},
+    };
     use alloc::{collections::BTreeSet, string::ToString};
     use frame_support::{pallet_prelude::*, traits::UnixTime};
     use frame_system::pallet_prelude::*;
@@ -85,6 +88,11 @@ pub mod pallet {
 
         const CHAIN_ID: ChainID;
         type TimeProvider: UnixTime;
+
+        /// Configurable router that dispatches calls to modules
+        type ModuleRouter: CustomRouter;
+        /// Provides concrete implementations of consensus clients
+        type ConsensusClientProvider: ConsensusClientProvider;
     }
 
     // Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and

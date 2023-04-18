@@ -1,15 +1,9 @@
 use crate::{
-    consensus_clients::{
-        beacon_consensus_client::beacon_client::BeaconConsensusClient,
-        consensus_client_ids::ETHEREUM_CONSENSUS_CLIENT_ID,
-    },
-    router::Router,
-    Config, ConsensusClientUpdateTime, ConsensusStates, FrozenHeights, LatestStateMachineHeight,
-    RequestAcks, StateCommitments,
+    primitives::ConsensusClientProvider, router::Router, Config, ConsensusClientUpdateTime,
+    ConsensusStates, FrozenHeights, LatestStateMachineHeight, RequestAcks, StateCommitments,
 };
 use alloc::{format, string::ToString};
 use core::time::Duration;
-use ethabi::ethereum_types::H256;
 use frame_support::traits::UnixTime;
 use ismp_rs::{
     consensus_client::{
@@ -20,6 +14,7 @@ use ismp_rs::{
     router::{ISMPRouter, Request},
     util::hash_request,
 };
+use sp_core::H256;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
@@ -122,20 +117,11 @@ where
     }
 
     fn consensus_client(&self, id: ConsensusClientId) -> Result<Box<dyn ConsensusClient>, Error> {
-        match id {
-            ETHEREUM_CONSENSUS_CLIENT_ID => Ok(Box::new(BeaconConsensusClient::<Self>::default())),
-            _ => Err(Error::ImplementationSpecific(format!(
-                "No consensus client found for consensus id {:?}",
-                id
-            ))),
-        }
+        <T as Config>::ConsensusClientProvider::consensus_client(id)
     }
 
     fn challenge_period(&self, id: ConsensusClientId) -> Duration {
-        match id {
-            id if id == ETHEREUM_CONSENSUS_CLIENT_ID => Duration::from_secs(30 * 60),
-            _ => Duration::from_secs(15 * 60),
-        }
+        <T as Config>::ConsensusClientProvider::challenge_period(id)
     }
 
     fn ismp_router(&self) -> Box<dyn ISMPRouter> {

@@ -1,1 +1,0 @@
-pub const ETHEREUM_CONSENSUS_CLIENT_ID: [u8; 4] = *b"ETHC";

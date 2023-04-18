@@ -16,6 +16,20 @@ pub enum Receipt {
     Ok,
 }
 
+pub trait CustomRouter {
+    /// Dispatch a request from a module to the ISMP router.
+    /// If request source chain is the host, it should be committed in state as a sha256 hash
+    fn dispatch(request: Request) -> Result<(), Error>;
+
+    /// Dispatch a request timeout from a module to the ISMP router.
+    /// If request source chain is the host, it should be committed in state as a sha256 hash
+    fn dispatch_timeout(request: Request) -> Result<(), Error>;
+
+    /// Provide a response to a previously received request.
+    /// If response source chain is the host, it should be committed in state as a sha256 hash
+    fn write_response(response: Response) -> Result<(), Error>;
+}
+
 #[derive(Clone)]
 pub struct Router<T: Config>(PhantomData<T>);
 
@@ -32,18 +46,18 @@ where
     fn dispatch(&self, request: Request) -> Result<(), Error> {
         let host = Host::<T>::default();
 
-        let commitment = hash_request::<Host<T>>(&request).0.to_vec();
-
-        if RequestAcks::<T>::contains_key(commitment.clone()) {
-            return Err(Error::ImplementationSpecific(format!(
-                "Duplicate request: nonce: {} , source: {:?} , dest: {:?}",
-                request.nonce(),
-                request.source_chain(),
-                request.dest_chain()
-            )))
-        }
-
         if host.host() != request.dest_chain() {
+            let commitment = hash_request::<Host<T>>(&request).0.to_vec();
+
+            if RequestAcks::<T>::contains_key(commitment.clone()) {
+                return Err(Error::ImplementationSpecific(format!(
+                    "Duplicate request: nonce: {} , source: {:?} , dest: {:?}",
+                    request.nonce(),
+                    request.source_chain(),
+                    request.dest_chain()
+                )))
+            }
+
             let leaves = Pallet::<T>::number_of_leaves();
             let (dest_chain, source_chain, nonce) =
                 (request.dest_chain(), request.source_chain(), request.nonce());
@@ -60,10 +74,12 @@ where
                 dest_chain,
             });
             // Store a map of request to leaf_index
-            Pallet::<T>::store_leaf_index_offchain(offchain_key, leaf_index)
+            Pallet::<T>::store_leaf_index_offchain(offchain_key, leaf_index);
+            RequestAcks::<T>::insert(commitment, Receipt::Ok);
+        } else {
+            <T as Config>::ModuleRouter::dispatch(request)?;
         }
 
-        RequestAcks::<T>::insert(commitment, Receipt::Ok);
         Ok(())
     }
 
@@ -74,18 +90,18 @@ where
     fn write_response(&self, response: Response) -> Result<(), Error> {
         let host = Host::<T>::default();
 
-        let commitment = hash_response::<Host<T>>(&response).0.to_vec();
-
-        if ResponseAcks::<T>::contains_key(commitment.clone()) {
-            return Err(Error::ImplementationSpecific(format!(
-                "Duplicate response: nonce: {} , source: {:?} , dest: {:?}",
-                response.request.nonce(),
-                response.request.source_chain(),
-                response.request.dest_chain()
-            )))
-        }
-
         if host.host() != response.request.source_chain() {
+            let commitment = hash_response::<Host<T>>(&response).0.to_vec();
+
+            if ResponseAcks::<T>::contains_key(commitment.clone()) {
+                return Err(Error::ImplementationSpecific(format!(
+                    "Duplicate response: nonce: {} , source: {:?} , dest: {:?}",
+                    response.request.nonce(),
+                    response.request.source_chain(),
+                    response.request.dest_chain()
+                )))
+            }
+
             let leaves = Pallet::<T>::number_of_leaves();
             let (dest_chain, source_chain, nonce) = (
                 response.request.source_chain(),
@@ -103,10 +119,11 @@ where
                 dest_chain,
                 source_chain,
             });
-            Pallet::<T>::store_leaf_index_offchain(offchain_key, leaf_index)
+            Pallet::<T>::store_leaf_index_offchain(offchain_key, leaf_index);
+            ResponseAcks::<T>::insert(commitment, Receipt::Ok);
+        } else {
+            <T as Config>::ModuleRouter::write_response(response)?;
         }
-
-        ResponseAcks::<T>::insert(commitment, Receipt::Ok);
 
         Ok(())
     }
