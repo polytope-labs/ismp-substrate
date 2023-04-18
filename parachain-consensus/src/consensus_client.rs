@@ -4,7 +4,8 @@ use codec::{Decode, Encode};
 use hex_literal::hex;
 use ismp::{
     consensus_client::{
-        ConsensusClient, IntermediateState, StateCommitment, StateMachineHeight, StateMachineId,
+        ConsensusClient, ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight,
+        StateMachineId,
     },
     error::Error,
     host::ISMPHost,
@@ -12,10 +13,10 @@ use ismp::{
     router::RequestResponse,
 };
 use merkle_mountain_range::MerkleProof;
-use sp_consensus_aura::AURA_ENGINE_ID;
 use primitive_types::H256;
+use sp_consensus_aura::AURA_ENGINE_ID;
 use sp_runtime::{
-    traits::{BlakeTwo256, Header},
+    traits::{BlakeTwo256, Header, Keccak256},
     DigestItem,
 };
 use sp_trie::{LayoutV0, StorageProof, Trie, TrieDBBuilder};
@@ -27,11 +28,26 @@ struct ParachainConsensusClient<T>(PhantomData<T>);
 /// Information necessary to prove the sibling parachain's finalization to this
 /// parachain.
 #[derive(Encode, Decode)]
-pub struct ParachainConsensusUpdate {
+pub struct ParachainConsensusProof {
     /// List of para ids contained in the proof
     pub para_ids: Vec<u32>,
     /// Height of the relay chain for the given proof
     pub relay_height: u32,
+    /// Storage proof for the parachain headers
+    pub storage_proof: Vec<Vec<u8>>,
+}
+
+/// Hashing algorithm for the state proof
+#[derive(Encode, Decode)]
+pub enum HashAlgorithm {
+    Keccak,
+    Blake2,
+}
+
+#[derive(Encode, Decode)]
+pub struct ParachainStateProof {
+    /// Algorithm to use for state proof verification
+    pub hasher: HashAlgorithm,
     /// Storage proof for the parachain headers
     pub storage_proof: Vec<Vec<u8>>,
 }
@@ -42,6 +58,9 @@ const PARACHAIN_HEADS_KEY: [u8; 32] =
 
 /// The `ConsensusEngineId` of ISMP.
 pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
+
+/// ConsensusClientId for [`ParachainConsensusClient`]
+pub const PARACHAIN_CONSENSUS_ID: ConsensusClientId = *b"PARA";
 
 /// Slot duration in milliseconds
 const SLOT_DURATION: u64 = 12_000;
@@ -57,7 +76,7 @@ where
         state: Vec<u8>,
         proof: Vec<u8>,
     ) -> Result<(Vec<u8>, Vec<IntermediateState>), Error> {
-        let update: ParachainConsensusUpdate =
+        let update: ParachainConsensusProof =
             codec::Decode::decode(&mut &proof[..]).map_err(|e| {
                 Error::ImplementationSpecific(format!("Cannot decode beacon message: {e}"))
             })?;
@@ -132,7 +151,10 @@ where
 
             let intermediate = IntermediateState {
                 height: StateMachineHeight {
-                    id: StateMachineId { state_id: id as u64, consensus_client: 0 },
+                    id: StateMachineId {
+                        state_id: id as u64,
+                        consensus_client: PARACHAIN_CONSENSUS_ID,
+                    },
                     height: height as u64,
                 },
                 commitment: StateCommitment {
@@ -176,15 +198,26 @@ where
         root: StateCommitment,
         proof: &Proof,
     ) -> Result<Option<Vec<u8>>, Error> {
-        let proof: Vec<Vec<u8>> = codec::Decode::decode(&mut &*proof.proof)
+        let state_proof: ParachainStateProof = codec::Decode::decode(&mut &*proof.proof)
             .map_err(|e| Error::ImplementationSpecific(format!("failed to decode proof: {e}")))?;
 
-        let db = StorageProof::new(proof).into_memory_db::<BlakeTwo256>();
-        let trie = TrieDBBuilder::<LayoutV0<BlakeTwo256>>::new(&db, &root.state_root).build();
+        let db = StorageProof::new(state_proof.storage_proof).into_memory_db::<BlakeTwo256>();
 
-        let data = trie.get(&key).map_err(|e| {
-            Error::ImplementationSpecific(format!("Error reading state proof: {e}"))
-        })?;
+        let data = match state_proof.hasher {
+            HashAlgorithm::Keccak => {
+                let trie = TrieDBBuilder::<LayoutV0<Keccak256>>::new(&db, &root.state_root).build();
+                trie.get(&key).map_err(|e| {
+                    Error::ImplementationSpecific(format!("Error reading state proof: {e}"))
+                })?
+            }
+            HashAlgorithm::Blake2 => {
+                let trie =
+                    TrieDBBuilder::<LayoutV0<BlakeTwo256>>::new(&db, &root.state_root).build();
+                trie.get(&key).map_err(|e| {
+                    Error::ImplementationSpecific(format!("Error reading state proof: {e}"))
+                })?
+            }
+        };
 
         Ok(data)
     }
