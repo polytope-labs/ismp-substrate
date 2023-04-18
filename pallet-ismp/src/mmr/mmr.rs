@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use crate::{
+    host::Host,
     mmr::{
         storage::{OffchainStorage, RuntimeStorage, Storage},
         utils::NodesUtils,
@@ -21,7 +22,7 @@ use crate::{
     primitives::{Error, Proof},
     Config,
 };
-use ismp_primitives::mmr::{DataOrHash, MmrHasher, NodeIndex};
+use ismp_primitives::mmr::{DataOrHash, Leaf, MmrHasher, NodeIndex};
 use sp_std::prelude::*;
 
 /// A wrapper around an MMR library to expose limited functionality.
@@ -33,7 +34,7 @@ where
     T: Config,
     Storage<StorageType, T>: mmr_lib::MMRStore<DataOrHash<T>>,
 {
-    mmr: mmr_lib::MMR<DataOrHash<T>, MmrHasher<T>, Storage<StorageType, T>>,
+    mmr: mmr_lib::MMR<DataOrHash<T>, MmrHasher<T, Host<T>>, Storage<StorageType, T>>,
     leaves: NodeIndex,
 }
 
@@ -63,7 +64,7 @@ where
     /// Push another item to the MMR.
     ///
     /// Returns element position (index) in the MMR.
-    pub fn push(&mut self, leaf: L) -> Option<NodeIndex> {
+    pub fn push(&mut self, leaf: Leaf) -> Option<NodeIndex> {
         let position = self.mmr.push(DataOrHash::Data(leaf)).map_err(|_| Error::Push).ok()?;
 
         self.leaves += 1;
@@ -92,7 +93,7 @@ where
     pub fn generate_proof(
         &self,
         leaf_indices: Vec<NodeIndex>,
-    ) -> Result<(Vec<L>, Proof<<T as Config>::Hash>), Error> {
+    ) -> Result<(Vec<Leaf>, Proof<<T as Config>::Hash>), Error> {
         let positions =
             leaf_indices.iter().map(|index| mmr_lib::leaf_index_to_pos(*index)).collect::<Vec<_>>();
         let store = <Storage<OffchainStorage, T>>::default();

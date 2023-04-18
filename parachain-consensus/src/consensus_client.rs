@@ -12,6 +12,7 @@ use ismp::{
     messaging::Proof,
     router::RequestResponse,
 };
+use ismp_primitives::mmr::{DataOrHash, Leaf, MmrHasher};
 use merkle_mountain_range::MerkleProof;
 use primitive_types::H256;
 use sp_consensus_aura::AURA_ENGINE_ID;
@@ -23,7 +24,7 @@ use sp_trie::{LayoutV0, StorageProof, Trie, TrieDBBuilder};
 
 use crate::RelayChainOracle;
 
-struct ParachainConsensusClient<T>(PhantomData<T>);
+struct ParachainConsensusClient<T, H>(PhantomData<(T, H)>);
 
 /// Information necessary to prove the sibling parachain's finalization to this
 /// parachain.
@@ -52,6 +53,17 @@ pub struct ParachainStateProof {
     pub storage_proof: Vec<Vec<u8>>,
 }
 
+/// Membership proof schema
+#[derive(Encode, Decode)]
+pub struct MembershipProof {
+    /// Size of the mmr at the time this proof was generated
+    pub mmr_size: u64,
+    /// Mmr pos for this leaf
+    pub mmr_pos: u64,
+    /// Mmr proof
+    pub proof: Vec<H256>,
+}
+
 /// Static key for parachain headers in the relay chain storage
 const PARACHAIN_HEADS_KEY: [u8; 32] =
     hex!("cd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c3");
@@ -65,10 +77,12 @@ pub const PARACHAIN_CONSENSUS_ID: ConsensusClientId = *b"PARA";
 /// Slot duration in milliseconds
 const SLOT_DURATION: u64 = 12_000;
 
-impl<T> ConsensusClient for ParachainConsensusClient<T>
+impl<T, H> ConsensusClient for ParachainConsensusClient<T, H>
 where
+    H: ISMPHost,
     T: RelayChainOracle + frame_system::Config,
     T::BlockNumber: Into<u32>,
+    T::Hash: From<H256>,
 {
     fn verify_consensus(
         &self,
@@ -78,7 +92,9 @@ where
     ) -> Result<(Vec<u8>, Vec<IntermediateState>), Error> {
         let update: ParachainConsensusProof =
             codec::Decode::decode(&mut &proof[..]).map_err(|e| {
-                Error::ImplementationSpecific(format!("Cannot decode beacon message: {e}"))
+                Error::ImplementationSpecific(format!(
+                    "Cannot decode parachain consensus proof: {e}"
+                ))
             })?;
 
         let root = T::state_root(update.relay_height).ok_or_else(|| {
@@ -179,10 +195,32 @@ where
         &self,
         _host: &dyn ISMPHost,
         _item: RequestResponse,
-        _root: StateCommitment,
+        state: StateCommitment,
         _proof: &Proof,
     ) -> Result<(), Error> {
-        // MerkleProof::new(mmr_size, proof.proof);
+        let membership = MembershipProof::decode(&mut &*_proof.proof).map_err(|e| {
+            Error::ImplementationSpecific(format!("Cannot decode membership proof: {e}"))
+        })?;
+        let nodes = membership.proof.into_iter().map(|h| DataOrHash::Hash(h.into())).collect();
+        let proof = MerkleProof::<DataOrHash<T>, MmrHasher<T, H>>::new(membership.mmr_size, nodes);
+        let leaf = match _item {
+            RequestResponse::Request(req) => Leaf::Request(req),
+            RequestResponse::Response(res) => Leaf::Response(res),
+        };
+        let root = state
+            .ismp_root
+            .ok_or_else(|| Error::ImplementationSpecific("ISMP root should not be None".into()))?;
+
+        let valid = proof
+            .verify(
+                DataOrHash::Hash(root.into()),
+                vec![(membership.mmr_pos, DataOrHash::Data(leaf))],
+            )
+            .map_err(|e| Error::ImplementationSpecific(format!("Error verifying mmr: {e}")))?;
+
+        if !valid {
+            Err(Error::ImplementationSpecific("Invalid membership proof".into()))?
+        }
 
         Ok(())
     }
@@ -201,16 +239,18 @@ where
         let state_proof: ParachainStateProof = codec::Decode::decode(&mut &*proof.proof)
             .map_err(|e| Error::ImplementationSpecific(format!("failed to decode proof: {e}")))?;
 
-        let db = StorageProof::new(state_proof.storage_proof).into_memory_db::<BlakeTwo256>();
-
         let data = match state_proof.hasher {
             HashAlgorithm::Keccak => {
+                let db = StorageProof::new(state_proof.storage_proof).into_memory_db::<Keccak256>();
                 let trie = TrieDBBuilder::<LayoutV0<Keccak256>>::new(&db, &root.state_root).build();
                 trie.get(&key).map_err(|e| {
                     Error::ImplementationSpecific(format!("Error reading state proof: {e}"))
                 })?
             }
             HashAlgorithm::Blake2 => {
+                let db =
+                    StorageProof::new(state_proof.storage_proof).into_memory_db::<BlakeTwo256>();
+
                 let trie =
                     TrieDBBuilder::<LayoutV0<BlakeTwo256>>::new(&db, &root.state_root).build();
                 trie.get(&key).map_err(|e| {

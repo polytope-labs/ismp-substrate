@@ -82,7 +82,6 @@ where
 impl<T> mmr_lib::MMRStore<DataOrHash<T>> for Storage<RuntimeStorage, T>
 where
     T: Config,
-    L: FullLeaf<T>,
 {
     fn get_elem(&self, pos: NodeIndex) -> mmr_lib::Result<Option<DataOrHash<T>>> {
         Ok(Pallet::<T>::get_node(pos))

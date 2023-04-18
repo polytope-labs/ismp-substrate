@@ -26,10 +26,7 @@ pub mod mmr;
 pub mod primitives;
 mod router;
 
-use crate::{
-    host::Host,
-    mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex, NodeOf},
-};
+use crate::host::Host;
 use codec::{Decode, Encode};
 use frame_support::{log::debug, RuntimeDebug};
 use ismp_rs::{
@@ -38,6 +35,8 @@ use ismp_rs::{
 };
 use sp_core::offchain::StorageKind;
 // Re-export pallet items so that they can be accessed from the crate namespace.
+use ismp_primitives::mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex};
+use mmr::mmr::Mmr;
 pub use pallet::*;
 use sp_std::prelude::*;
 
@@ -48,15 +47,11 @@ pub mod pallet {
 
     // Import various types used to declare pallet in scope.
     use super::*;
-    use crate::{
-        errors::HandlingError,
-        mmr::{LeafIndex, Mmr, NodeIndex},
-        primitives::ISMP_ID,
-        router::Receipt,
-    };
+    use crate::{errors::HandlingError, primitives::ISMP_ID, router::Receipt};
     use alloc::{collections::BTreeSet, string::ToString};
     use frame_support::{pallet_prelude::*, traits::UnixTime};
     use frame_system::pallet_prelude::*;
+    use ismp_primitives::mmr::{LeafIndex, NodeIndex};
     use ismp_rs::{
         consensus_client::{
             ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
@@ -206,10 +201,9 @@ pub mod pallet {
         }
 
         fn on_finalize(_n: T::BlockNumber) {
-            use crate::mmr;
             let leaves = Self::number_of_leaves();
 
-            let mmr: Mmr<mmr::storage::RuntimeStorage, T, Leaf> = mmr::Mmr::new(leaves);
+            let mmr: Mmr<mmr::storage::RuntimeStorage, T> = Mmr::new(leaves);
 
             // Update the size, `mmr.finalize()` should also never fail.
             let (leaves, root) = match mmr.finalize() {
@@ -384,7 +378,7 @@ impl<T: Config> Pallet<T> {
         leaf_indices: Vec<LeafIndex>,
     ) -> Result<(Vec<Leaf>, primitives::Proof<<T as Config>::Hash>), primitives::Error> {
         let leaves_count = NumberOfLeaves::<T>::get();
-        let mmr = mmr::Mmr::<mmr::storage::OffchainStorage, T, Leaf>::new(leaves_count);
+        let mmr = Mmr::<mmr::storage::OffchainStorage, T>::new(leaves_count);
         mmr.generate_proof(leaf_indices)
     }
 
@@ -395,8 +389,8 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> Pallet<T> {
-    fn get_node<L>(pos: NodeIndex) -> Option<NodeOf<T, L>> {
-        Nodes::<T>::get(pos).map(NodeOf::Hash)
+    fn get_node<L>(pos: NodeIndex) -> Option<DataOrHash<T>> {
+        Nodes::<T>::get(pos).map(DataOrHash::Hash)
     }
 
     fn remove_node(pos: NodeIndex) {
@@ -449,7 +443,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_request(leaf_index: LeafIndex) -> Option<Request> {
         let key = Pallet::<T>::offchain_key(leaf_index);
         if let Some(elem) = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &key) {
-            let data_or_hash = DataOrHash::<T, Leaf>::decode(&mut &*elem).ok()?;
+            let data_or_hash = DataOrHash::<T>::decode(&mut &*elem).ok()?;
             return match data_or_hash {
                 DataOrHash::Data(leaf) => match leaf {
                     Leaf::Request(req) => Some(req),
@@ -464,7 +458,7 @@ impl<T: Config> Pallet<T> {
     pub fn get_response(leaf_index: LeafIndex) -> Option<Response> {
         let key = Pallet::<T>::offchain_key(leaf_index);
         if let Some(elem) = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &key) {
-            let data_or_hash = DataOrHash::<T, Leaf>::decode(&mut &*elem).ok()?;
+            let data_or_hash = DataOrHash::<T>::decode(&mut &*elem).ok()?;
             return match data_or_hash {
                 DataOrHash::Data(leaf) => match leaf {
                     Leaf::Response(res) => Some(res),

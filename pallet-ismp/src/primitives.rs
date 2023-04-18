@@ -1,5 +1,5 @@
-use crate::mmr::{LeafIndex, NodeIndex};
 use frame_support::RuntimeDebug;
+use ismp_primitives::mmr::{LeafIndex, NodeIndex};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 

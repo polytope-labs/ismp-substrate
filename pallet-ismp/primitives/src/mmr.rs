@@ -18,6 +18,7 @@ use codec::{Decode, Encode};
 use ismp::{
     host::ISMPHost,
     router::{Request, Response},
+    util::{hash_request, hash_response},
 };
 use primitive_types::H256;
 use sp_runtime::traits;
@@ -32,11 +33,10 @@ pub enum Leaf {
 }
 
 impl Leaf {
-    fn hash<H: ISMPHost + Default>(&self) -> H256 {
-        let host = H::default();
+    fn hash<H: ISMPHost>(&self) -> H256 {
         match self {
-            Leaf::Request(req) => host.get_request_commitment(req),
-            Leaf::Response(res) => host.get_response_commitment(res),
+            Leaf::Request(req) => hash_request::<H>(req),
+            Leaf::Response(res) => hash_response::<H>(res),
         }
     }
 }
@@ -74,11 +74,11 @@ where
     ///
     /// Depending on the node type it's going to either be a contained value for [DataOrHash::Hash]
     /// node, or a hash of SCALE-encoded [DataOrHash::Data] data.
-    pub fn hash<H: ISMPHost + Default>(
+    pub fn hash<H: ISMPHost>(
         &self,
     ) -> <<T as frame_system::Config>::Hashing as traits::Hash>::Output {
         match *self {
-            Self::Data(ref leaf) => <T::Hash>::from(leaf.hash()),
+            Self::Data(ref leaf) => <T::Hash>::from(leaf.hash::<H>()),
             Self::Hash(ref hash) => *hash,
         }
     }
@@ -90,7 +90,8 @@ pub struct MmrHasher<T, H>(core::marker::PhantomData<(T, H)>);
 impl<T, H> merkle_mountain_range::Merge for MmrHasher<T, H>
 where
     T: frame_system::Config,
-    H: ISMPHost + Default,
+    T::Hash: From<H256>,
+    H: ISMPHost,
 {
     type Item = DataOrHash<T>;
 

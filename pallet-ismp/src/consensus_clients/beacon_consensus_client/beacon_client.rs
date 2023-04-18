@@ -140,17 +140,11 @@ impl ConsensusClient for BeaconConsensusClient {
         Ok(())
     }
 
-    fn verify_state_proof(
-        &self,
-        _host: &dyn ISMPHost,
-        _key: Vec<u8>,
-        _root: StateCommitment,
-        _proof: &Proof,
-    ) -> Result<Vec<u8>, Error> {
-        unimplemented!()
+    fn state_trie_key(&self, _request: RequestResponse) -> Vec<u8> {
+        todo!()
     }
 
-    fn verify_non_membership(
+    fn verify_state_proof(
         &self,
         host: &dyn ISMPHost,
         item: RequestResponse,

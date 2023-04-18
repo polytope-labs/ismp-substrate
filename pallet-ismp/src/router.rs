@@ -1,11 +1,8 @@
-use crate::{
-    host::Host,
-    mmr::{self, Leaf, Mmr},
-    Config, Event, Pallet, RequestAcks, ResponseAcks,
-};
+use crate::{host::Host, mmr, mmr::mmr::Mmr, Config, Event, Pallet, RequestAcks, ResponseAcks};
 use alloc::{format, string::ToString};
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
+use ismp_primitives::mmr::Leaf;
 use ismp_rs::{
     error::Error,
     host::ISMPHost,
@@ -45,7 +42,7 @@ impl<T: Config> ISMPRouter for Router<T> {
             let leaves = Pallet::<T>::number_of_leaves();
             let (dest_chain, source_chain, nonce) =
                 (request.dest_chain(), request.source_chain(), request.nonce());
-            let mut mmr: Mmr<mmr::storage::RuntimeStorage, T, Leaf> = mmr::Mmr::new(leaves);
+            let mut mmr: Mmr<mmr::storage::RuntimeStorage, T> = Mmr::new(leaves);
             let offchain_key =
                 Pallet::<T>::request_leaf_index_offchain_key(source_chain, dest_chain, nonce);
             let leaf_index = mmr.push(Leaf::Request(request)).ok_or_else(|| {
@@ -63,6 +60,10 @@ impl<T: Config> ISMPRouter for Router<T> {
 
         RequestAcks::<T>::insert(commitment, Receipt::Ok);
         Ok(())
+    }
+
+    fn dispatch_timeout(&self, request: Request) -> Result<(), Error> {
+        todo!()
     }
 
     fn write_response(&self, response: Response) -> Result<(), Error> {
@@ -86,7 +87,7 @@ impl<T: Config> ISMPRouter for Router<T> {
                 response.request.dest_chain(),
                 response.request.nonce(),
             );
-            let mut mmr: Mmr<mmr::storage::RuntimeStorage, T, Leaf> = mmr::Mmr::new(leaves);
+            let mut mmr: Mmr<mmr::storage::RuntimeStorage, T> = Mmr::new(leaves);
             let offchain_key =
                 Pallet::<T>::response_leaf_index_offchain_key(source_chain, dest_chain, nonce);
             let leaf_index = mmr.push(Leaf::Response(response)).ok_or_else(|| {
