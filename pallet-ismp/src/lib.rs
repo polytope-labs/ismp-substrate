@@ -23,7 +23,7 @@ pub mod events;
 pub mod host;
 pub mod mmr;
 pub mod primitives;
-mod router;
+pub mod router;
 
 use crate::host::Host;
 use codec::{Decode, Encode};
