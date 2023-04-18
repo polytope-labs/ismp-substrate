@@ -3103,6 +3103,7 @@ dependencies = [
 name = "ismp-parachain-consensus"
 version = "0.1.0"
 dependencies = [
+ "ckb-merkle-mountain-range",
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -3112,10 +3113,23 @@ dependencies = [
  "ismp",
  "parity-scale-codec",
  "scale-info",
+ "sp-consensus-aura",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-trie",
+]
+
+[[package]]
+name = "ismp-primitives"
+version = "0.1.0"
+dependencies = [
+ "ckb-merkle-mountain-range",
+ "frame-system",
+ "ismp",
+ "parity-scale-codec",
+ "primitive-types",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -4692,6 +4706,7 @@ dependencies = [
  "hex",
  "hex-literal 0.3.4",
  "ismp",
+ "ismp-primitives",
  "log",
  "parity-scale-codec",
  "rlp",
@@ -7370,6 +7385,24 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "thiserror",
+]
+
+[[package]]
+name = "sp-consensus-aura"
+version = "0.10.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.40#76fed9b9082daade5392663f25ed8968f8e8c11c"
+dependencies = [
+ "async-trait",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-consensus",
+ "sp-consensus-slots",
+ "sp-inherents",
+ "sp-runtime",
+ "sp-std",
+ "sp-timestamp",
 ]
 
 [[package]]

@@ -16,16 +16,14 @@
 //! An MMR storage implementation.
 use codec::Encode;
 use frame_support::log::{debug, trace};
+use ismp_primitives::mmr::{DataOrHash, NodeIndex};
 use mmr_lib::helper;
 use sp_core::offchain::StorageKind;
 use sp_std::iter::Peekable;
 #[cfg(not(feature = "std"))]
 use sp_std::prelude::*;
 
-use crate::{
-    mmr::{utils::NodesUtils, FullLeaf, NodeIndex, NodeOf},
-    Config, Pallet,
-};
+use crate::{mmr::utils::NodesUtils, Config, Pallet};
 
 /// A marker type for runtime-specific storage implementation.
 ///
@@ -47,20 +45,19 @@ pub struct OffchainStorage;
 ///
 /// There are two different implementations depending on the use case.
 /// See docs for [RuntimeStorage] and [OffchainStorage].
-pub struct Storage<StorageType, T, L>(sp_std::marker::PhantomData<(StorageType, T, L)>);
+pub struct Storage<StorageType, T>(sp_std::marker::PhantomData<(StorageType, T)>);
 
-impl<StorageType, T, L> Default for Storage<StorageType, T, L> {
+impl<StorageType, T> Default for Storage<StorageType, T> {
     fn default() -> Self {
         Self(Default::default())
     }
 }
 
-impl<T, L> mmr_lib::MMRStore<NodeOf<T, L>> for Storage<OffchainStorage, T, L>
+impl<T> mmr_lib::MMRStore<DataOrHash<T>> for Storage<OffchainStorage, T>
 where
     T: Config,
-    L: FullLeaf<T> + codec::Decode,
 {
-    fn get_elem(&self, pos: NodeIndex) -> mmr_lib::Result<Option<NodeOf<T, L>>> {
+    fn get_elem(&self, pos: NodeIndex) -> mmr_lib::Result<Option<DataOrHash<T>>> {
         // Find out which leaf added node `pos` in the MMR.
         let ancestor_leaf_idx = NodesUtils::leaf_index_that_added_node(pos);
 
@@ -77,21 +74,21 @@ where
         Ok(None)
     }
 
-    fn append(&mut self, _: NodeIndex, _: Vec<NodeOf<T, L>>) -> mmr_lib::Result<()> {
+    fn append(&mut self, _: NodeIndex, _: Vec<DataOrHash<T>>) -> mmr_lib::Result<()> {
         panic!("MMR must not be altered in the off-chain context.")
     }
 }
 
-impl<T, L> mmr_lib::MMRStore<NodeOf<T, L>> for Storage<RuntimeStorage, T, L>
+impl<T> mmr_lib::MMRStore<DataOrHash<T>> for Storage<RuntimeStorage, T>
 where
     T: Config,
     L: FullLeaf<T>,
 {
-    fn get_elem(&self, pos: NodeIndex) -> mmr_lib::Result<Option<NodeOf<T, L>>> {
+    fn get_elem(&self, pos: NodeIndex) -> mmr_lib::Result<Option<DataOrHash<T>>> {
         Ok(Pallet::<T>::get_node(pos))
     }
 
-    fn append(&mut self, pos: NodeIndex, elems: Vec<NodeOf<T, L>>) -> mmr_lib::Result<()> {
+    fn append(&mut self, pos: NodeIndex, elems: Vec<DataOrHash<T>>) -> mmr_lib::Result<()> {
         if elems.is_empty() {
             return Ok(())
         }
@@ -127,7 +124,7 @@ where
             Self::store_to_offchain(node_index, &elem);
 
             // Increase the indices.
-            if let NodeOf::Data(..) = elem {
+            if let DataOrHash::Data(..) = elem {
                 leaf_index += 1;
             }
             node_index += 1;
@@ -145,12 +142,11 @@ where
     }
 }
 
-impl<T, L> Storage<RuntimeStorage, T, L>
+impl<T> Storage<RuntimeStorage, T>
 where
     T: Config,
-    L: FullLeaf<T>,
 {
-    fn store_to_offchain(pos: NodeIndex, node: &NodeOf<T, L>) {
+    fn store_to_offchain(pos: NodeIndex, node: &DataOrHash<T>) {
         let encoded_node = node.encode();
 
         let key = Pallet::<T>::offchain_key(pos);

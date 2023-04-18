@@ -1,4 +1,5 @@
-use crate::RelayChainOracle;
+use std::{marker::PhantomData, time::Duration};
+
 use codec::{Decode, Encode};
 use hex_literal::hex;
 use ismp::{
@@ -10,9 +11,16 @@ use ismp::{
     messaging::Proof,
     router::RequestResponse,
 };
-use sp_runtime::traits::{BlakeTwo256, Header};
+use merkle_mountain_range::MerkleProof;
+use sp_consensus_aura::AURA_ENGINE_ID;
+use sp_core::H256;
+use sp_runtime::{
+    traits::{BlakeTwo256, Header},
+    DigestItem,
+};
 use sp_trie::{LayoutV0, StorageProof, Trie, TrieDBBuilder};
-use std::{marker::PhantomData, time::Duration};
+
+use crate::RelayChainOracle;
 
 struct ParachainConsensusClient<T>(PhantomData<T>);
 
@@ -32,6 +40,12 @@ pub struct ParachainConsensusUpdate {
 const PARACHAIN_HEADS_KEY: [u8; 32] =
     hex!("cd710b30bd2eab0352ddcc26417aa1941b3c252fcb29d88eff4f3de5de4476c3");
 
+/// The `ConsensusEngineId` of ISMP.
+pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
+
+/// Slot duration in milliseconds
+const SLOT_DURATION: u64 = 12_000;
+
 impl<T> ConsensusClient for ParachainConsensusClient<T>
 where
     T: RelayChainOracle + frame_system::Config,
@@ -40,7 +54,7 @@ where
     fn verify_consensus(
         &self,
         _host: &dyn ISMPHost,
-        _state: Vec<u8>,
+        state: Vec<u8>,
         proof: Vec<u8>,
     ) -> Result<(Vec<u8>, Vec<IntermediateState>), Error> {
         let update: ParachainConsensusUpdate =
@@ -48,7 +62,7 @@ where
                 Error::ImplementationSpecific(format!("Cannot decode beacon message: {e}"))
             })?;
 
-        let root = T::storage_root(update.height).ok_or_else(|| {
+        let root = T::state_root(update.height).ok_or_else(|| {
             Error::ImplementationSpecific(format!(
                 "Cannot find relay chain height: {}",
                 update.height
@@ -76,24 +90,60 @@ where
                     ))
                 })?;
 
+            // ideally all parachain headers are the same
             let header = T::Header::decode(&mut &*header).map_err(|e| {
                 Error::ImplementationSpecific(format!("Error decoding parachain header",))
             })?;
 
-            let digests = header.digest().logs.iter().fold();
+            let (mut timestamp, mut ismp_root) = (0, H256::default());
+            for digest in header.digest().logs {
+                match digest {
+                    DigestItem::PreRuntime(consensus_engine_id, value)
+                        if consensus_engine_id == AURA_ENGINE_ID =>
+                    {
+                        let slot = u64::decode(&mut &*value).map_err(|e| {
+                            Error::ImplementationSpecific(format!(
+                                "Cannot decode beacon message: {e}"
+                            ))
+                        })?;
+                        timestamp = Duration::from_millis(slot * SLOT_DURATION).as_secs();
+                    }
+                    DigestItem::Consensus(consensus_engine_id, value)
+                        if consensus_engine_id == ISMP_ID =>
+                    {
+                        if value.len() != 32 {
+                            Err(Error::ImplementationSpecific(
+                                "Header contains an invalid ismp root".into(),
+                            ))?
+                        }
+
+                        ismp_root = H256::from_slice(&value);
+                    }
+                    // don't really care about the rest
+                    _ => {}
+                };
+            }
+
+            if timestamp == 0 || ismp_root == H256::default() {
+                Err(Error::ImplementationSpecific("Timestamp or ismp root not found".into()))
+            }
 
             let intermediate = IntermediateState {
                 height: StateMachineHeight {
                     id: StateMachineId { state_id: id as u64, consensus_client: 0 },
                     height: header.number().into() as u64,
                 },
-                commitment: StateCommitment { timestamp: 0, ismp_root: None, state_root: header.state_root().as_ref() },
+                commitment: StateCommitment {
+                    timestamp,
+                    ismp_root: Some(ismp_root),
+                    state_root: H256::from_slice(header.state_root().as_ref()),
+                },
             };
 
             intermediates.push(intermediate);
         }
 
-        todo!()
+        Ok((state, intermediates))
     }
 
     fn unbonding_period(&self) -> Duration {
@@ -108,30 +158,37 @@ where
         root: StateCommitment,
         proof: &Proof,
     ) -> Result<(), Error> {
+        MerkleProof::new(mmr_size, proof.proof);
+
+        Ok(())
+    }
+
+    fn state_trie_key(&self, request: RequestResponse) -> Vec<u8> {
         todo!()
     }
 
     fn verify_state_proof(
         &self,
-        host: &dyn ISMPHost,
+        _host: &dyn ISMPHost,
         key: Vec<u8>,
         root: StateCommitment,
         proof: &Proof,
-    ) -> Result<Vec<u8>, Error> {
-        todo!()
+    ) -> Result<Option<Vec<u8>>, Error> {
+        let proof: Vec<Vec<u8>> = codec::Decode::decode(&mut &*proof.proof)
+            .map_err(|e| Error::ImplementationSpecific(format!("failed to decode proof: {e}")))?;
+
+        let db = StorageProof::new(proof).into_memory_db::<BlakeTwo256>();
+        let trie = TrieDBBuilder::<LayoutV0<BlakeTwo256>>::new(&db, &root.state_root).build();
+
+        let data = trie.get(&key).map_err(|e| {
+            Error::ImplementationSpecific(format!("Error reading state proof: {e}"))
+        })?;
+
+        Ok(data)
     }
 
-    fn verify_non_membership(
-        &self,
-        host: &dyn ISMPHost,
-        item: RequestResponse,
-        root: StateCommitment,
-        proof: &Proof,
-    ) -> Result<(), Error> {
-        todo!()
-    }
-
-    fn is_frozen(&self, trusted_consensus_state: &[u8]) -> Result<(), Error> {
+    fn is_frozen(&self, _: &[u8]) -> Result<(), Error> {
+        // parachain consensus client can never be frozen.
         Ok(())
     }
 }
