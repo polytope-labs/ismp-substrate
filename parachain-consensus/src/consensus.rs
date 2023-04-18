@@ -17,7 +17,8 @@
 
 use core::{marker::PhantomData, time::Duration};
 
-use codec::{Decode, Encode};
+use alloc::{format, vec, vec::Vec};
+use codec::{alloc, Decode, Encode};
 use hex_literal::hex;
 use ismp::{
     consensus_client::{
@@ -112,7 +113,7 @@ where
         let update: ParachainConsensusProof =
             codec::Decode::decode(&mut &proof[..]).map_err(|e| {
                 Error::ImplementationSpecific(format!(
-                    "Cannot decode parachain consensus proof: {e}"
+                    "Cannot decode parachain consensus proof: {e:?}"
                 ))
             })?;
 
@@ -136,7 +137,9 @@ where
             let header = trie
                 .get(&full_key)
                 .map_err(|e| {
-                    Error::ImplementationSpecific(format!("Error verifying parachain header {e}",))
+                    Error::ImplementationSpecific(
+                        format!("Error verifying parachain header {e:?}",),
+                    )
                 })?
                 .ok_or_else(|| {
                     Error::ImplementationSpecific(format!(
@@ -146,7 +149,7 @@ where
 
             // ideally all parachain headers are the same
             let header = T::Header::decode(&mut &*header).map_err(|e| {
-                Error::ImplementationSpecific(format!("Error decoding parachain header: {e}",))
+                Error::ImplementationSpecific(format!("Error decoding parachain header: {e:?}",))
             })?;
 
             let (mut timestamp, mut ismp_root) = (0, H256::default());
@@ -157,7 +160,7 @@ where
                     {
                         let slot = u64::decode(&mut &value[..]).map_err(|e| {
                             Error::ImplementationSpecific(format!(
-                                "Cannot decode beacon message: {e}"
+                                "Cannot decode beacon message: {e:?}"
                             ))
                         })?;
                         timestamp = Duration::from_millis(slot * SLOT_DURATION).as_secs();
@@ -218,7 +221,7 @@ where
         _proof: &Proof,
     ) -> Result<(), Error> {
         let membership = MembershipProof::decode(&mut &*_proof.proof).map_err(|e| {
-            Error::ImplementationSpecific(format!("Cannot decode membership proof: {e}"))
+            Error::ImplementationSpecific(format!("Cannot decode membership proof: {e:?}"))
         })?;
         let nodes = membership.proof.into_iter().map(|h| DataOrHash::Hash(h.into())).collect();
         let proof = MerkleProof::<DataOrHash<T>, MmrHasher<T, H>>::new(membership.mmr_size, nodes);
@@ -235,7 +238,7 @@ where
                 DataOrHash::Hash(root.into()),
                 vec![(membership.mmr_pos, DataOrHash::Data(leaf))],
             )
-            .map_err(|e| Error::ImplementationSpecific(format!("Error verifying mmr: {e}")))?;
+            .map_err(|e| Error::ImplementationSpecific(format!("Error verifying mmr: {e:?}")))?;
 
         if !valid {
             Err(Error::ImplementationSpecific("Invalid membership proof".into()))?
@@ -256,14 +259,14 @@ where
         proof: &Proof,
     ) -> Result<Option<Vec<u8>>, Error> {
         let state_proof: ParachainStateProof = codec::Decode::decode(&mut &*proof.proof)
-            .map_err(|e| Error::ImplementationSpecific(format!("failed to decode proof: {e}")))?;
+            .map_err(|e| Error::ImplementationSpecific(format!("failed to decode proof: {e:?}")))?;
 
         let data = match state_proof.hasher {
             HashAlgorithm::Keccak => {
                 let db = StorageProof::new(state_proof.storage_proof).into_memory_db::<Keccak256>();
                 let trie = TrieDBBuilder::<LayoutV0<Keccak256>>::new(&db, &root.state_root).build();
                 trie.get(&key).map_err(|e| {
-                    Error::ImplementationSpecific(format!("Error reading state proof: {e}"))
+                    Error::ImplementationSpecific(format!("Error reading state proof: {e:?}"))
                 })?
             }
             HashAlgorithm::Blake2 => {
@@ -273,7 +276,7 @@ where
                 let trie =
                     TrieDBBuilder::<LayoutV0<BlakeTwo256>>::new(&db, &root.state_root).build();
                 trie.get(&key).map_err(|e| {
-                    Error::ImplementationSpecific(format!("Error reading state proof: {e}"))
+                    Error::ImplementationSpecific(format!("Error reading state proof: {e:?}"))
                 })?
             }
         };
