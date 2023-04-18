@@ -18,7 +18,7 @@
 use core::{marker::PhantomData, time::Duration};
 
 use alloc::{format, vec, vec::Vec};
-use codec::{alloc, Decode, Encode};
+use codec::{Decode, Encode};
 use hex_literal::hex;
 use ismp::{
     consensus_client::{
