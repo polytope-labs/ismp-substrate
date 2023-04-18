@@ -19,13 +19,13 @@ use sp_std::prelude::*;
 #[derive(codec::Encode, codec::Decode)]
 pub struct OptimismPayloadProof {
     /// Actual state root of the optimism execution layer
-    pub state_root: [u8; 32],
+    pub state_root: H256,
     /// Storage root hash of the optimism withdrawal contracts
-    pub withdrawal_storage_root: [u8; 32],
+    pub withdrawal_storage_root: H256,
     /// Optimism Block hash at which the values aboved were fetched
-    pub l2_block_hash: [u8; 32],
+    pub l2_block_hash: H256,
     /// L2Oracle contract version
-    pub version: [u8; 32],
+    pub version: H256,
     /// Membership Proof for the L2Oracle contract account in the ethereum world trie
     pub l2_oracle_proof: Vec<Vec<u8>>,
     /// Membership proof for output root in l2Outputs array
@@ -109,7 +109,7 @@ pub(super) fn verify_optimism_payload(
         },
         commitment: StateCommitment {
             timestamp: payload.timestamp,
-            ismp_root: [0u8; 32],
+            ismp_root: None,
             state_root: payload.state_root,
         },
     })

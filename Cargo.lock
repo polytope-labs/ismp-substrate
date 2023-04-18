@@ -2604,9 +2604,9 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.3.17"
+version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66b91535aa35fea1523ad1b86cb6b53c28e0ae566ba4a460f4457e936cad7c6f"
+checksum = "17f8a914c2987b688368b5138aa05321db91f4090cf26118185672ad588bce21"
 dependencies = [
  "bytes",
  "fnv",
@@ -3090,7 +3090,7 @@ dependencies = [
 [[package]]
 name = "ismp"
 version = "0.1.0"
-source = "git+ssh://git@github.com/polytope-labs/ismp-rs.git?branch=main#d479368139af98d7eb0ef0f79a06ad86a28748e2"
+source = "git+ssh://git@github.com/polytope-labs/ismp-rs.git?branch=main#26534dce3e5980eb33ff5ee1ce1e193cc53ebf1a"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -3139,6 +3139,7 @@ dependencies = [
  "frame-system",
  "hex-literal 0.3.4",
  "ismp",
+ "ismp-primitives",
  "ismp-runtime-api",
  "jsonrpsee",
  "pallet-ismp",
@@ -3157,6 +3158,7 @@ name = "ismp-runtime-api"
 version = "0.1.0"
 dependencies = [
  "ismp",
+ "ismp-primitives",
  "pallet-ismp",
  "parity-scale-codec",
  "serde",
@@ -3953,9 +3955,9 @@ checksum = "f051f77a7c8e6957c0696eac88f26b0117e54f52d3fc682ab19397a8812846a4"
 
 [[package]]
 name = "linux-raw-sys"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d59d8c75012853d2e872fb56bc8a2e53718e2cafe1a4c823143141c6d90c322f"
+checksum = "3f508063cc7bb32987c71511216bd5a32be15bccb6a80b52df8b9d7f01fc3aa2"
 
 [[package]]
 name = "lock_api"
@@ -5954,7 +5956,7 @@ dependencies = [
  "errno 0.3.1",
  "io-lifetimes 1.0.10",
  "libc",
- "linux-raw-sys 0.3.1",
+ "linux-raw-sys 0.3.2",
  "windows-sys 0.48.0",
 ]
 

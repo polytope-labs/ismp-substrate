@@ -18,12 +18,12 @@ use codec::Encode;
 use frame_support::log::{debug, trace};
 use ismp_primitives::mmr::{DataOrHash, NodeIndex};
 use mmr_lib::helper;
-use sp_core::offchain::StorageKind;
+use sp_core::{offchain::StorageKind, H256};
 use sp_std::iter::Peekable;
 #[cfg(not(feature = "std"))]
 use sp_std::prelude::*;
 
-use crate::{mmr::utils::NodesUtils, Config, Pallet};
+use crate::{host::Host, mmr::utils::NodesUtils, Config, Pallet};
 
 /// A marker type for runtime-specific storage implementation.
 ///
@@ -82,6 +82,7 @@ where
 impl<T> mmr_lib::MMRStore<DataOrHash<T>> for Storage<RuntimeStorage, T>
 where
     T: Config,
+    <T as frame_system::Config>::Hash: From<H256>,
 {
     fn get_elem(&self, pos: NodeIndex) -> mmr_lib::Result<Option<DataOrHash<T>>> {
         Ok(Pallet::<T>::get_node(pos))
@@ -94,7 +95,7 @@ where
 
         trace!(
             target: "runtime::mmr", "elems: {:?}",
-            elems.iter().map(|elem| elem.hash()).collect::<Vec<_>>()
+            elems.iter().map(|elem| elem.hash::<Host<T>>()).collect::<Vec<_>>()
         );
 
         let leaves = Pallet::<T>::get_num_leaves();
@@ -117,7 +118,7 @@ where
         for elem in elems {
             // On-chain we are going to only store new peaks.
             if peaks_to_store.next_if_eq(&node_index).is_some() {
-                Pallet::<T>::insert_node(node_index, elem.hash());
+                Pallet::<T>::insert_node(node_index, elem.hash::<Host<T>>());
             }
             // We are storing full node off-chain (using indexing API).
             Self::store_to_offchain(node_index, &elem);

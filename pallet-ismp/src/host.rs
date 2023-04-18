@@ -9,6 +9,7 @@ use crate::{
 };
 use alloc::{format, string::ToString};
 use core::time::Duration;
+use ethabi::ethereum_types::H256;
 use frame_support::traits::UnixTime;
 use ismp_rs::{
     consensus_client::{
@@ -17,6 +18,7 @@ use ismp_rs::{
     error::Error,
     host::{ChainID, ISMPHost},
     router::{ISMPRouter, Request},
+    util::hash_request,
 };
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
@@ -30,7 +32,10 @@ impl<T: Config> Default for Host<T> {
     }
 }
 
-impl<T: Config> ISMPHost for Host<T> {
+impl<T: Config> ISMPHost for Host<T>
+where
+    <T as frame_system::Config>::Hash: From<H256>,
+{
     fn host(&self) -> ChainID {
         <T as Config>::CHAIN_ID
     }
@@ -74,10 +79,10 @@ impl<T: Config> ISMPHost for Host<T> {
         }
     }
 
-    fn request_commitment(&self, req: &Request) -> Result<Vec<u8>, Error> {
-        let commitment = self.get_request_commitment(req);
+    fn request_commitment(&self, req: &Request) -> Result<H256, Error> {
+        let commitment = hash_request::<Self>(req);
 
-        let _ = RequestAcks::<T>::get(commitment.clone()).ok_or_else(|| {
+        let _ = RequestAcks::<T>::get(commitment.0.to_vec()).ok_or_else(|| {
             Error::RequestCommitmentNotFound {
                 nonce: req.nonce(),
                 source: req.source_chain(),
@@ -118,16 +123,12 @@ impl<T: Config> ISMPHost for Host<T> {
 
     fn consensus_client(&self, id: ConsensusClientId) -> Result<Box<dyn ConsensusClient>, Error> {
         match id {
-            ETHEREUM_CONSENSUS_CLIENT_ID => Ok(Box::new(BeaconConsensusClient::default())),
+            ETHEREUM_CONSENSUS_CLIENT_ID => Ok(Box::new(BeaconConsensusClient::<Self>::default())),
             _ => Err(Error::ImplementationSpecific(format!(
-                "No consensus client found for consensus id {}",
+                "No consensus client found for consensus id {:?}",
                 id
             ))),
         }
-    }
-
-    fn keccak256(&self, bytes: &[u8]) -> [u8; 32] {
-        sp_io::hashing::keccak_256(bytes)
     }
 
     fn challenge_period(&self, id: ConsensusClientId) -> Duration {
@@ -144,5 +145,12 @@ impl<T: Config> ISMPHost for Host<T> {
     fn store_latest_commitment_height(&self, height: StateMachineHeight) -> Result<(), Error> {
         LatestStateMachineHeight::<T>::insert(height.id, height.height);
         Ok(())
+    }
+
+    fn keccak256(bytes: &[u8]) -> H256
+    where
+        Self: Sized,
+    {
+        sp_io::hashing::keccak_256(bytes).into()
     }
 }

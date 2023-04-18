@@ -33,7 +33,7 @@ use ismp_rs::{
     host::ChainID,
     router::{Request, Response},
 };
-use sp_core::offchain::StorageKind;
+use sp_core::{offchain::StorageKind, H256};
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use ismp_primitives::mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex};
 use mmr::mmr::Mmr;
@@ -60,7 +60,7 @@ pub mod pallet {
         host::ChainID,
         messaging::Message,
     };
-    use sp_runtime::traits;
+    use sp_core::H256;
 
     /// Our pallet's configuration trait. All our types and constants go in here. If the
     /// pallet is dependent on specific other pallets, then their configuration traits
@@ -83,48 +83,20 @@ pub mod pallet {
         const INDEXING_PREFIX: &'static [u8];
         type AdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
-        /// A hasher type for MMR.
-        ///
-        /// To construct trie nodes that result in merging (bagging) two peaks, depending on the
-        /// node kind we take either:
-        /// - The node (hash) itself if it's an inner node.
-        /// - The hash of SCALE-encoding of the leaf data if it's a leaf node.
-        ///
-        /// Then we create a tuple of these two hashes, SCALE-encode it (concatenate) and
-        /// hash, to obtain a new MMR inner node - the new peak.
-        type Hashing: traits::Hash<Output = <Self as Config>::Hash>;
         const CHAIN_ID: ChainID;
-        /// The hashing output type.
-        ///
-        /// This type is actually going to be stored in the MMR.
-        /// Required to be provided again, to satisfy trait bounds for storage items.
-        type Hash: traits::Member
-            + traits::MaybeSerializeDeserialize
-            + sp_std::fmt::Debug
-            + sp_std::hash::Hash
-            + AsRef<[u8]>
-            + AsMut<[u8]>
-            + From<[u8; 32]>
-            + Copy
-            + Default
-            + codec::Codec
-            + codec::EncodeLike
-            + scale_info::TypeInfo
-            + MaxEncodedLen;
         type TimeProvider: UnixTime;
     }
 
     // Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and
     // method.
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     /// Latest MMR Root hash
     #[pallet::storage]
     #[pallet::getter(fn mmr_root_hash)]
-    pub type RootHash<T: Config> = StorageValue<_, <T as Config>::Hash, ValueQuery>;
+    pub type RootHash<T: Config> = StorageValue<_, <T as frame_system::Config>::Hash, ValueQuery>;
 
     /// Current size of the MMR (number of leaves) for requests.
     #[pallet::storage]
@@ -138,7 +110,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn request_peaks)]
     pub type Nodes<T: Config> =
-        StorageMap<_, Identity, NodeIndex, <T as Config>::Hash, OptionQuery>;
+        StorageMap<_, Identity, NodeIndex, <T as frame_system::Config>::Hash, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn state_commitments)]
@@ -194,7 +166,10 @@ pub mod pallet {
 
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
+    where
+        <T as frame_system::Config>::Hash: From<H256>,
+    {
         fn on_initialize(_n: T::BlockNumber) -> Weight {
             // return Mmr finalization weight here
             Weight::zero()
@@ -227,7 +202,10 @@ pub mod pallet {
     }
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
+    impl<T: Config> Pallet<T>
+    where
+        <T as frame_system::Config>::Hash: From<H256>,
+    {
         /// Handles ismp messages
         #[pallet::weight(0)]
         #[pallet::call_index(0)]
@@ -368,7 +346,10 @@ pub mod pallet {
     }
 }
 
-impl<T: Config> Pallet<T> {
+impl<T: Config> Pallet<T>
+where
+    <T as frame_system::Config>::Hash: From<H256>,
+{
     /// Generate an MMR proof for the given `leaf_indices`.
     /// Note this method can only be used from an off-chain context
     /// (Offchain Worker or Runtime API call), since it requires
@@ -376,20 +357,21 @@ impl<T: Config> Pallet<T> {
     /// It may return an error or panic if used incorrectly.
     pub fn generate_proof(
         leaf_indices: Vec<LeafIndex>,
-    ) -> Result<(Vec<Leaf>, primitives::Proof<<T as Config>::Hash>), primitives::Error> {
+    ) -> Result<(Vec<Leaf>, primitives::Proof<<T as frame_system::Config>::Hash>), primitives::Error>
+    {
         let leaves_count = NumberOfLeaves::<T>::get();
         let mmr = Mmr::<mmr::storage::OffchainStorage, T>::new(leaves_count);
         mmr.generate_proof(leaf_indices)
     }
 
     /// Return the on-chain MMR root hash.
-    pub fn mmr_root() -> <T as Config>::Hash {
+    pub fn mmr_root() -> <T as frame_system::Config>::Hash {
         Self::mmr_root_hash()
     }
 }
 
 impl<T: Config> Pallet<T> {
-    fn get_node<L>(pos: NodeIndex) -> Option<DataOrHash<T>> {
+    fn get_node(pos: NodeIndex) -> Option<DataOrHash<T>> {
         Nodes::<T>::get(pos).map(DataOrHash::Hash)
     }
 
@@ -397,7 +379,7 @@ impl<T: Config> Pallet<T> {
         Nodes::<T>::remove(pos);
     }
 
-    fn insert_node(pos: NodeIndex, node: <T as Config>::Hash) {
+    fn insert_node(pos: NodeIndex, node: <T as frame_system::Config>::Hash) {
         Nodes::<T>::insert(pos, node)
     }
 
@@ -416,7 +398,7 @@ impl<T: Config> Pallet<T> {
 
 #[derive(RuntimeDebug, Encode, Decode)]
 pub struct RequestResponseLog<T: Config> {
-    mmr_root_hash: <T as Config>::Hash,
+    mmr_root_hash: <T as frame_system::Config>::Hash,
 }
 
 impl<T: Config> Pallet<T> {

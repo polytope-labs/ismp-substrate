@@ -7,7 +7,9 @@ use ismp_rs::{
     error::Error,
     host::ISMPHost,
     router::{ISMPRouter, Request, Response},
+    util::{hash_request, hash_response},
 };
+use sp_core::H256;
 
 #[derive(Encode, Decode, scale_info::TypeInfo)]
 pub enum Receipt {
@@ -23,11 +25,14 @@ impl<T: Config> Default for Router<T> {
     }
 }
 
-impl<T: Config> ISMPRouter for Router<T> {
+impl<T: Config> ISMPRouter for Router<T>
+where
+    <T as frame_system::Config>::Hash: From<H256>,
+{
     fn dispatch(&self, request: Request) -> Result<(), Error> {
         let host = Host::<T>::default();
 
-        let commitment = host.get_request_commitment(&request);
+        let commitment = hash_request::<Host<T>>(&request).0.to_vec();
 
         if RequestAcks::<T>::contains_key(commitment.clone()) {
             return Err(Error::ImplementationSpecific(format!(
@@ -69,7 +74,7 @@ impl<T: Config> ISMPRouter for Router<T> {
     fn write_response(&self, response: Response) -> Result<(), Error> {
         let host = Host::<T>::default();
 
-        let commitment = host.get_response_commitment(&response);
+        let commitment = hash_response::<Host<T>>(&response).0.to_vec();
 
         if ResponseAcks::<T>::contains_key(commitment.clone()) {
             return Err(Error::ImplementationSpecific(format!(

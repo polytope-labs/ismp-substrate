@@ -8,11 +8,14 @@ use ethabi::{
     Token,
 };
 use ismp_rs::{
-    consensus_client::{IntermediateState, StateCommitment, StateMachineHeight, StateMachineId},
+    consensus_client::{
+        ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight, StateMachineId,
+    },
     error::Error,
     host::ISMPHost,
     messaging::Proof,
     router::RequestResponse,
+    util::{hash_request, hash_response},
 };
 use patricia_merkle_trie::{EIP1186Layout, StorageProof};
 use rlp::Rlp;
@@ -21,7 +24,7 @@ use trie_db::{DBValue, Trie, TrieDBBuilder};
 
 pub fn construct_intermediate_state(
     state_id: u64,
-    consensus_client_id: u64,
+    consensus_client_id: ConsensusClientId,
     height: u64,
     timestamp: u64,
     state_root: &[u8],
@@ -32,7 +35,7 @@ pub fn construct_intermediate_state(
 
     let state_commitment = StateCommitment {
         timestamp,
-        ismp_root: [0u8; 32],
+        ismp_root: None,
         state_root: to_bytes_32(&state_root[..])?.into(),
     };
 
@@ -51,17 +54,17 @@ pub(super) fn decode_evm_state_proof(proof: &Proof) -> Result<EvmStateProof, Err
     Ok(evm_state_proof)
 }
 
-pub fn req_res_to_key(host: &dyn ISMPHost, item: RequestResponse) -> Vec<u8> {
+pub fn req_res_to_key<H: ISMPHost>(item: RequestResponse) -> Vec<u8> {
     match item {
         RequestResponse::Request(request) => {
-            let commitment = host.get_request_commitment(&request);
-            let unhashed = derive_unhashed_map_key(commitment, REQ_SLOT);
-            host.keccak256(&unhashed).to_vec()
+            let commitment = hash_request::<H>(&request);
+            let unhashed = derive_unhashed_map_key(commitment.0.to_vec(), REQ_SLOT);
+            H::keccak256(&unhashed).0.to_vec()
         }
         RequestResponse::Response(response) => {
-            let commitment = host.get_response_commitment(&response);
-            let unhashed = derive_unhashed_map_key(commitment, RESP_SLOT);
-            host.keccak256(&unhashed).to_vec()
+            let commitment = hash_response::<H>(&response);
+            let unhashed = derive_unhashed_map_key(commitment.0.to_vec(), RESP_SLOT);
+            H::keccak256(&unhashed).0.to_vec()
         }
     }
 }

@@ -29,9 +29,9 @@ use crate::consensus_clients::beacon_consensus_client::{
 use sp_std::prelude::*;
 
 #[derive(Default, Clone)]
-pub struct BeaconConsensusClient;
+pub struct BeaconConsensusClient<H: ISMPHost>(core::marker::PhantomData<H>);
 
-impl ConsensusClient for BeaconConsensusClient {
+impl<H: ISMPHost> ConsensusClient for BeaconConsensusClient<H> {
     fn verify_consensus(
         &self,
         _host: &dyn ISMPHost,
@@ -116,7 +116,7 @@ impl ConsensusClient for BeaconConsensusClient {
 
     fn verify_membership(
         &self,
-        host: &dyn ISMPHost,
+        _host: &dyn ISMPHost,
         item: RequestResponse,
         root: StateCommitment,
         proof: &Proof,
@@ -125,7 +125,7 @@ impl ConsensusClient for BeaconConsensusClient {
         let contract_address = ismp_contract_address(&item).ok_or_else(|| {
             Error::ImplementationSpecific("Ismp contract address not found".to_string())
         })?;
-        let key = req_res_to_key(host, item);
+        let key = req_res_to_key::<H>(item);
         let root = H256::from_slice(&root.state_root[..]);
         let contract_root = get_contract_storage_root(
             evm_state_proof.contract_proof,
@@ -141,34 +141,17 @@ impl ConsensusClient for BeaconConsensusClient {
     }
 
     fn state_trie_key(&self, _request: RequestResponse) -> Vec<u8> {
-        todo!()
+        unimplemented!()
     }
 
     fn verify_state_proof(
         &self,
-        host: &dyn ISMPHost,
-        item: RequestResponse,
-        root: StateCommitment,
-        proof: &Proof,
-    ) -> Result<(), Error> {
-        let evm_state_proof = decode_evm_state_proof(proof)?;
-        let contract_address = ismp_contract_address(&item).ok_or_else(|| {
-            Error::ImplementationSpecific("Ismp contract address not found".to_string())
-        })?;
-        let key = req_res_to_key(host, item);
-        let root = H256::from_slice(&root.state_root[..]);
-        let contract_root =
-            get_contract_storage_root(evm_state_proof.contract_proof, &contract_address, root)?;
-
-        let result = get_value_from_proof(key, contract_root, evm_state_proof.storage_proof)?;
-
-        if result.is_some() {
-            return Err(Error::NonMembershipProofVerificationFailed(
-                "Invalid membership proof".to_string(),
-            ))
-        }
-
-        Ok(())
+        _host: &dyn ISMPHost,
+        _item: Vec<u8>,
+        _root: StateCommitment,
+        _proof: &Proof,
+    ) -> Result<Option<Vec<u8>>, Error> {
+        Err(Error::ImplementationSpecific("State proofs not supported by ethereum".to_string()))
     }
 
     fn is_frozen(&self, consensus_state: &[u8]) -> Result<(), Error> {
