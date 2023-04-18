@@ -17,7 +17,7 @@ serde_json = "1.0.45"
 ismp-rs = { package = "ismp", git = "ssh://git@github.com/polytope-labs/ismp-rs.git", branch = "main" }
 pallet-ismp = { path = ".." }
 ismp-runtime-api = { path = "../runtime-api" }
-ismp-primitives = { path = "../primitives", default-features = false }
+ismp-primitives = { path = "../primitives" }
 
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
