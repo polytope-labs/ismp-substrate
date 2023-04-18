@@ -57,6 +57,7 @@ pub mod pallet {
             let state = RelaychainDataProvider::<T>::current_relay_chain_state();
             if !RelayChainState::<T>::contains_key(state.number) {
                 RelayChainState::<T>::insert(state.number, state.state_root);
+                Self::deposit_event(Event::<T>::NewRelayChainState { height: state.number })
             }
             Weight::zero()
         }
@@ -71,6 +72,6 @@ pub trait RelayChainOracle {
 
 impl<T: Config> RelayChainOracle for Pallet<T> {
     fn state_root(height: relay_chain::BlockNumber) -> Option<relay_chain::Hash> {
-        RelayChainState::get(height)
+        RelayChainState::<T>::get(height)
     }
 }

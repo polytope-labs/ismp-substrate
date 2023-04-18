@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, time::Duration};
+use core::{marker::PhantomData, time::Duration};
 
 use codec::{Decode, Encode};
 use hex_literal::hex;
@@ -13,7 +13,7 @@ use ismp::{
 };
 use merkle_mountain_range::MerkleProof;
 use sp_consensus_aura::AURA_ENGINE_ID;
-use sp_core::H256;
+use primitive_types::H256;
 use sp_runtime::{
     traits::{BlakeTwo256, Header},
     DigestItem,
@@ -62,14 +62,14 @@ where
                 Error::ImplementationSpecific(format!("Cannot decode beacon message: {e}"))
             })?;
 
-        let root = T::state_root(update.height).ok_or_else(|| {
+        let root = T::state_root(update.relay_height).ok_or_else(|| {
             Error::ImplementationSpecific(format!(
                 "Cannot find relay chain height: {}",
-                update.height
+                update.relay_height
             ))
         })?;
 
-        let db = StorageProof::new(update.proof).into_memory_db::<BlakeTwo256>();
+        let db = StorageProof::new(update.storage_proof).into_memory_db::<BlakeTwo256>();
         let trie = TrieDBBuilder::<LayoutV0<BlakeTwo256>>::new(&db, &root).build();
 
         let parachain_heads_key = PARACHAIN_HEADS_KEY.to_vec();
@@ -92,16 +92,16 @@ where
 
             // ideally all parachain headers are the same
             let header = T::Header::decode(&mut &*header).map_err(|e| {
-                Error::ImplementationSpecific(format!("Error decoding parachain header",))
+                Error::ImplementationSpecific(format!("Error decoding parachain header: {e}",))
             })?;
 
             let (mut timestamp, mut ismp_root) = (0, H256::default());
-            for digest in header.digest().logs {
+            for digest in header.digest().logs.iter() {
                 match digest {
                     DigestItem::PreRuntime(consensus_engine_id, value)
-                        if consensus_engine_id == AURA_ENGINE_ID =>
+                        if *consensus_engine_id == AURA_ENGINE_ID =>
                     {
-                        let slot = u64::decode(&mut &*value).map_err(|e| {
+                        let slot = u64::decode(&mut &value[..]).map_err(|e| {
                             Error::ImplementationSpecific(format!(
                                 "Cannot decode beacon message: {e}"
                             ))
@@ -109,7 +109,7 @@ where
                         timestamp = Duration::from_millis(slot * SLOT_DURATION).as_secs();
                     }
                     DigestItem::Consensus(consensus_engine_id, value)
-                        if consensus_engine_id == ISMP_ID =>
+                        if *consensus_engine_id == ISMP_ID =>
                     {
                         if value.len() != 32 {
                             Err(Error::ImplementationSpecific(
@@ -125,13 +125,15 @@ where
             }
 
             if timestamp == 0 || ismp_root == H256::default() {
-                Err(Error::ImplementationSpecific("Timestamp or ismp root not found".into()))
+                Err(Error::ImplementationSpecific("Timestamp or ismp root not found".into()))?
             }
+
+            let height: u32 = (*header.number()).into();
 
             let intermediate = IntermediateState {
                 height: StateMachineHeight {
                     id: StateMachineId { state_id: id as u64, consensus_client: 0 },
-                    height: header.number().into() as u64,
+                    height: height as u64,
                 },
                 commitment: StateCommitment {
                     timestamp,
@@ -153,17 +155,17 @@ where
 
     fn verify_membership(
         &self,
-        host: &dyn ISMPHost,
-        item: RequestResponse,
-        root: StateCommitment,
-        proof: &Proof,
+        _host: &dyn ISMPHost,
+        _item: RequestResponse,
+        _root: StateCommitment,
+        _proof: &Proof,
     ) -> Result<(), Error> {
-        MerkleProof::new(mmr_size, proof.proof);
+        // MerkleProof::new(mmr_size, proof.proof);
 
         Ok(())
     }
 
-    fn state_trie_key(&self, request: RequestResponse) -> Vec<u8> {
+    fn state_trie_key(&self, _request: RequestResponse) -> Vec<u8> {
         todo!()
     }
 
