@@ -29,9 +29,9 @@ use crate::host::Host;
 use codec::{Decode, Encode};
 use frame_support::{log::debug, RuntimeDebug};
 use ismp_rs::{
+    host::StateMachine,
     router::{Request, Response},
 };
-use ismp_rs::host::StateMachine;
 use sp_core::{offchain::StorageKind, H256};
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use ismp_primitives::mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex};
@@ -60,10 +60,10 @@ pub mod pallet {
             ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
         },
         handlers::{handle_incoming_message, MessageResult},
+        host::StateMachine,
         messaging::Message,
         router::ISMPRouter,
     };
-    use ismp_rs::host::StateMachine;
     use sp_core::H256;
 
     /// Our pallet's configuration trait. All our types and constants go in here. If the

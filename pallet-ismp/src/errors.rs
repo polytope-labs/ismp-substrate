@@ -2,8 +2,8 @@ use codec::{Decode, Encode};
 use ismp_rs::{
     consensus_client::{ConsensusClientId, StateMachineHeight},
     error::Error as IsmpError,
+    host::StateMachine,
 };
-use ismp_rs::host::StateMachine;
 use sp_std::prelude::*;
 
 #[derive(Clone, Debug, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]

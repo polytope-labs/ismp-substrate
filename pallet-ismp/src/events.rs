@@ -2,8 +2,8 @@ use crate::{Config, Event as PalletEvent};
 use alloc::collections::BTreeSet;
 use ismp_rs::{
     consensus_client::{ConsensusClientId, StateMachineHeight, StateMachineId},
+    host::StateMachine,
 };
-use ismp_rs::host::StateMachine;
 
 #[derive(codec::Encode, codec::Decode)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]

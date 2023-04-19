@@ -26,11 +26,10 @@ use ismp::{
         StateMachineId,
     },
     error::Error,
-    host::ISMPHost,
+    host::{ISMPHost, StateMachine},
     messaging::Proof,
     router::RequestResponse,
 };
-use ismp::host::StateMachine;
 use ismp_primitives::mmr::{DataOrHash, Leaf, MmrHasher};
 use merkle_mountain_range::MerkleProof;
 use primitive_types::H256;
@@ -191,15 +190,14 @@ where
             let state_id = match _host.host_state_machine() {
                 StateMachine::Kusama(_) => StateMachine::Kusama(id),
                 StateMachine::Polkadot(_) => StateMachine::Polkadot(id),
-                _ => Err(Error::ImplementationSpecific("Host state machine should be a parachain".into()))?
+                _ => Err(Error::ImplementationSpecific(
+                    "Host state machine should be a parachain".into(),
+                ))?,
             };
 
             let intermediate = IntermediateState {
                 height: StateMachineHeight {
-                    id: StateMachineId {
-                        state_id,
-                        consensus_client: PARACHAIN_CONSENSUS_ID,
-                    },
+                    id: StateMachineId { state_id, consensus_client: PARACHAIN_CONSENSUS_ID },
                     height: height as u64,
                 },
                 commitment: StateCommitment {

@@ -10,11 +10,10 @@ use ismp_rs::{
         ConsensusClient, ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
     },
     error::Error,
-    host::{ ISMPHost},
+    host::{ISMPHost, StateMachine},
     router::{ISMPRouter, Request},
     util::hash_request,
 };
-use ismp_rs::host::StateMachine;
 use sp_core::H256;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;

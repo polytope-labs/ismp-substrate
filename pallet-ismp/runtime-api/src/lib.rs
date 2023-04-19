@@ -3,9 +3,9 @@
 
 use ismp_rs::{
     consensus_client::ConsensusClientId,
+    host::StateMachine,
     router::{Request, Response},
 };
-use ismp_rs::host::StateMachine;
 use pallet_ismp::primitives::{Error, Proof};
 
 use ismp_primitives::mmr::{Leaf, LeafIndex};
