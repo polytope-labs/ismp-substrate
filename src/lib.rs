@@ -64,6 +64,7 @@ pub mod pallet {
         handlers::{handle_incoming_message, MessageResult},
         host::ChainID,
         messaging::Message,
+        module::ISMPModule,
     };
     use sp_runtime::traits;
 
@@ -117,6 +118,7 @@ pub mod pallet {
             + scale_info::TypeInfo
             + MaxEncodedLen;
         type TimeProvider: UnixTime;
+        type ISMPModule: ISMPModule;
     }
 
     // Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and

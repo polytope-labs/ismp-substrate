@@ -9,6 +9,7 @@ use core::marker::PhantomData;
 use ismp_rs::{
     error::Error,
     host::ISMPHost,
+    module::ISMPModule,
     router::{ISMPRouter, Request, Response},
 };
 
@@ -59,14 +60,16 @@ impl<T: Config> ISMPRouter for Router<T> {
             });
             // Store a map of request to leaf_index
             Pallet::<T>::store_leaf_index_offchain(offchain_key, leaf_index)
+        } else {
+            <T::ISMPModule>::on_accept(request)?;
         }
 
         RequestAcks::<T>::insert(commitment, Receipt::Ok);
         Ok(())
     }
 
-    fn dispatch_timeout(&self, _request: Request) -> Result<(), Error> {
-        todo!()
+    fn dispatch_timeout(&self, request: Request) -> Result<(), Error> {
+        <T::ISMPModule>::on_timeout(request)
     }
 
     fn write_response(&self, response: Response) -> Result<(), Error> {
@@ -102,6 +105,8 @@ impl<T: Config> ISMPRouter for Router<T> {
                 source_chain,
             });
             Pallet::<T>::store_leaf_index_offchain(offchain_key, leaf_index)
+        } else {
+            <T::ISMPModule>::on_response(response)?;
         }
 
         ResponseAcks::<T>::insert(commitment, Receipt::Ok);
