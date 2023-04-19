@@ -18,29 +18,30 @@ pub enum Receipt {
 
 /// The proxy router, This router allows for routing requests & responses from a source chain
 /// to a destination chain.
-#[derive(Clone)]
-pub struct ProxyRouter<T, R> {
-    inner: Option<R>,
+pub struct ProxyRouter<T> {
+    inner: Option<Box<dyn ISMPRouter>>,
     _phantom: PhantomData<T>,
 }
 
-impl<T, R> ProxyRouter<T, R> {
+impl<T> ProxyRouter<T> {
     /// Initialize the proxy router with an inner router.
-    pub fn new(router: R) -> Self {
-        Self { inner: Some(router), _phantom: PhantomData }
+    pub fn new<R>(router: R) -> Self
+    where
+        R: ISMPRouter + 'static,
+    {
+        Self { inner: Some(Box::new(router)), _phantom: PhantomData }
     }
 }
 
-impl<T, R> Default for ProxyRouter<T, R> {
+impl<T> Default for ProxyRouter<T> {
     fn default() -> Self {
         Self { inner: None, _phantom: PhantomData }
     }
 }
 
-impl<T, R> ISMPRouter for ProxyRouter<T, R>
+impl<T> ISMPRouter for ProxyRouter<T>
 where
     T: Config,
-    R: ISMPRouter,
     <T as frame_system::Config>::Hash: From<H256>,
 {
     fn dispatch(&self, request: Request) -> Result<(), Error> {

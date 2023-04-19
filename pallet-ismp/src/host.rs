@@ -4,7 +4,7 @@ use crate::{
 };
 use alloc::{format, string::ToString};
 use core::time::Duration;
-use frame_support::traits::UnixTime;
+use frame_support::traits::{Get, UnixTime};
 use ismp_rs::{
     consensus_client::{
         ConsensusClient, ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
@@ -32,7 +32,7 @@ where
     <T as frame_system::Config>::Hash: From<H256>,
 {
     fn host_state_machine(&self) -> StateMachine {
-        <T as Config>::STATE_MACHINE
+        T::StateMachine::get()
     }
 
     fn latest_commitment_height(&self, id: StateMachineId) -> Result<StateMachineHeight, Error> {
