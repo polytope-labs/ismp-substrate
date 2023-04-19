@@ -90,7 +90,7 @@ pub mod pallet {
         type AdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Host state machine identifier
-        const STATE_MACHINE: StateMachine;
+        type StateMachine: Get<StateMachine>;
 
         /// Timestamp provider
         type TimeProvider: UnixTime;
