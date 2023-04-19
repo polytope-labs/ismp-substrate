@@ -10,10 +10,11 @@ use ismp_rs::{
         ConsensusClient, ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
     },
     error::Error,
-    host::{ChainID, ISMPHost},
+    host::{ ISMPHost},
     router::{ISMPRouter, Request},
     util::hash_request,
 };
+use ismp_rs::host::StateMachine;
 use sp_core::H256;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
@@ -31,8 +32,8 @@ impl<T: Config> ISMPHost for Host<T>
 where
     <T as frame_system::Config>::Hash: From<H256>,
 {
-    fn host(&self) -> ChainID {
-        <T as Config>::CHAIN_ID
+    fn host_state_machine(&self) -> StateMachine {
+        <T as Config>::STATE_MACHINE
     }
 
     fn latest_commitment_height(&self, id: StateMachineId) -> Result<StateMachineHeight, Error> {
@@ -116,8 +117,20 @@ where
         Ok(())
     }
 
+    fn store_latest_commitment_height(&self, height: StateMachineHeight) -> Result<(), Error> {
+        LatestStateMachineHeight::<T>::insert(height.id, height.height);
+        Ok(())
+    }
+
     fn consensus_client(&self, id: ConsensusClientId) -> Result<Box<dyn ConsensusClient>, Error> {
         <T as Config>::ConsensusClientProvider::consensus_client(id)
+    }
+
+    fn keccak256(bytes: &[u8]) -> H256
+    where
+        Self: Sized,
+    {
+        sp_io::hashing::keccak_256(bytes).into()
     }
 
     fn challenge_period(&self, id: ConsensusClientId) -> Duration {
@@ -126,17 +139,5 @@ where
 
     fn ismp_router(&self) -> Box<dyn ISMPRouter> {
         Box::new(T::IsmpRouter::default())
-    }
-
-    fn store_latest_commitment_height(&self, height: StateMachineHeight) -> Result<(), Error> {
-        LatestStateMachineHeight::<T>::insert(height.id, height.height);
-        Ok(())
-    }
-
-    fn keccak256(bytes: &[u8]) -> H256
-    where
-        Self: Sized,
-    {
-        sp_io::hashing::keccak_256(bytes).into()
     }
 }

@@ -46,7 +46,7 @@ where
     fn dispatch(&self, request: Request) -> Result<(), Error> {
         let host = Host::<T>::default();
 
-        if host.host() != request.dest_chain() {
+        if host.host_state_machine() != request.dest_chain() {
             let commitment = hash_request::<Host<T>>(&request).0.to_vec();
 
             if RequestAcks::<T>::contains_key(commitment.clone()) {
@@ -90,7 +90,7 @@ where
     fn write_response(&self, response: Response) -> Result<(), Error> {
         let host = Host::<T>::default();
 
-        if host.host() != response.request.source_chain() {
+        if host.host_state_machine() != response.request.source_chain() {
             let commitment = hash_response::<Host<T>>(&response).0.to_vec();
 
             if ResponseAcks::<T>::contains_key(commitment.clone()) {
