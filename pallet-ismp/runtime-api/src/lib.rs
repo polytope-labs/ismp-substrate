@@ -2,7 +2,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use ismp_rs::{
-    consensus_client::ConsensusClientId,
+    consensus_client::{ConsensusClientId, StateMachineId},
     host::StateMachine,
     router::{Request, Response},
 };
@@ -42,6 +42,9 @@ sp_api::decl_runtime_apis! {
 
         /// Return the timestamp this client was last updated in seconds
         fn consensus_update_time(id: ConsensusClientId) -> Option<u64>;
+
+        /// Return the latest height of the state machine
+        fn latest_state_machine_height(id: StateMachineId) -> Option<u64>;
 
         /// Get Request Leaf Indices
         fn get_request_leaf_indices(leaf_queries: Vec<LeafIndexQuery>) -> Option<Vec<LeafIndex>>;

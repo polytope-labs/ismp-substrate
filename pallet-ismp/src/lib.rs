@@ -266,7 +266,7 @@ pub mod pallet {
                         );
                     }
                     Ok(_) => {
-                        // Do nothing, event has been deposited in ismp router
+                        // Do nothing, event should have been deposited by the ismp router
                     }
                     Err(err) => {
                         errors.push(err.into());

@@ -2995,7 +2995,11 @@ dependencies = [
 [[package]]
 name = "ismp"
 version = "0.1.0"
+<<<<<<< HEAD
 source = "git+ssh://git@github.com/polytope-labs/ismp-rs.git?branch=main#4b8013cada9f69ccbd550d1fc7e2c5107096559e"
+=======
+source = "git+ssh://git@github.com/polytope-labs/ismp-rs.git?branch=main#4e8f0d59bd304a5fb96a02a9de2d8976f9f21db8"
+>>>>>>> a5fef35 (batch messaging update)
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -8513,7 +8517,7 @@ checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
  "cfg-if",
  "digest 0.10.6",
- "rand 0.8.5",
+ "rand 0.7.3",
  "static_assertions",
 ]
 

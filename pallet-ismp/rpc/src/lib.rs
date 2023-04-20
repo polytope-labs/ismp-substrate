@@ -11,7 +11,7 @@ use jsonrpsee::{
 use codec::Encode;
 use ismp_primitives::mmr::{Leaf, LeafIndex};
 use ismp_rs::{
-    consensus_client::ConsensusClientId,
+    consensus_client::{ConsensusClientId, StateMachineId},
     router::{Request, Response},
 };
 use ismp_runtime_api::{IsmpRuntimeApi, LeafIndexQuery};
@@ -98,6 +98,10 @@ where
     /// Query timestamp of when this client was last updated in seconds
     #[method(name = "ismp_queryConsensusUpdateTime")]
     fn query_consensus_update_time(&self, client_id: ConsensusClientId) -> Result<u64>;
+
+    /// Query the latest height for a state machine
+    #[method(name = "ismp_queryStateMachineLatestHeight")]
+    fn query_state_machine_latest_height(&self, id: StateMachineId) -> Result<u64>;
 
     /// Query ISMP Events that were deposited in a series of blocks
     /// Using String keys because HashMap fails to deserialize when key is not a String
@@ -226,7 +230,15 @@ where
         api.consensus_update_time(at, client_id)
             .ok()
             .flatten()
-            .ok_or_else(|| runtime_error_into_rpc_error("Error fetching Consensus state"))
+            .ok_or_else(|| runtime_error_into_rpc_error("Error fetching Consensus update time"))
+    }
+
+    fn query_state_machine_latest_height(&self, id: StateMachineId) -> Result<u64> {
+        let api = self.client.runtime_api();
+        let at = self.client.info().best_hash;
+        api.latest_state_machine_height(at, id).ok().flatten().ok_or_else(|| {
+            runtime_error_into_rpc_error("Error fetching latest state machine height")
+        })
     }
 
     fn query_events(
