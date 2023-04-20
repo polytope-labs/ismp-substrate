@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 use ismp_primitives::mmr::Leaf;
 use ismp_rs::{
     host::ISMPHost,
-    router::{DispatchResult, ISMPRouter, Request, Response},
+    router::{DispatchError, DispatchResult, DispatchSuccess, ISMPRouter, Request, Response},
     util::{hash_request, hash_response},
 };
 use sp_core::H256;
@@ -50,12 +50,12 @@ where
             let commitment = hash_request::<Host<T>>(&request).0.to_vec();
 
             if RequestAcks::<T>::contains_key(commitment.clone()) {
-                return DispatchResult::Error {
+                Err(DispatchError {
                     msg: "Duplicate request".to_string(),
                     nonce: request.nonce(),
                     source: request.source_chain(),
                     dest: request.dest_chain(),
-                }
+                })?
             }
 
             let leaves = Pallet::<T>::number_of_leaves();
@@ -67,12 +67,12 @@ where
             let leaf_index = if let Some(leaf_index) = mmr.push(Leaf::Request(request)) {
                 leaf_index
             } else {
-                return DispatchResult::Error {
+                Err(DispatchError {
                     msg: "Failed to push request into mmr".to_string(),
                     nonce,
                     source: source_chain,
                     dest: dest_chain,
-                }
+                })?
             };
             // Deposit Event
             Pallet::<T>::deposit_event(Event::Request {
@@ -83,16 +83,16 @@ where
             // Store a map of request to leaf_index
             Pallet::<T>::store_leaf_index_offchain(offchain_key, leaf_index);
             RequestAcks::<T>::insert(commitment, Receipt::Ok);
-            DispatchResult::Success { dest_chain, source_chain, nonce }
+            Ok(DispatchSuccess { dest_chain, source_chain, nonce })
         } else if let Some(ref router) = self.inner {
             router.dispatch(request)
         } else {
-            DispatchResult::Error {
+            Err(DispatchError {
                 msg: "Missing a module router".to_string(),
                 nonce: request.nonce(),
                 source: request.source_chain(),
                 dest: request.dest_chain(),
-            }
+            })?
         }
     }
 
@@ -100,12 +100,12 @@ where
         if let Some(ref router) = self.inner {
             router.dispatch(request)
         } else {
-            DispatchResult::Error {
+            Err(DispatchError {
                 msg: "Missing a module router".to_string(),
                 nonce: request.nonce(),
                 source: request.source_chain(),
                 dest: request.dest_chain(),
-            }
+            })?
         }
     }
 
@@ -116,12 +116,12 @@ where
             let commitment = hash_response::<Host<T>>(&response).0.to_vec();
 
             if ResponseAcks::<T>::contains_key(commitment.clone()) {
-                return DispatchResult::Error {
+                Err(DispatchError {
                     msg: "Duplicate response".to_string(),
                     nonce: response.request.nonce(),
                     source: response.request.source_chain(),
                     dest: response.request.dest_chain(),
-                }
+                })?
             }
 
             let leaves = Pallet::<T>::number_of_leaves();
@@ -136,12 +136,12 @@ where
             let leaf_index = if let Some(leaf_index) = mmr.push(Leaf::Response(response)) {
                 leaf_index
             } else {
-                return DispatchResult::Error {
+                Err(DispatchError {
                     msg: "Failed to push response into mmr".to_string(),
                     nonce,
                     source: source_chain,
                     dest: dest_chain,
-                }
+                })?
             };
 
             Pallet::<T>::deposit_event(Event::Response {
@@ -151,16 +151,16 @@ where
             });
             Pallet::<T>::store_leaf_index_offchain(offchain_key, leaf_index);
             ResponseAcks::<T>::insert(commitment, Receipt::Ok);
-            DispatchResult::Success { dest_chain, source_chain, nonce }
+            Ok(DispatchSuccess { dest_chain, source_chain, nonce })
         } else if let Some(ref router) = self.inner {
             router.write_response(response)
         } else {
-            DispatchResult::Error {
+            Err(DispatchError {
                 msg: "Missing a module router".to_string(),
                 nonce: response.request.nonce(),
                 source: response.request.source_chain(),
                 dest: response.request.dest_chain(),
-            }
+            })?
         }
     }
 }
