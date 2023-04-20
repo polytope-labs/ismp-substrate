@@ -3035,6 +3035,7 @@ dependencies = [
  "ismp",
  "parity-scale-codec",
  "primitive-types",
+ "serde",
  "sp-runtime",
 ]
 
