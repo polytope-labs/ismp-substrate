@@ -1,5 +1,5 @@
 use crate::{host::Host, mmr, mmr::mmr::Mmr, Config, Event, Pallet, RequestAcks, ResponseAcks};
-use alloc::{boxed::Box, format, string::ToString};
+use alloc::{boxed::Box, string::ToString};
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use ismp_primitives::mmr::Leaf;

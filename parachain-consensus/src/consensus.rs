@@ -52,12 +52,6 @@ impl<T, R> Default for ParachainConsensusClient<T, R> {
     }
 }
 
-#[derive(Debug, Encode, Decode)]
-pub enum RelayChain {
-    Polkadot,
-    Kusama,
-}
-
 /// Information necessary to prove the sibling parachain's finalization to this
 /// parachain.
 #[derive(Debug, Encode, Decode)]
@@ -68,8 +62,6 @@ pub struct ParachainConsensusProof {
     pub relay_height: u32,
     /// Storage proof for the parachain headers
     pub storage_proof: Vec<Vec<u8>>,
-    /// Relay chain
-    pub relay_chain: RelayChain,
 }
 
 /// Hashing algorithm for the state proof
@@ -244,7 +236,8 @@ where
             Error::ImplementationSpecific(format!("Cannot decode membership proof: {e:?}"))
         })?;
         let nodes = membership.proof.into_iter().map(|h| DataOrHash::Hash(h.into())).collect();
-        let proof = MerkleProof::<DataOrHash<T>, MmrHasher<T, H>>::new(membership.mmr_size, nodes);
+        let proof =
+            MerkleProof::<DataOrHash<T>, MmrHasher<T, Host<T>>>::new(membership.mmr_size, nodes);
         let leaves = match item {
             RequestResponse::Request(req) => membership
                 .leaf_indices
