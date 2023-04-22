@@ -3013,6 +3013,7 @@ dependencies = [
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
+ "hash-db",
  "hex-literal 0.4.1",
  "ismp",
  "ismp-primitives",

@@ -27,6 +27,7 @@ pub mod router;
 
 use crate::host::Host;
 use codec::{Decode, Encode};
+use core::time::Duration;
 use frame_support::{log::debug, RuntimeDebug};
 use ismp_rs::{
     consensus_client::{ConsensusClientId, StateMachineId},
@@ -39,6 +40,7 @@ use ismp_primitives::{
     mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex},
     LeafIndexQuery,
 };
+use ismp_rs::host::ISMPHost;
 use mmr::mmr::Mmr;
 pub use pallet::*;
 use sp_std::prelude::*;
@@ -200,30 +202,30 @@ pub mod pallet {
 
         fn on_finalize(_n: T::BlockNumber) {
             // Only finalize if mmr was modified
-            if !NewLeavesAdded::<T>::exists() {
-                return
-            }
-            let leaves = Self::number_of_leaves();
+            let root = if !NewLeavesAdded::<T>::exists() {
+                <RootHash<T>>::get()
+            } else {
+                let leaves = Self::number_of_leaves();
+                let mmr: Mmr<mmr::storage::RuntimeStorage, T> = Mmr::new(leaves);
 
-            let mmr: Mmr<mmr::storage::RuntimeStorage, T> = Mmr::new(leaves);
+                // Update the size, `mmr.finalize()` should also never fail.
+                let (leaves, root) = match mmr.finalize() {
+                    Ok((leaves, root)) => (leaves, root),
+                    Err(e) => {
+                        log::error!(target: "runtime::mmr", "MMR finalize failed: {:?}", e);
+                        return
+                    }
+                };
 
-            // Update the size, `mmr.finalize()` should also never fail.
-            let (leaves, root) = match mmr.finalize() {
-                Ok((leaves, root)) => (leaves, root),
-                Err(e) => {
-                    log::error!(target: "runtime::mmr", "MMR finalize failed: {:?}", e);
-                    return
-                }
+                <NumberOfLeaves<T>>::put(leaves);
+                <RootHash<T>>::put(root);
+                NewLeavesAdded::<T>::kill();
+
+                root
             };
 
-            <NumberOfLeaves<T>>::put(leaves);
-            <RootHash<T>>::put(root);
-
-            let log = RequestResponseLog::<T> { mmr_root_hash: root };
-
-            let digest = sp_runtime::generic::DigestItem::Consensus(ISMP_ID, log.encode());
+            let digest = sp_runtime::generic::DigestItem::Consensus(ISMP_ID, root.encode());
             <frame_system::Pallet<T>>::deposit_log(digest);
-            NewLeavesAdded::<T>::kill();
         }
 
         fn offchain_worker(_n: T::BlockNumber) {}
@@ -253,31 +255,42 @@ pub mod pallet {
 
                 match handle_incoming_message(&host, message) {
                     Ok(MessageResult::ConsensusMessage(res)) => {
-                        // Deposit events for previous update result that has passed the
-                        // challenge period
-                        if let Some(pending_updates) =
-                            ConsensusUpdateResults::<T>::get(res.consensus_client_id)
-                        {
-                            for (prev_height, latest_height) in pending_updates.into_iter() {
+                        // check if this is a trusted state machine
+                        let is_trusted_state_machine = host
+                            .challenge_period(res.consensus_client_id.clone()) ==
+                            Duration::from_secs(0);
+
+                        if is_trusted_state_machine {
+                            for (_, latest_height) in res.state_updates.into_iter() {
                                 Self::deposit_event(Event::<T>::StateMachineUpdated {
                                     state_machine_id: latest_height.id,
                                     latest_height: latest_height.height,
-                                    previous_height: prev_height.height,
                                 })
                             }
+                        } else {
+                            if let Some(pending_updates) =
+                                ConsensusUpdateResults::<T>::get(res.consensus_client_id)
+                            {
+                                for (_, latest_height) in pending_updates.into_iter() {
+                                    Self::deposit_event(Event::<T>::StateMachineUpdated {
+                                        state_machine_id: latest_height.id,
+                                        latest_height: latest_height.height,
+                                    })
+                                }
+                            }
+
+                            Self::deposit_event(Event::<T>::ChallengePeriodStarted {
+                                consensus_client_id: res.consensus_client_id,
+                                state_machines: res.state_updates.clone(),
+                            });
+
+                            // Store the new update result that have just entered the challenge
+                            // period
+                            ConsensusUpdateResults::<T>::insert(
+                                res.consensus_client_id,
+                                res.state_updates,
+                            );
                         }
-
-                        Self::deposit_event(Event::<T>::ChallengePeriodStarted {
-                            consensus_client_id: res.consensus_client_id,
-                            state_machines: res.state_updates.clone(),
-                        });
-
-                        // Store the new update result that have just entered the challenge
-                        // period
-                        ConsensusUpdateResults::<T>::insert(
-                            res.consensus_client_id,
-                            res.state_updates,
-                        );
                     }
                     Ok(_) => {
                         // Do nothing, event should have been deposited by the ismp router
@@ -332,12 +345,8 @@ pub mod pallet {
     /// it is optional, it is also possible to provide a custom implementation.
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Event to be emitted when the challenge period for a state machine update has elapsed
-        StateMachineUpdated {
-            state_machine_id: StateMachineId,
-            latest_height: u64,
-            previous_height: u64,
-        },
+        /// Emitted when a state machine is successfully updated to a new height
+        StateMachineUpdated { state_machine_id: StateMachineId, latest_height: u64 },
         /// Signifies that a client has begun it's challenge period
         ChallengePeriodStarted {
             consensus_client_id: ConsensusClientId,
