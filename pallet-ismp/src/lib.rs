@@ -33,6 +33,7 @@ use ismp_rs::{
     consensus_client::{ConsensusClientId, StateMachineId},
     host::StateMachine,
     router::{Request, Response},
+    messaging::CreateConsensusClient,
 };
 use sp_core::{offchain::StorageKind, H256};
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -312,16 +313,11 @@ pub mod pallet {
         /// Create consensus clients
         #[pallet::weight(0)]
         #[pallet::call_index(1)]
-        pub fn create_consensus_client(origin: OriginFor<T>, message: Message) -> DispatchResult {
+        pub fn create_consensus_client(origin: OriginFor<T>, message: CreateConsensusClient) -> DispatchResult {
             <T as Config>::AdminOrigin::ensure_origin(origin)?;
-
             let host = Host::<T>::default();
 
-            if !matches!(message, Message::CreateConsensusClient(_)) {
-                Err(Error::<T>::InvalidMessage)?
-            }
-
-            let result = handle_incoming_message(&host, message)
+            let result = handle_incoming_message(&host, Message::CreateConsensusClient(message))
                 .map_err(|_| Error::<T>::ConsensusClientCreationFailed)?;
 
             let result = match result {

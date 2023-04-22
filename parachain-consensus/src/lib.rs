@@ -32,7 +32,6 @@ pub mod pallet {
     use cumulus_primitives_core::relay_chain;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use ismp::{consensus_client::StateMachineId, host::StateMachine};
     use parachain_system::{RelaychainDataProvider, RelaychainStateProvider};
 
     #[pallet::pallet]
