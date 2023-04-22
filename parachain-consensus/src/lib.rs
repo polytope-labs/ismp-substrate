@@ -95,14 +95,6 @@ pub mod pallet {
                 // parachains have no challenge period
                 0,
             );
-
-            for id in [2000, 2001] {
-                let sm = StateMachineId {
-                    consensus_client: consensus::PARACHAIN_CONSENSUS_ID,
-                    state_id: StateMachine::Kusama(id),
-                };
-                pallet_ismp::LatestStateMachineHeight::<T>::insert(sm, 0);
-            }
         }
     }
 }
