@@ -82,7 +82,10 @@ pub mod pallet {
     impl<T: Config> GenesisBuild<T> for GenesisConfig {
         fn build(&self) {
             // insert empty bytes
-            pallet_ismp::ConsensusStates::<T>::insert(consensus::PARACHAIN_CONSENSUS_ID, Vec::<u8>::new());
+            pallet_ismp::ConsensusStates::<T>::insert(
+                consensus::PARACHAIN_CONSENSUS_ID,
+                Vec::<u8>::new(),
+            );
         }
     }
 }
