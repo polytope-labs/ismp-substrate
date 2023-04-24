@@ -111,7 +111,7 @@ where
 {
     fn verify_consensus(
         &self,
-        _host: &dyn ISMPHost,
+        host: &dyn ISMPHost,
         state: Vec<u8>,
         proof: Vec<u8>,
     ) -> Result<(Vec<u8>, Vec<IntermediateState>), Error> {
@@ -181,13 +181,13 @@ where
                 };
             }
 
-            // if timestamp == 0 || ismp_root == H256::default() {
-            //     Err(Error::ImplementationSpecific("Timestamp or ismp root not found".into()))?
-            // }
+            if timestamp == 0 {
+                Err(Error::ImplementationSpecific("Timestamp or ismp root not found".into()))?
+            }
 
             let height: u32 = (*header.number()).into();
 
-            let state_id = match _host.host_state_machine() {
+            let state_id = match host.host_state_machine() {
                 StateMachine::Kusama(_) => StateMachine::Kusama(id),
                 StateMachine::Polkadot(_) => StateMachine::Polkadot(id),
                 _ => Err(Error::ImplementationSpecific(
