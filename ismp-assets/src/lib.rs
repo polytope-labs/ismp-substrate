@@ -13,9 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! ISMP Parachain Consensus Client
-//!
-//! This allows parachains communicate over ISMP leveraging the relay chain as a consensus oracle.
+//! ISMP Assets
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -159,7 +157,7 @@ impl<T: Config> ISMPModule for Pallet<T> {
 
     fn on_response(_response: Response) -> Result<(), ismp::error::Error> {
         Err(ismp::error::Error::ImplementationSpecific(
-            "Balance transfer protocol does not use accept responses".to_string(),
+            "Balance transfer protocol does not accept responses".to_string(),
         ))
     }
 
