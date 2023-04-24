@@ -41,3 +41,8 @@ pub trait ConsensusClientProvider {
 
     fn challenge_period(id: ConsensusClientId) -> Duration;
 }
+
+pub trait NonceProvider {
+    /// Should return the next nonce value
+    fn next_nonce() -> u64;
+}

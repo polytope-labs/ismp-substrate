@@ -3014,6 +3014,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ismp-assets"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "ismp",
+ "pallet-ismp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
 name = "ismp-parachain"
 version = "0.1.0"
 dependencies = [

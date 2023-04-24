@@ -37,6 +37,7 @@ use ismp_rs::{
 };
 use sp_core::{offchain::StorageKind, H256};
 // Re-export pallet items so that they can be accessed from the crate namespace.
+use crate::primitives::NonceProvider;
 use ismp_primitives::{
     mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex},
     LeafIndexQuery,
@@ -187,6 +188,11 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn new_leaves)]
     pub type NewLeavesAdded<T> = StorageValue<_, LeafIndex, OptionQuery>;
+
+    /// Latest Nonce value for messages sent from this chain
+    #[pallet::storage]
+    #[pallet::getter(fn nonce)]
+    pub type Nonce<T> = StorageValue<_, u64, ValueQuery>;
 
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
     #[pallet::hooks]
@@ -547,5 +553,13 @@ where
             NewLeavesAdded::<T>::put(index.unwrap())
         }
         index
+    }
+}
+
+impl<T: Config> NonceProvider for Pallet<T> {
+    fn next_nonce() -> u64 {
+        let nonce = Nonce::<T>::get();
+        Nonce::<T>::put(nonce + 1);
+        nonce
     }
 }
