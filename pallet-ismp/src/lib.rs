@@ -396,6 +396,11 @@ where
     pub fn mmr_root() -> <T as frame_system::Config>::Hash {
         Self::mmr_root_hash()
     }
+
+    /// Return mmr leaf count
+    pub fn mmr_leaf_count() -> LeafIndex {
+        Self::number_of_leaves()
+    }
 }
 
 impl<T: Config> Pallet<T> {
