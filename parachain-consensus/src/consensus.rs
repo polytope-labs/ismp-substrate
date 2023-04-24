@@ -21,7 +21,7 @@ use alloc::{collections::BTreeMap, format, vec, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use ismp::{
-    consensus_client::{
+    consensus::{
         ConsensusClient, ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight,
         StateMachineId,
     },

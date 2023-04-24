@@ -30,10 +30,10 @@ use codec::{Decode, Encode};
 use core::time::Duration;
 use frame_support::{log::debug, RuntimeDebug};
 use ismp_rs::{
-    consensus_client::{ConsensusClientId, StateMachineId},
+    consensus::{ConsensusClientId, StateMachineId},
     host::StateMachine,
-    router::{Request, Response},
     messaging::CreateConsensusClient,
+    router::{Request, Response},
 };
 use sp_core::{offchain::StorageKind, H256};
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -58,15 +58,13 @@ pub mod pallet {
         primitives::{ConsensusClientProvider, ISMP_ID},
         router::Receipt,
     };
-    use alloc::{collections::BTreeSet, string::ToString};
+    use alloc::collections::BTreeSet;
     use frame_support::{pallet_prelude::*, traits::UnixTime};
     use frame_system::pallet_prelude::*;
     use ismp_primitives::mmr::{LeafIndex, NodeIndex};
     use ismp_rs::{
-        consensus_client::{
-            ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId,
-        },
-        handlers::{handle_incoming_message, MessageResult},
+        consensus::{ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId},
+        handlers::{self, handle_incoming_message, MessageResult},
         host::StateMachine,
         messaging::Message,
         router::ISMPRouter,
@@ -247,13 +245,6 @@ pub mod pallet {
             let mut errors: Vec<HandlingError> = vec![];
 
             for message in messages {
-                if matches!(message, Message::CreateConsensusClient(_)) {
-                    errors.push(HandlingError::ImplementationSpecific {
-                        msg: "Invalid message for extrinsic".to_string().as_bytes().to_vec(),
-                    });
-                    continue
-                }
-
                 match handle_incoming_message(&host, message) {
                     Ok(MessageResult::ConsensusMessage(res)) => {
                         // check if this is a trusted state machine
@@ -313,17 +304,15 @@ pub mod pallet {
         /// Create consensus clients
         #[pallet::weight(0)]
         #[pallet::call_index(1)]
-        pub fn create_consensus_client(origin: OriginFor<T>, message: CreateConsensusClient) -> DispatchResult {
+        pub fn create_consensus_client(
+            origin: OriginFor<T>,
+            message: CreateConsensusClient,
+        ) -> DispatchResult {
             <T as Config>::AdminOrigin::ensure_origin(origin)?;
             let host = Host::<T>::default();
 
-            let result = handle_incoming_message(&host, Message::CreateConsensusClient(message))
+            let result = handlers::create_consensus_client(&host, message)
                 .map_err(|_| Error::<T>::ConsensusClientCreationFailed)?;
-
-            let result = match result {
-                MessageResult::ConsensusClientCreated(res) => res,
-                _ => Err(Error::<T>::InvalidMessage)?,
-            };
 
             Self::deposit_event(Event::<T>::ConsensusClientCreated {
                 consensus_client_id: result.consensus_client_id,

@@ -1,7 +1,7 @@
 use crate::{Config, Event as PalletEvent};
 use alloc::collections::BTreeSet;
 use ismp_rs::{
-    consensus_client::{ConsensusClientId, StateMachineHeight, StateMachineId},
+    consensus::{ConsensusClientId, StateMachineHeight, StateMachineId},
     host::StateMachine,
 };
 
