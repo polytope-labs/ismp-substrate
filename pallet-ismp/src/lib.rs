@@ -22,8 +22,14 @@ mod errors;
 pub mod events;
 pub mod host;
 mod mmr;
+#[cfg(test)]
+mod mock;
 pub mod primitives;
 pub mod router;
+#[cfg(test)]
+mod tests;
+
+pub use mmr::utils::NodesUtils;
 
 use crate::host::Host;
 use codec::{Decode, Encode};
@@ -184,11 +190,6 @@ pub mod pallet {
         OptionQuery,
     >;
 
-    /// State variable that tells us if at least one new leaf was added to the mmr
-    #[pallet::storage]
-    #[pallet::getter(fn new_leaves)]
-    pub type NewLeavesAdded<T> = StorageValue<_, LeafIndex, OptionQuery>;
-
     /// Latest Nonce value for messages sent from this chain
     #[pallet::storage]
     #[pallet::getter(fn nonce)]
@@ -207,26 +208,23 @@ pub mod pallet {
 
         fn on_finalize(_n: T::BlockNumber) {
             // Only finalize if mmr was modified
-            let root = if !NewLeavesAdded::<T>::exists() {
-                <RootHash<T>>::get()
-            } else {
-                let leaves = Self::number_of_leaves();
+            let leaves = Self::number_of_leaves();
+            let root = if leaves != 0 {
                 let mmr: Mmr<mmr::storage::RuntimeStorage, T> = Mmr::new(leaves);
-
                 // Update the size, `mmr.finalize()` should also never fail.
-                let (leaves, root) = match mmr.finalize() {
-                    Ok((leaves, root)) => (leaves, root),
+                let root = match mmr.finalize() {
+                    Ok(root) => root,
                     Err(e) => {
                         log::error!(target: "runtime::mmr", "MMR finalize failed: {:?}", e);
                         return
                     }
                 };
 
-                <NumberOfLeaves<T>>::put(leaves);
                 <RootHash<T>>::put(root);
-                NewLeavesAdded::<T>::kill();
 
                 root
+            } else {
+                H256::default().into()
             };
 
             let digest = sp_runtime::generic::DigestItem::Consensus(ISMP_ID, root.encode());
@@ -425,7 +423,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn offchain_key(pos: NodeIndex) -> Vec<u8> {
-        (T::INDEXING_PREFIX, "Requests/Responses", pos).encode()
+        (T::INDEXING_PREFIX, "leaves", pos).encode()
     }
 }
 
@@ -443,7 +441,7 @@ where
         dest_chain: StateMachine,
         nonce: u64,
     ) -> Vec<u8> {
-        (T::INDEXING_PREFIX, "Requests/leaf_indices", source_chain, dest_chain, nonce).encode()
+        (T::INDEXING_PREFIX, "requests_leaf_indices", source_chain, dest_chain, nonce).encode()
     }
 
     pub fn response_leaf_index_offchain_key(
@@ -451,7 +449,7 @@ where
         dest_chain: StateMachine,
         nonce: u64,
     ) -> Vec<u8> {
-        (T::INDEXING_PREFIX, "Responses/leaf_indices", source_chain, dest_chain, nonce).encode()
+        (T::INDEXING_PREFIX, "responses_leaf_indices", source_chain, dest_chain, nonce).encode()
     }
 
     pub fn store_leaf_index_offchain(key: Vec<u8>, leaf_index: LeafIndex) {
@@ -551,13 +549,23 @@ where
     }
 
     pub fn mmr_push(leaf: Leaf) -> Option<NodeIndex> {
+        let offchain_key = match &leaf {
+            Leaf::Request(req) => Pallet::<T>::request_leaf_index_offchain_key(
+                req.source_chain(),
+                req.dest_chain(),
+                req.nonce(),
+            ),
+            Leaf::Response(res) => Pallet::<T>::response_leaf_index_offchain_key(
+                res.request.dest_chain(),
+                res.request.source_chain(),
+                res.request.nonce(),
+            ),
+        };
         let leaves = Self::number_of_leaves();
-        let mut mmr: Mmr<mmr::storage::RuntimeStorage, T> = Mmr::new(leaves);
-        let index = mmr.push(leaf);
-        if !NewLeavesAdded::<T>::exists() && index.is_some() {
-            NewLeavesAdded::<T>::put(index.unwrap())
-        }
-        index
+        let mmr: Mmr<mmr::storage::RuntimeStorage, T> = Mmr::new(leaves);
+        let pos = mmr.push(leaf)?;
+        Pallet::<T>::store_leaf_index_offchain(offchain_key, pos);
+        Some(pos)
     }
 }
 

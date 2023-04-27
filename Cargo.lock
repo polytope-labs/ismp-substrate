@@ -3039,6 +3039,7 @@ dependencies = [
  "hex-literal 0.4.1",
  "ismp",
  "ismp-primitives",
+ "log",
  "pallet-ismp",
  "parity-scale-codec",
  "primitive-types",
@@ -4605,12 +4606,14 @@ version = "0.1.0"
 dependencies = [
  "ckb-merkle-mountain-range",
  "derive_more",
+ "env_logger",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "ismp",
  "ismp-primitives",
  "log",
+ "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -4619,6 +4622,24 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-timestamp"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.40#98f2e3451c9143278ec53c6718940aeabcd3b68a"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-inherents",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-timestamp",
 ]
 
 [[package]]

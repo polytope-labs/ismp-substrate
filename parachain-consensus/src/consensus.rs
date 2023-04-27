@@ -20,6 +20,7 @@ use core::{marker::PhantomData, time::Duration};
 use alloc::{collections::BTreeMap, format, vec, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
+use frame_support::log;
 use ismp::{
     consensus::{
         ConsensusClient, ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight,
@@ -231,7 +232,7 @@ where
         let nodes = membership.proof.into_iter().map(|h| DataOrHash::Hash(h.into())).collect();
         let proof =
             MerkleProof::<DataOrHash<T>, MmrHasher<T, Host<T>>>::new(membership.mmr_size, nodes);
-        let leaves = match item {
+        let leaves: Vec<(u64, DataOrHash<T>)> = match item {
             RequestResponse::Request(req) => membership
                 .leaf_indices
                 .into_iter()
@@ -249,9 +250,11 @@ where
             .ismp_root
             .ok_or_else(|| Error::ImplementationSpecific("ISMP root should not be None".into()))?;
 
-        let valid = proof
-            .verify(DataOrHash::Hash(root.into()), leaves)
+        let cal_root = proof
+            .calculate_root(leaves.clone())
             .map_err(|e| Error::ImplementationSpecific(format!("Error verifying mmr: {e:?}")))?;
+        log::trace!(target: "runtime::mmr", "Calculated root {:?}  Expected root {:?}", cal_root, root);
+        let valid = cal_root.hash::<Host<T>>() == root.into();
 
         if !valid {
             Err(Error::ImplementationSpecific("Invalid membership proof".into()))?
