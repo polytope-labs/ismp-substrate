@@ -20,7 +20,6 @@ use core::{marker::PhantomData, time::Duration};
 use alloc::{collections::BTreeMap, format, vec, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use frame_support::log;
 use ismp::{
     consensus::{
         ConsensusClient, ConsensusClientId, IntermediateState, StateCommitment, StateMachineHeight,
@@ -250,11 +249,10 @@ where
             .ismp_root
             .ok_or_else(|| Error::ImplementationSpecific("ISMP root should not be None".into()))?;
 
-        let cal_root = proof
+        let calc_root = proof
             .calculate_root(leaves.clone())
             .map_err(|e| Error::ImplementationSpecific(format!("Error verifying mmr: {e:?}")))?;
-        log::trace!(target: "runtime::mmr", "Calculated root {:?}  Expected root {:?}", cal_root, root);
-        let valid = cal_root.hash::<Host<T>>() == root.into();
+        let valid = calc_root.hash::<Host<T>>() == root.into();
 
         if !valid {
             Err(Error::ImplementationSpecific("Invalid membership proof".into()))?

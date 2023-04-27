@@ -3039,7 +3039,6 @@ dependencies = [
  "hex-literal 0.4.1",
  "ismp",
  "ismp-primitives",
- "log",
  "pallet-ismp",
  "parity-scale-codec",
  "primitive-types",
