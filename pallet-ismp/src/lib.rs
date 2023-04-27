@@ -34,7 +34,7 @@ pub use mmr::utils::NodesUtils;
 use crate::host::Host;
 use codec::{Decode, Encode};
 use core::time::Duration;
-use frame_support::{log::debug, RuntimeDebug};
+use frame_support::{log::debug, traits::Get, RuntimeDebug};
 use ismp_rs::{
     consensus::{ConsensusClientId, StateMachineId},
     host::StateMachine,
@@ -43,12 +43,12 @@ use ismp_rs::{
 };
 use sp_core::{offchain::StorageKind, H256};
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use crate::primitives::NonceProvider;
+use crate::primitives::{IsmpDispatch, IsmpMessage};
 use ismp_primitives::{
     mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex},
     LeafIndexQuery,
 };
-use ismp_rs::host::ISMPHost;
+use ismp_rs::{host::ISMPHost, router::ISMPRouter};
 use mmr::mmr::Mmr;
 pub use pallet::*;
 use sp_std::prelude::*;
@@ -569,10 +569,45 @@ where
     }
 }
 
-impl<T: Config> NonceProvider for Pallet<T> {
+impl<T: Config> Pallet<T> {
     fn next_nonce() -> u64 {
         let nonce = Nonce::<T>::get();
         Nonce::<T>::put(nonce + 1);
         nonce
+    }
+}
+
+impl<T: Config> IsmpDispatch for Pallet<T> {
+    fn dispatch_message(msg: IsmpMessage) -> Result<(), ismp_rs::router::DispatchError> {
+        let router = T::IsmpRouter::default();
+        match msg {
+            IsmpMessage::Post { timeout_timestamp, dest_chain, data, from, to } => {
+                let post = ismp_rs::router::Post {
+                    source_chain: T::StateMachine::get(),
+                    dest_chain,
+                    nonce: Pallet::<T>::next_nonce(),
+                    from,
+                    to,
+                    timeout_timestamp,
+                    data,
+                };
+                router.dispatch(Request::Post(post)).map(|_| ())
+            }
+            IsmpMessage::Get { timeout_timestamp, dest_chain, keys, height, from } => {
+                let get = ismp_rs::router::Get {
+                    source_chain: T::StateMachine::get(),
+                    dest_chain,
+                    nonce: Pallet::<T>::next_nonce(),
+                    from,
+                    keys,
+                    height,
+                    timeout_timestamp,
+                };
+                router.dispatch(Request::Get(get)).map(|_| ())
+            }
+            IsmpMessage::Response { response, request } => {
+                router.write_response(Response { request, response }).map(|_| ())
+            }
+        }
     }
 }

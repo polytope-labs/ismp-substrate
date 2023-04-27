@@ -18,7 +18,6 @@ use ismp_rs::{
     router::{Request, Response},
 };
 use ismp_runtime_api::IsmpRuntimeApi;
-use jsonrpsee::tracing::log;
 use sc_client_api::{BlockBackend, ProofProvider};
 use serde::{Deserialize, Serialize};
 use sp_api::ProvideRuntimeApi;
@@ -178,10 +177,7 @@ where
         let (leaves, proof): (Vec<Leaf>, pallet_ismp::primitives::Proof<Block::Hash>) = api
             .generate_proof(at, request_indices)
             .map_err(|_| runtime_error_into_rpc_error("Error calling runtime api"))?
-            .map_err(|e| {
-                log::error!("Proof Gen Error {:?}", e);
-                runtime_error_into_rpc_error(format!("Error generating mmr proof,  {:?}", e))
-            })?;
+            .map_err(|_| runtime_error_into_rpc_error("Error generating mmr proof"))?;
         Ok(Proof { proof: proof.encode(), leaves: Some(leaves.encode()), height })
     }
 

@@ -91,26 +91,19 @@ where
         &self,
         positions: Vec<NodeIndex>,
     ) -> Result<(Vec<Leaf>, Proof<<T as frame_system::Config>::Hash>), Error> {
-        log::trace!(target: "runtime::mmr", "Leaf indices {:?}", positions);
         let store = <Storage<OffchainStorage, T>>::default();
         let leaves = positions
             .iter()
             .map(|pos| match mmr_lib::MMRStore::get_elem(&store, *pos) {
                 Ok(Some(DataOrHash::Data(leaf))) => Ok(leaf),
-                _ => {
-                    log::error!(target: "runtime::mmr", "Leaf not found at pos {}", pos);
-                    Err(Error::LeafNotFound)
-                }
+                _ => Err(Error::LeafNotFound),
             })
             .collect::<Result<Vec<_>, Error>>()?;
         log::trace!(target: "runtime::mmr", "Positions {:?}", positions);
         let leaf_count = self.leaves;
         self.mmr
             .gen_proof(positions.clone())
-            .map_err(|e| {
-                log::error!(target: "runtime::mmr", "Proof generation failed with error {:?}", e);
-                Error::GenerateProof
-            })
+            .map_err(|_| Error::GenerateProof)
             .map(|p| Proof {
                 leaf_indices: positions,
                 leaf_count,

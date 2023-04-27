@@ -40,21 +40,18 @@ pub mod pallet {
         },
     };
     use frame_system::pallet_prelude::*;
-    use ismp::{
-        host::StateMachine,
-        router::{ISMPRouter, Post, Request},
-    };
-    use pallet_ismp::primitives::NonceProvider;
+    use ismp::host::StateMachine;
+    use pallet_ismp::primitives::{IsmpDispatch, IsmpMessage};
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_ismp::Config {
+    pub trait Config: frame_system::Config {
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Balance: Balance + Into<<Self::NativeCurrency as Inspect<Self::AccountId>>::Balance>;
         type NativeCurrency: Mutate<Self::AccountId>;
-        type NonceProvider: NonceProvider;
+        type IsmpDispatch: IsmpDispatch;
     }
 
     #[pallet::event]
@@ -84,18 +81,15 @@ pub mod pallet {
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
             let payload = Payload { to: params.to, from: origin.clone(), amount: params.amount };
-            let request = Post {
-                source_chain: <T as pallet_ismp::Config>::StateMachine::get(),
+            let request = IsmpMessage::Post {
                 dest_chain: params.dest_chain,
-                nonce: T::NonceProvider::next_nonce(),
                 from: PALLET_ID.0.to_vec(),
                 to: PALLET_ID.0.to_vec(),
                 timeout_timestamp: params.timeout,
                 data: payload.encode(),
             };
 
-            let router = <T as pallet_ismp::Config>::IsmpRouter::default();
-            router.dispatch(Request::Post(request)).map_err(|_| Error::<T>::TransferFailed)?;
+            T::IsmpDispatch::dispatch_message(request).map_err(|_| Error::<T>::TransferFailed)?;
             <T::NativeCurrency as Mutate<T::AccountId>>::burn_from(&origin, params.amount.into())?;
             Self::deposit_event(Event::<T>::BalanceTransferred {
                 from: payload.from,
