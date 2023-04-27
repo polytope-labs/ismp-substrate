@@ -3004,7 +3004,7 @@ dependencies = [
 [[package]]
 name = "ismp"
 version = "0.1.0"
-source = "git+ssh://git@github.com/polytope-labs/ismp-rs.git?branch=main#32cc5cda31092b265b531dd263fa9d9f82c00065"
+source = "git+ssh://git@github.com/polytope-labs/ismp-rs.git?branch=main#26a75c1b3de872faa683cb14e75b38cd51668ca2"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -8564,7 +8564,7 @@ checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
  "cfg-if",
  "digest 0.10.6",
- "rand 0.8.5",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
