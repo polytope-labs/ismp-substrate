@@ -56,9 +56,19 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        BalanceTransferred { from: T::AccountId, to: T::AccountId, amount: T::Balance },
+        BalanceTransferred {
+            from: T::AccountId,
+            to: T::AccountId,
+            amount: T::Balance,
+            dest_chain: StateMachine,
+        },
 
-        BalanceReceived { from: T::AccountId, to: T::AccountId, amount: T::Balance },
+        BalanceReceived {
+            from: T::AccountId,
+            to: T::AccountId,
+            amount: T::Balance,
+            source_chain: StateMachine,
+        },
     }
 
     #[pallet::error]
@@ -94,6 +104,7 @@ pub mod pallet {
                 from: payload.from,
                 to: payload.to,
                 amount: payload.amount,
+                dest_chain: params.dest_chain,
             });
             Ok(())
         }
@@ -126,6 +137,7 @@ fn ismp_dispatch_error(msg: &'static str) -> ismp::error::Error {
 
 impl<T: Config> ISMPModule for Pallet<T> {
     fn on_accept(request: Request) -> Result<(), ismp::error::Error> {
+        let source_chain = request.source_chain();
         let data = match request {
             Request::Post(post) => post.data,
             _ => Err(ismp_dispatch_error("Only Post requests allowed, found Get"))?,
@@ -139,6 +151,7 @@ impl<T: Config> ISMPModule for Pallet<T> {
             from: payload.from,
             to: payload.to,
             amount: payload.amount,
+            source_chain,
         });
         Ok(())
     }
@@ -148,6 +161,7 @@ impl<T: Config> ISMPModule for Pallet<T> {
     }
 
     fn on_timeout(request: Request) -> Result<(), ismp::error::Error> {
+        let source_chain = request.source_chain();
         let data = match request {
             Request::Post(post) => post.data,
             _ => Err(ismp_dispatch_error("Only Post requests allowed, found Get"))?,
@@ -163,6 +177,7 @@ impl<T: Config> ISMPModule for Pallet<T> {
             from: payload.from,
             to: payload.to,
             amount: payload.amount,
+            source_chain,
         });
         Ok(())
     }
