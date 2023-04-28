@@ -21,7 +21,6 @@ extern crate alloc;
 use alloc::string::ToString;
 use frame_support::{traits::fungible::Mutate, PalletId};
 use ismp::{
-    host::StateMachine,
     module::ISMPModule,
     router::{Request, Response},
 };
@@ -121,94 +120,50 @@ pub mod pallet {
     }
 }
 
-fn ismp_dispatch_error(
-    msg: &'static str,
-    source: StateMachine,
-    dest: StateMachine,
-    nonce: u64,
-) -> ismp::router::DispatchError {
-    ismp::router::DispatchError { msg: msg.to_string(), nonce, source, dest }
+fn ismp_dispatch_error(msg: &'static str) -> ismp::error::Error {
+    ismp::error::Error::ImplementationSpecific(msg.to_string())
 }
 
 impl<T: Config> ISMPModule for Pallet<T> {
-    fn on_accept(request: Request) -> ismp::router::DispatchResult {
-        let source_chain = request.source_chain();
-        let dest_chain = request.dest_chain();
-        let nonce = request.nonce();
+    fn on_accept(request: Request) -> Result<(), ismp::error::Error> {
         let data = match request {
             Request::Post(post) => post.data,
-            _ => Err(ismp_dispatch_error(
-                "Only Post requests allowed, found Get",
-                source_chain,
-                dest_chain,
-                nonce,
-            ))?,
+            _ => Err(ismp_dispatch_error("Only Post requests allowed, found Get"))?,
         };
 
         let payload = <Payload<T::AccountId, T::Balance> as codec::Decode>::decode(&mut &*data)
-            .map_err(|_| {
-                ismp_dispatch_error(
-                    "Failed to decode request data",
-                    source_chain,
-                    dest_chain,
-                    nonce,
-                )
-            })?;
+            .map_err(|_| ismp_dispatch_error("Failed to decode request data"))?;
         <T::NativeCurrency as Mutate<T::AccountId>>::mint_into(&payload.to, payload.amount.into())
-            .map_err(|_| {
-                ismp_dispatch_error("Failed to mint funds", source_chain, dest_chain, nonce)
-            })?;
+            .map_err(|_| ismp_dispatch_error("Failed to mint funds"))?;
         Pallet::<T>::deposit_event(Event::<T>::BalanceReceived {
             from: payload.from,
             to: payload.to,
             amount: payload.amount,
         });
-        Ok(ismp::router::DispatchSuccess { dest_chain, source_chain, nonce })
+        Ok(())
     }
 
-    fn on_response(response: Response) -> ismp::router::DispatchResult {
-        Err(ismp_dispatch_error(
-            "Balance transfer protocol does not accept responses",
-            response.request.source_chain(),
-            response.request.dest_chain(),
-            response.request.nonce(),
-        ))
+    fn on_response(_response: Response) -> Result<(), ismp::error::Error> {
+        Err(ismp_dispatch_error("Balance transfer protocol does not accept responses"))
     }
 
-    fn on_timeout(request: Request) -> ismp::router::DispatchResult {
-        let source_chain = request.source_chain();
-        let dest_chain = request.dest_chain();
-        let nonce = request.nonce();
+    fn on_timeout(request: Request) -> Result<(), ismp::error::Error> {
         let data = match request {
             Request::Post(post) => post.data,
-            _ => Err(ismp_dispatch_error(
-                "Only Post requests allowed, found Get",
-                source_chain,
-                dest_chain,
-                nonce,
-            ))?,
+            _ => Err(ismp_dispatch_error("Only Post requests allowed, found Get"))?,
         };
         let payload = <Payload<T::AccountId, T::Balance> as codec::Decode>::decode(&mut &*data)
-            .map_err(|_| {
-                ismp_dispatch_error(
-                    "Failed to decode request data",
-                    source_chain,
-                    dest_chain,
-                    nonce,
-                )
-            })?;
+            .map_err(|_| ismp_dispatch_error("Failed to decode request data"))?;
         <T::NativeCurrency as Mutate<T::AccountId>>::mint_into(
             &payload.from,
             payload.amount.into(),
         )
-        .map_err(|_| {
-            ismp_dispatch_error("Failed to mint funds", source_chain, dest_chain, nonce)
-        })?;
+        .map_err(|_| ismp_dispatch_error("Failed to mint funds"))?;
         Pallet::<T>::deposit_event(Event::<T>::BalanceReceived {
             from: payload.from,
             to: payload.to,
             amount: payload.amount,
         });
-        Ok(ismp::router::DispatchSuccess { dest_chain, source_chain, nonce })
+        Ok(())
     }
 }
