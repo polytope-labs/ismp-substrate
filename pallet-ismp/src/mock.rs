@@ -98,4 +98,5 @@ impl Config for Test {
     type TimeProvider = Timestamp;
     type IsmpRouter = ProxyRouter<Test>;
     type ConsensusClientProvider = ConsensusProvider;
+    type WeightInfo = ();
 }

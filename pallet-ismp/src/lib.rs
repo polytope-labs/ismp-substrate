@@ -18,16 +18,21 @@
 
 extern crate alloc;
 
-mod errors;
-pub mod events;
-pub mod host;
 mod mmr;
+mod errors;
+pub mod host;
+pub mod events;
+pub mod weights;
+
 #[cfg(test)]
 mod mock;
 pub mod primitives;
 pub mod router;
 #[cfg(test)]
 mod tests;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 pub use mmr::utils::NodesUtils;
 
@@ -52,6 +57,7 @@ use ismp_rs::{host::ISMPHost, router::ISMPRouter};
 use mmr::mmr::Mmr;
 pub use pallet::*;
 use sp_std::prelude::*;
+pub use weights::WeightInfo;
 
 // Definition of the pallet logic, to be aggregated at runtime definition through
 // `construct_runtime`.
@@ -109,8 +115,12 @@ pub mod pallet {
 
         /// Configurable router that dispatches calls to modules
         type IsmpRouter: ISMPRouter + Default;
+
         /// Provides concrete implementations of consensus clients
         type ConsensusClientProvider: ConsensusClientProvider;
+
+        /// Information on runtime weights.
+        type WeightInfo: WeightInfo;
     }
 
     // Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and
@@ -306,7 +316,7 @@ pub mod pallet {
         }
 
         /// Create consensus clients
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::create_consensus_client())]
         #[pallet::call_index(1)]
         pub fn create_consensus_client(
             origin: OriginFor<T>,
