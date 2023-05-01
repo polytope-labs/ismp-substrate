@@ -18,10 +18,10 @@
 
 extern crate alloc;
 
-mod mmr;
 mod errors;
-pub mod host;
 pub mod events;
+pub mod host;
+mod mmr;
 pub mod weights;
 
 #[cfg(test)]
@@ -250,7 +250,7 @@ pub mod pallet {
         <T as frame_system::Config>::Hash: From<H256>,
     {
         /// Handles ismp messages
-        #[pallet::weight(0)]
+        #[pallet::weight(T::WeightInfo::handle())]
         #[pallet::call_index(0)]
         pub fn handle(origin: OriginFor<T>, messages: Vec<Message>) -> DispatchResult {
             let _ = ensure_signed(origin)?;
