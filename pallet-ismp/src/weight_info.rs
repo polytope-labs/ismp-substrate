@@ -62,12 +62,40 @@ pub trait WeightProvider {
     fn module_callback(dest_module: &[u8]) -> Option<Box<dyn IsmpModuleWeight>>;
 }
 
+impl WeightProvider for () {
+    fn consensus_client(_id: ConsensusClientId) -> Option<Box<dyn ConsensusClientWeight>> {
+        None
+    }
+
+    fn module_callback(_dest_module: &[u8]) -> Option<Box<dyn IsmpModuleWeight>> {
+        None
+    }
+}
+
 pub trait WeightInfo {
     fn create_consensus_client() -> Weight;
     /// These functions account fot storage reads and writes in the message handlers
     fn handle_request_message() -> Weight;
     fn handle_response_message() -> Weight;
     fn handle_timeout_message() -> Weight;
+}
+
+impl WeightInfo for () {
+    fn create_consensus_client() -> Weight {
+        Weight::zero()
+    }
+
+    fn handle_request_message() -> Weight {
+        Weight::zero()
+    }
+
+    fn handle_response_message() -> Weight {
+        Weight::zero()
+    }
+
+    fn handle_timeout_message() -> Weight {
+        Weight::zero()
+    }
 }
 
 pub fn get_weight<T: Config>(messages: &[Message]) -> Weight {

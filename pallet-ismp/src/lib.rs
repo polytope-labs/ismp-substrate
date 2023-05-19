@@ -18,7 +18,7 @@
 
 extern crate alloc;
 
-mod benchmarks;
+mod benchmarking;
 mod errors;
 pub mod events;
 pub mod host;
