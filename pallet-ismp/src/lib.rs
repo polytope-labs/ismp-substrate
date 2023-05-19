@@ -314,7 +314,7 @@ pub mod pallet {
         }
 
         /// Create consensus clients
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config>::WeightInfo::create_consensus_client())]
         #[pallet::call_index(1)]
         pub fn create_consensus_client(
             origin: OriginFor<T>,

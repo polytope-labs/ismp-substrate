@@ -64,6 +64,7 @@ pub trait WeightProvider {
 
 pub trait WeightInfo {
     fn create_consensus_client() -> Weight;
+    /// These functions account fot storage reads and writes in the message handlers
     fn handle_request_message() -> Weight;
     fn handle_response_message() -> Weight;
     fn handle_timeout_message() -> Weight;
