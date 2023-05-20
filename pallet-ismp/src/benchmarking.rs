@@ -9,7 +9,9 @@ use frame_system::RawOrigin;
 //   https://paritytech.github.io/substrate/master/frame_benchmarking/trait.Benchmarking.html#tymethod.benchmarks
 #[benchmarks(
     where
-        <T as frame_system::Config>::Hash: From<H256>
+        <T as frame_system::Config>::Hash: From<H256>,
+        T: pallet_timestamp::Config,
+        <T as pallet_timestamp::Config>::Moment: From<u64>
 )]
 mod benchmarks {
     use super::*;
@@ -19,7 +21,7 @@ mod benchmarks {
     use ismp_rs::{
         consensus::{ConsensusClient, IntermediateState, StateCommitment, StateMachineHeight},
         error::Error as IsmpError,
-        messaging::{Message, Proof, RequestMessage, ResponseMessage},
+        messaging::{Message, Proof, RequestMessage, ResponseMessage, TimeoutMessage},
         module::ISMPModule,
         router::{Post, RequestResponse},
         util::hash_request,
@@ -80,7 +82,7 @@ mod benchmarks {
         }
     }
 
-    /// This module should be added to the module router in runtime-benchmarks
+    /// This module should be added to the module router in runtime for benchmarks to pass
     pub struct BenchmarkIsmpModule;
     pub const MODULE_ID: PalletId = PalletId(*b"benchmar");
     impl ISMPModule for BenchmarkIsmpModule {
@@ -97,8 +99,16 @@ mod benchmarks {
         }
     }
 
+    fn set_timestamp<T: pallet_timestamp::Config>()
+    where
+        <T as pallet_timestamp::Config>::Moment: From<u64>,
+    {
+        pallet_timestamp::Pallet::<T>::set_timestamp(1000_000_000u64.into());
+    }
+
     #[benchmark]
     fn create_consensus_client() {
+        set_timestamp::<T>();
         let intermediate_state = IntermediateState {
             height: StateMachineHeight {
                 id: StateMachineId {
@@ -122,7 +132,7 @@ mod benchmarks {
         };
 
         #[extrinsic_call]
-        pallet::<T>::create_consensus_client(RawOrigin::Root, message);
+        _(RawOrigin::Root, message);
 
         assert_last_event::<T>(
             Event::ConsensusClientCreated { consensus_client_id: BENCHMARK_CONSENSUS_CLIENT_ID }
@@ -147,6 +157,8 @@ mod benchmarks {
         };
 
         host.store_consensus_state(BENCHMARK_CONSENSUS_CLIENT_ID, vec![]).unwrap();
+        host.store_consensus_update_time(BENCHMARK_CONSENSUS_CLIENT_ID, Duration::from_secs(1000))
+            .unwrap();
         host.store_state_machine_commitment(
             intermediate_state.height,
             intermediate_state.commitment,
@@ -159,6 +171,7 @@ mod benchmarks {
     // The Benchmark consensus client should be added to the runtime for these benchmarks to work
     #[benchmark]
     fn handle_request_message() {
+        set_timestamp::<T>();
         let host = Host::<T>::default();
         let intermediate_state = setup_mock_client(&host);
         let post = Post {
@@ -178,11 +191,12 @@ mod benchmarks {
         let caller = whitelisted_caller();
 
         #[extrinsic_call]
-        pallet::<T>::handle(RawOrigin::Signed(caller), vec![Message::Request(msg)]);
+        handle(RawOrigin::Signed(caller), vec![Message::Request(msg)]);
     }
 
     #[benchmark]
     fn handle_response_message() {
+        set_timestamp::<T>();
         let host = Host::<T>::default();
         let intermediate_state = setup_mock_client(&host);
         let post = Post {
@@ -209,11 +223,37 @@ mod benchmarks {
         let caller = whitelisted_caller();
 
         #[extrinsic_call]
-        pallet::<T>::handle(RawOrigin::Signed(caller), vec![Message::Response(msg)]);
+        handle(RawOrigin::Signed(caller), vec![Message::Response(msg)]);
     }
 
-    // #[benchmark]
-    // fn handle_timeout_message() {}
+    #[benchmark]
+    fn handle_timeout_message() {
+        set_timestamp::<T>();
+        let host = Host::<T>::default();
+        let intermediate_state = setup_mock_client(&host);
+        let post = Post {
+            source_chain: <T as Config>::StateMachine::get(),
+            dest_chain: StateMachine::Ethereum,
+            nonce: 0,
+            from: MODULE_ID.0.to_vec(),
+            to: MODULE_ID.0.to_vec(),
+            timeout_timestamp: 500,
+            data: vec![],
+        };
+        let request = Request::Post(post.clone());
 
-    impl_benchmark_test_suite!(Pallet, crate::tests::new_test_ext(), crate::tests::Test);
+        let commitment = hash_request::<Host<T>>(&request);
+        RequestAcks::<T>::insert(commitment.0.to_vec(), Receipt::Ok);
+
+        let msg = TimeoutMessage::Post {
+            requests: vec![request],
+            timeout_proof: Proof { height: intermediate_state.height, proof: vec![] },
+        };
+        let caller = whitelisted_caller();
+
+        #[extrinsic_call]
+        handle(RawOrigin::Signed(caller), vec![Message::Timeout(msg)]);
+    }
+
+    impl_benchmark_test_suite!(Pallet, crate::tests::new_test_ext(), crate::mock::Test);
 }

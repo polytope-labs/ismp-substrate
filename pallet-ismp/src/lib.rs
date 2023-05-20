@@ -24,11 +24,11 @@ pub mod events;
 pub mod host;
 mod mmr;
 #[cfg(test)]
-mod mock;
+pub mod mock;
 pub mod primitives;
 pub mod router;
 #[cfg(test)]
-mod tests;
+pub mod tests;
 pub mod weight_info;
 
 pub use mmr::utils::NodesUtils;
