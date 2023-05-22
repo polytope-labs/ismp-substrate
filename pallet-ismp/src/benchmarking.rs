@@ -185,13 +185,16 @@ mod benchmarks {
         };
 
         let msg = RequestMessage {
-            requests: vec![Request::Post(post)],
+            requests: vec![Request::Post(post.clone())],
             proof: Proof { height: intermediate_state.height, proof: vec![] },
         };
         let caller = whitelisted_caller();
 
         #[extrinsic_call]
         handle(RawOrigin::Signed(caller), vec![Message::Request(msg)]);
+
+        let commitment = hash_request::<Host<T>>(&Request::Post(post));
+        assert!(RequestAcks::<T>::get(commitment.0.to_vec()).is_some());
     }
 
     #[benchmark]
@@ -224,6 +227,8 @@ mod benchmarks {
 
         #[extrinsic_call]
         handle(RawOrigin::Signed(caller), vec![Message::Response(msg)]);
+
+        assert!(RequestAcks::<T>::get(commitment.0.to_vec()).is_none());
     }
 
     #[benchmark]
@@ -253,6 +258,8 @@ mod benchmarks {
 
         #[extrinsic_call]
         handle(RawOrigin::Signed(caller), vec![Message::Timeout(msg)]);
+
+        assert!(RequestAcks::<T>::get(commitment.0.to_vec()).is_none());
     }
 
     impl_benchmark_test_suite!(Pallet, crate::tests::new_test_ext(), crate::mock::Test);

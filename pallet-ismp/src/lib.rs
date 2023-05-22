@@ -250,6 +250,7 @@ pub mod pallet {
         /// Handles ismp messages
         #[pallet::weight(get_weight::<T>(&messages))]
         #[pallet::call_index(0)]
+        #[frame_support::transactional]
         pub fn handle(origin: OriginFor<T>, messages: Vec<Message>) -> DispatchResult {
             let _ = ensure_signed(origin)?;
             // Define a host
