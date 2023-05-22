@@ -5,6 +5,12 @@ use crate::*;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 
+// Running the benchmarks correctly
+// Add the [`BenchmarkClient`] as one of the consensus clients available to pallet-ismp in the
+// runtime configuration
+// In your module router configuration add the [`BenchmarkIsmpModule`] as one of the ismp modules
+// using the pallet id defined here as it's module id.
+
 // Details on using the benchmarks macro can be seen at:
 //   https://paritytech.github.io/substrate/master/frame_benchmarking/trait.Benchmarking.html#tymethod.benchmarks
 #[benchmarks(
@@ -13,7 +19,7 @@ use frame_system::RawOrigin;
         T: pallet_timestamp::Config,
         <T as pallet_timestamp::Config>::Moment: From<u64>
 )]
-mod benchmarks {
+pub mod benchmarks {
     use super::*;
     use crate::router::Receipt;
     use frame_support::PalletId;
@@ -84,7 +90,7 @@ mod benchmarks {
 
     /// This module should be added to the module router in runtime for benchmarks to pass
     pub struct BenchmarkIsmpModule;
-    pub const MODULE_ID: PalletId = PalletId(*b"benchmar");
+    pub const MODULE_ID: PalletId = PalletId(*b"benchmak");
     impl ISMPModule for BenchmarkIsmpModule {
         fn on_accept(_request: Request) -> Result<(), IsmpError> {
             Ok(())

@@ -11,13 +11,15 @@ use ismp_rs::{
 
 /// A trait that provides information about how consensus client execute in the runtime
 pub trait ConsensusClientWeight {
-    /// Returns the weight that would be consumed processing this message
+    /// Returns the weight that would be used in processing this consensus message
     fn verify_consensus(&self, msg: ConsensusMessage) -> Weight;
-    /// Returns weight uses in verifying this proof
+    /// Returns weight used in verifying this membership proof
     /// `items` is the number of values being verified
+    /// The weight should ideally depend on the number of items being verified
     fn verify_membership(&self, items: usize, proof: &Proof) -> Weight;
     /// Returns weight used in verifying this state proof
     /// `items` is the number of keys being verified
+    /// The weight should ideally depend on the number of items being verified
     fn verify_state_proof(&self, items: usize, proof: &Proof) -> Weight;
 }
 
@@ -37,8 +39,11 @@ impl ConsensusClientWeight for () {
 
 /// A trait that provides weight information about how module callbacks execute
 pub trait IsmpModuleWeight {
+    /// Returns the weight used in processing this request
     fn on_accept(&self, request: &Request) -> Weight;
+    /// Returns the weight used in processing this timeout
     fn on_timeout(&self, request: &Request) -> Weight;
+    /// Returns the weight used in processing this response
     fn on_response(&self, response: &Response) -> Weight;
 }
 
@@ -72,9 +77,9 @@ impl WeightProvider for () {
     }
 }
 
+/// These functions account fot storage reads and writes in the ismp message handlers
 pub trait WeightInfo {
     fn create_consensus_client() -> Weight;
-    /// These functions account fot storage reads and writes in the message handlers
     fn handle_request_message() -> Weight;
     fn handle_response_message() -> Weight;
     fn handle_timeout_message() -> Weight;
