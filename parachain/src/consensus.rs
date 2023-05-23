@@ -33,6 +33,7 @@ use ismp::{
 use ismp_primitives::mmr::{DataOrHash, Leaf, MmrHasher};
 use merkle_mountain_range::MerkleProof;
 use pallet_ismp::host::Host;
+use parachain_system::{RelaychainDataProvider, RelaychainStateProvider};
 use primitive_types::H256;
 use sp_consensus_aura::{Slot, AURA_ENGINE_ID};
 use sp_runtime::{
@@ -105,7 +106,7 @@ const SLOT_DURATION: u64 = 12_000;
 impl<T, R> ConsensusClient for ParachainConsensusClient<T, R>
 where
     R: RelayChainOracle,
-    T: pallet_ismp::Config,
+    T: pallet_ismp::Config + super::Config,
     T::BlockNumber: Into<u32>,
     T::Hash: From<H256>,
 {
@@ -122,13 +123,25 @@ where
                 ))
             })?;
 
-        // todo: verify directly with parachain_system
-        let root = R::state_root(update.relay_height).ok_or_else(|| {
-            Error::ImplementationSpecific(format!(
-                "Cannot find relay chain height: {}",
-                update.relay_height
-            ))
-        })?;
+        // first check our oracle's registry
+        let root = R::state_root(update.relay_height)
+            // not in our registry? ask parachain_system.
+            .or_else(|| {
+                let state = RelaychainDataProvider::<T>::current_relay_chain_state();
+
+                if state.number == update.relay_height {
+                    Some(state.state_root)
+                } else {
+                    None
+                }
+            })
+            // well, we couldn't find it
+            .ok_or_else(|| {
+                Error::ImplementationSpecific(format!(
+                    "Cannot find relay chain height: {}",
+                    update.relay_height
+                ))
+            })?;
 
         let storage_proof = StorageProof::new(update.storage_proof);
         let mut intermediates = vec![];

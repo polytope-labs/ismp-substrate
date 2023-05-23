@@ -23,13 +23,13 @@ extern crate core;
 
 pub mod consensus;
 
+use alloc::{vec, vec::Vec};
 use cumulus_primitives_core::relay_chain;
 pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use alloc::vec;
     use cumulus_primitives_core::relay_chain;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
@@ -56,6 +56,10 @@ pub mod pallet {
     /// Tracks whether we've already seen the `update_parachain_consensus` inherent
     #[pallet::storage]
     pub type ConsensusUpdated<T: Config> = StorageValue<_, bool>;
+
+    /// Tracks whether we've already seen the `update_parachain_consensus` inherent
+    #[pallet::storage]
+    pub type Parachains<T: Config> = StorageMap<_, Identity, u32, ()>;
 
     #[pallet::event]
     pub enum Event<T: Config> {}
@@ -89,6 +93,30 @@ pub mod pallet {
             pallet_ismp::Pallet::<T>::handle_messages(vec![Message::Consensus(data)])?;
 
             Ok(Pays::No.into())
+        }
+
+        /// Add some new parachains to the list of parachains we care about
+        #[pallet::call_index(1)]
+        #[pallet::weight(0)] // todo: fix weight
+        pub fn add_parachain(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
+            ensure_root(origin)?;
+            for id in para_ids {
+                Parachains::<T>::insert(id, ());
+            }
+
+            Ok(())
+        }
+
+        /// Remove some parachains from the list of parachains we care about
+        #[pallet::call_index(2)]
+        #[pallet::weight(0)] // todo: fix weight
+        pub fn remove_parachain(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
+            ensure_root(origin)?;
+            for id in para_ids {
+                Parachains::<T>::remove(id);
+            }
+
+            Ok(())
         }
     }
 
@@ -166,6 +194,14 @@ pub mod pallet {
                 0,
             );
         }
+    }
+}
+
+impl<T: Config> Pallet<T> {
+    /// Returns the list of parachains who's consensus updates will be inserted by the inherent
+    /// data provider
+    pub fn para_ids() -> Vec<u32> {
+        Parachains::<T>::iter_keys().collect()
     }
 }
 
