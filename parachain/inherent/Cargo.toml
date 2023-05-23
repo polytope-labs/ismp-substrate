@@ -11,6 +11,9 @@ anyhow = "1.0.71"
 
 # Substrate
 sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
 
 # Cumulus
 cumulus-primitives-core = {  git = "https://github.com/paritytech/cumulus", branch = "release-v0.9.400" }
@@ -19,3 +22,4 @@ cumulus-relay-chain-interface = {  git = "https://github.com/paritytech/cumulus"
 # polytope-labs
 ismp = { git = "ssh://git@github.com/polytope-labs/ismp-rs.git", branch = "main" }
 ismp-parachain = { path = "../" }
+ismp-parachain-runtime-api = { path = "../runtime-api" }

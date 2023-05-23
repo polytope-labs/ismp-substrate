@@ -6,6 +6,7 @@ members = [
     "pallet-ismp/primitives",
     "pallet-ismp",
     "parachain/inherent",
+    "parachain/runtime-api",
     "parachain",
     "ismp-assets"
 ]

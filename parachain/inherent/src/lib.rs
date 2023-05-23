@@ -23,18 +23,28 @@ use cumulus_primitives_core::PersistedValidationData;
 use cumulus_relay_chain_interface::{PHash, RelayChainInterface};
 use ismp::messaging::ConsensusMessage;
 use ismp_parachain::consensus::{parachain_header_storage_key, ParachainConsensusProof};
+use ismp_parachain_runtime_api::IsmpParachainApi;
+use sp_runtime::traits::Block as BlockT;
+use std::sync::Arc;
 
-pub struct ParachainConsensusProvider(ConsensusMessage);
+/// Implements [`InherentDataProvider`] for providing parachain consensus updates as inherents.
+pub struct ConsensusInherentProvider(ConsensusMessage);
 
-impl ParachainConsensusProvider {
-    /// Create the [`ParachainConsensusProvider`] at the given `relay_parent`.
-    pub async fn create_at(
+impl ConsensusInherentProvider {
+    /// Create the [`ConsensusInherentProvider`] at the given `relay_parent`.
+    pub async fn create<C, B>(
+        client: Arc<C>,
         relay_parent: PHash,
         relay_chain_interface: &impl RelayChainInterface,
         validation_data: PersistedValidationData,
-    ) -> Result<ParachainConsensusProvider, anyhow::Error> {
-        // todo: read the para_ids from the runtime.
-        let para_ids = vec![];
+    ) -> Result<ConsensusInherentProvider, anyhow::Error>
+    where
+        C: sp_api::ProvideRuntimeApi<B> + sp_blockchain::HeaderBackend<B>,
+        C::Api: IsmpParachainApi<B>,
+        B: BlockT,
+    {
+        let head = client.info().best_hash;
+        let para_ids = client.runtime_api().para_ids(head)?;
 
         let keys = para_ids.iter().map(|id| parachain_header_storage_key(*id).0).collect();
         let storage_proof = relay_chain_interface
@@ -53,12 +63,12 @@ impl ParachainConsensusProvider {
             consensus_proof: consensus_proof.encode(),
         };
 
-        Ok(ParachainConsensusProvider(message))
+        Ok(ConsensusInherentProvider(message))
     }
 }
 
 #[async_trait::async_trait]
-impl sp_inherents::InherentDataProvider for ParachainConsensusProvider {
+impl sp_inherents::InherentDataProvider for ConsensusInherentProvider {
     async fn provide_inherent_data(
         &self,
         inherent_data: &mut sp_inherents::InherentData,

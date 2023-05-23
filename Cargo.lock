@@ -3060,8 +3060,19 @@ dependencies = [
  "cumulus-relay-chain-interface",
  "ismp",
  "ismp-parachain",
+ "ismp-parachain-runtime-api",
  "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
  "sp-inherents",
+ "sp-runtime",
+]
+
+[[package]]
+name = "ismp-parachain-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "sp-api",
 ]
 
 [[package]]
