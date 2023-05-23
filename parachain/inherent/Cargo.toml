@@ -1,0 +1,21 @@
+[package]
+name = "ismp-parachain-inherent"
+version = "0.1.0"
+edition = "2021"
+authors = ["Polytope Labs <hello@polytope.technology>"]
+
+[dependencies]
+async-trait = { version = "0.1.63" }
+codec = { package = "parity-scale-codec", version = "3.0.0", features = [ "derive" ] }
+anyhow = "1.0.71"
+
+# Substrate
+sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.40" }
+
+# Cumulus
+cumulus-primitives-core = {  git = "https://github.com/paritytech/cumulus", branch = "release-v0.9.400" }
+cumulus-relay-chain-interface = {  git = "https://github.com/paritytech/cumulus", branch = "release-v0.9.400" }
+
+# polytope-labs
+ismp = { git = "ssh://git@github.com/polytope-labs/ismp-rs.git", branch = "main" }
+ismp-parachain = { path = "../" }

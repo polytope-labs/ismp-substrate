@@ -122,6 +122,7 @@ where
                 ))
             })?;
 
+        // todo: verify directly with parachain_system
         let root = R::state_root(update.relay_height).ok_or_else(|| {
             Error::ImplementationSpecific(format!(
                 "Cannot find relay chain height: {}",

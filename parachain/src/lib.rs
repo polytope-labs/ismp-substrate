@@ -81,7 +81,8 @@ pub mod pallet {
             );
 
             assert_eq!(
-                data.consensus_client_id, consensus::PARACHAIN_CONSENSUS_ID,
+                data.consensus_client_id,
+                consensus::PARACHAIN_CONSENSUS_ID,
                 "Only parachain consensus updates should be passed in the inherents!"
             );
 
