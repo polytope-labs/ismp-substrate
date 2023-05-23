@@ -146,19 +146,17 @@ where
         let storage_proof = StorageProof::new(update.storage_proof);
         let mut intermediates = vec![];
 
-        for id in update.para_ids {
-            let full_key = parachain_header_storage_key(id);
-            let header = read_proof_check::<BlakeTwo256, _>(
-                &root,
-                storage_proof.clone(),
-                vec![full_key.as_ref()],
-            )
-            .map_err(|e| {
+        let keys = update.para_ids.iter().map(|id| parachain_header_storage_key(*id).0);
+        let headers =
+            read_proof_check::<BlakeTwo256, _>(&root, storage_proof, keys).map_err(|e| {
                 Error::ImplementationSpecific(format!("Error verifying parachain header {e:?}",))
-            })?
-            .remove(full_key.as_ref())
-            .flatten()
-            .ok_or_else(|| {
+            })?;
+
+        for (key, header) in headers {
+            let id = codec::Decode::decode(&mut &key[(key.len() - 4)..]).map_err(|e| {
+                Error::ImplementationSpecific(format!("Error decoding parachain header: {e}"))
+            })?;
+            let header = header.ok_or_else(|| {
                 Error::ImplementationSpecific(format!(
                     "Cannot find parachain header for ParaId({id})",
                 ))
