@@ -3044,6 +3044,7 @@ dependencies = [
  "primitive-types",
  "scale-info",
  "sp-consensus-aura",
+ "sp-inherents",
  "sp-io",
  "sp-runtime",
  "sp-trie",

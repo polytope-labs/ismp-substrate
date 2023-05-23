@@ -29,10 +29,13 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use alloc::vec;
     use cumulus_primitives_core::relay_chain;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
+    use ismp::messaging::{ConsensusMessage, Message};
     use parachain_system::{RelaychainDataProvider, RelaychainStateProvider};
+    use primitive_types::H256;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -50,8 +53,43 @@ pub mod pallet {
     pub type RelayChainState<T: Config> =
         StorageMap<_, Blake2_128Concat, relay_chain::BlockNumber, relay_chain::Hash, OptionQuery>;
 
+    /// Tracks whether we've already seen the `update_parachain_consensus` inherent
+    #[pallet::storage]
+    pub type ConsensusUpdated<T: Config> = StorageValue<_, bool>;
+
     #[pallet::event]
     pub enum Event<T: Config> {}
+
+    #[pallet::call]
+    impl<T: Config> Pallet<T>
+    where
+        <T as frame_system::Config>::Hash: From<H256>,
+    {
+        /// Rather than users manually submitting consensus updates for sibling parachains, we
+        /// instead make it the responsibility of the block builder to insert the consensus
+        /// updates as an inherent.
+        #[pallet::call_index(0)]
+        #[pallet::weight((0, DispatchClass::Mandatory))]
+        pub fn update_parachain_consensus(
+            origin: OriginFor<T>,
+            data: ConsensusMessage,
+        ) -> DispatchResultWithPostInfo {
+            ensure_none(origin)?;
+            assert!(
+                !<ConsensusUpdated<T>>::exists(),
+                "ValidationData must be updated only once in a block",
+            );
+
+            assert_eq!(
+                data.consensus_client_id, consensus::PARACHAIN_CONSENSUS_ID,
+                "Only parachain consensus updates should be passed in the inherents!"
+            );
+
+            pallet_ismp::Pallet::<T>::handle_messages(vec![Message::Consensus(data)])?;
+
+            Ok(Pays::No.into())
+        }
+    }
 
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
     #[pallet::hooks]
@@ -65,8 +103,40 @@ pub mod pallet {
                     consensus::PARACHAIN_CONSENSUS_ID,
                     state.number.encode(),
                 );
+
                 <frame_system::Pallet<T>>::deposit_log(digest);
             }
+        }
+
+        fn on_initialize(_n: T::BlockNumber) -> Weight {
+            // kill the storage, since this is the beginning of a new block.
+            ConsensusUpdated::<T>::kill();
+
+            Weight::from_parts(0, 0)
+        }
+    }
+
+    /// The identifier for the parachain consensus update inherent.
+    pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"paraismp";
+
+    #[pallet::inherent]
+    impl<T: Config> ProvideInherent for Pallet<T>
+    where
+        <T as frame_system::Config>::Hash: From<H256>,
+    {
+        type Call = Call<T>;
+        type Error = sp_inherents::MakeFatalError<()>;
+        const INHERENT_IDENTIFIER: InherentIdentifier = INHERENT_IDENTIFIER;
+
+        fn create_inherent(data: &InherentData) -> Option<Self::Call> {
+            let data: ConsensusMessage =
+                data.get_data(&Self::INHERENT_IDENTIFIER).ok().flatten()?;
+
+            Some(Call::update_parachain_consensus { data })
+        }
+
+        fn is_inherent(call: &Self::Call) -> bool {
+            matches!(call, Call::update_parachain_consensus { .. })
         }
     }
 
