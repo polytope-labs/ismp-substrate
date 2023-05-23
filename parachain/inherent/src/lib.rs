@@ -28,7 +28,7 @@ use sp_runtime::traits::Block as BlockT;
 use std::sync::Arc;
 
 /// Implements [`InherentDataProvider`] for providing parachain consensus updates as inherents.
-pub struct ConsensusInherentProvider(ConsensusMessage);
+pub struct ConsensusInherentProvider(Option<ConsensusMessage>);
 
 impl ConsensusInherentProvider {
     /// Create the [`ConsensusInherentProvider`] at the given `relay_parent`.
@@ -37,7 +37,7 @@ impl ConsensusInherentProvider {
         relay_parent: PHash,
         relay_chain_interface: &impl RelayChainInterface,
         validation_data: PersistedValidationData,
-    ) -> Result<Option<ConsensusInherentProvider>, anyhow::Error>
+    ) -> Result<ConsensusInherentProvider, anyhow::Error>
     where
         C: sp_api::ProvideRuntimeApi<B> + sp_blockchain::HeaderBackend<B>,
         C::Api: IsmpParachainApi<B>,
@@ -47,7 +47,7 @@ impl ConsensusInherentProvider {
         let para_ids = client.runtime_api().para_ids(head)?;
 
         if para_ids.is_empty() {
-            return Ok(None)
+            return Ok(ConsensusInherentProvider(None))
         }
 
         let keys = para_ids.iter().map(|id| parachain_header_storage_key(*id).0).collect();
@@ -67,7 +67,7 @@ impl ConsensusInherentProvider {
             consensus_proof: consensus_proof.encode(),
         };
 
-        Ok(Some(ConsensusInherentProvider(message)))
+        Ok(ConsensusInherentProvider(Some(message)))
     }
 }
 
@@ -77,7 +77,11 @@ impl sp_inherents::InherentDataProvider for ConsensusInherentProvider {
         &self,
         inherent_data: &mut sp_inherents::InherentData,
     ) -> Result<(), sp_inherents::Error> {
-        inherent_data.put_data(ismp_parachain::INHERENT_IDENTIFIER, &self.0)
+        if let Some(ref message) = self.0 {
+            inherent_data.put_data(ismp_parachain::INHERENT_IDENTIFIER, message)?;
+        }
+
+        Ok(())
     }
 
     async fn try_handle_error(

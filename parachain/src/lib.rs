@@ -33,7 +33,11 @@ pub mod pallet {
     use cumulus_primitives_core::relay_chain;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use ismp::messaging::{ConsensusMessage, Message};
+    use ismp::{
+        consensus::StateMachineId,
+        host::StateMachine,
+        messaging::{ConsensusMessage, Message},
+    };
     use parachain_system::{RelaychainDataProvider, RelaychainStateProvider};
     use primitive_types::H256;
 
@@ -198,8 +202,23 @@ pub mod pallet {
             );
 
             // insert the parachain ids
-            for id in self.parachains {
+            for id in &self.parachains {
                 Parachains::<T>::insert(id, ());
+
+                let state_id = match T::StateMachine::get() {
+                    StateMachine::Polkadot(_) => StateMachine::Polkadot(*id),
+                    StateMachine::Kusama(_) => StateMachine::Kusama(*id),
+                    _ => panic!("State machine should be configured as a parachain!"),
+                };
+
+                // insert the "latest" parachain height
+                pallet_ismp::LatestStateMachineHeight::<T>::insert(
+                    StateMachineId {
+                        consensus_client: consensus::PARACHAIN_CONSENSUS_ID,
+                        state_id,
+                    },
+                    0,
+                );
             }
         }
     }
