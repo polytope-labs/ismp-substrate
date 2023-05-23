@@ -37,7 +37,7 @@ impl ConsensusInherentProvider {
         relay_parent: PHash,
         relay_chain_interface: &impl RelayChainInterface,
         validation_data: PersistedValidationData,
-    ) -> Result<ConsensusInherentProvider, anyhow::Error>
+    ) -> Result<Option<ConsensusInherentProvider>, anyhow::Error>
     where
         C: sp_api::ProvideRuntimeApi<B> + sp_blockchain::HeaderBackend<B>,
         C::Api: IsmpParachainApi<B>,
@@ -45,6 +45,10 @@ impl ConsensusInherentProvider {
     {
         let head = client.info().best_hash;
         let para_ids = client.runtime_api().para_ids(head)?;
+
+        if para_ids.is_empty() {
+            return Ok(None)
+        }
 
         let keys = para_ids.iter().map(|id| parachain_header_storage_key(*id).0).collect();
         let storage_proof = relay_chain_interface
@@ -63,7 +67,7 @@ impl ConsensusInherentProvider {
             consensus_proof: consensus_proof.encode(),
         };
 
-        Ok(ConsensusInherentProvider(message))
+        Ok(Some(ConsensusInherentProvider(message)))
     }
 }
 

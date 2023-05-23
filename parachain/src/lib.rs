@@ -178,7 +178,7 @@ pub mod pallet {
     #[cfg(feature = "std")]
     impl Default for GenesisConfig {
         fn default() -> Self {
-            GenesisConfig {}
+            GenesisConfig { parachains: vec![] }
         }
     }
 
