@@ -170,7 +170,10 @@ pub mod pallet {
     }
 
     #[pallet::genesis_config]
-    pub struct GenesisConfig {}
+    pub struct GenesisConfig {
+        /// List of parachains to track at genesis
+        pub parachains: Vec<u32>,
+    }
 
     #[cfg(feature = "std")]
     impl Default for GenesisConfig {
@@ -193,6 +196,11 @@ pub mod pallet {
                 // parachains have no challenge period
                 0,
             );
+
+            // insert the parachain ids
+            for id in self.parachains {
+                Parachains::<T>::insert(id, ());
+            }
         }
     }
 }
