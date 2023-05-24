@@ -284,8 +284,7 @@ where
                 Request::Post(post) => {
                     let request = Request::Post(post);
                     let commitment = hash_request::<Host<T>>(&request).0.to_vec();
-                    let key = pallet_ismp::RequestAcks::<T>::hashed_key_for(commitment);
-                    keys.push(key);
+                    keys.push(pallet_ismp::RequestAcks::<T>::hashed_key_for(commitment));
                 }
                 Request::Get(_) => continue,
             }
