@@ -17,6 +17,7 @@
 //!
 //! This allows parachains communicate over ISMP leveraging the relay chain as a consensus oracle.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![deny(missing_docs)]
 
 extern crate alloc;
 extern crate core;
@@ -101,7 +102,7 @@ pub mod pallet {
 
         /// Add some new parachains to the list of parachains we care about
         #[pallet::call_index(1)]
-        #[pallet::weight(0)] // todo: fix weight
+        #[pallet::weight(0)]
         pub fn add_parachain(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
             ensure_root(origin)?;
             for id in para_ids {
@@ -113,7 +114,7 @@ pub mod pallet {
 
         /// Remove some parachains from the list of parachains we care about
         #[pallet::call_index(2)]
-        #[pallet::weight(0)] // todo: fix weight
+        #[pallet::weight(0)]
         pub fn remove_parachain(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
             ensure_root(origin)?;
             for id in para_ids {
