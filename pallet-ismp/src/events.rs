@@ -12,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//! Core ISMP events
 
 use crate::{Config, Event as PalletEvent};
 use alloc::collections::BTreeSet;
@@ -20,20 +21,25 @@ use ismp_rs::{
     host::StateMachine,
 };
 
+/// Ismp Core Protocol Events
 #[derive(Clone, codec::Encode, codec::Decode, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub enum Event {
-    // Emitted when a state machine is successfully updated to a new height
+    /// Emitted when a state machine is successfully updated to a new height
     StateMachineUpdated {
+        /// State machine id
         state_machine_id: StateMachineId,
+        /// Latest height
         latest_height: u64,
     },
+    /// Emitted when a challenge period has begun for a consensus client
     ChallengePeriodStarted {
+        /// Consensus client id
         consensus_client_id: ConsensusClientId,
         /// Tuple of previous height and latest height
         state_machines: BTreeSet<(StateMachineHeight, StateMachineHeight)>,
     },
-
+    /// Emitted for an outgoing response
     Response {
         /// Chain that this response will be routed to
         dest_chain: StateMachine,
@@ -42,6 +48,7 @@ pub enum Event {
         /// Nonce for the request which this response is for
         request_nonce: u64,
     },
+    /// Emitted for an outgoing request
     Request {
         /// Chain that this request will be routed to
         dest_chain: StateMachine,
@@ -52,6 +59,7 @@ pub enum Event {
     },
 }
 
+/// Convert from pallet event to Ismp event
 pub fn to_core_protocol_event<T: Config>(event: PalletEvent<T>) -> Option<Event> {
     match event {
         PalletEvent::StateMachineUpdated { state_machine_id, latest_height } => {

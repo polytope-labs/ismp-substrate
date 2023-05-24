@@ -115,7 +115,7 @@ impl Config for Test {
 #[derive(Default)]
 pub struct ModuleRouter;
 
-impl ISMPRouter for ModuleRouter {
+impl IsmpRouter for ModuleRouter {
     fn dispatch(&self, request: Request) -> DispatchResult {
         let dest = request.dest_chain();
         let source = request.source_chain();
@@ -150,7 +150,7 @@ impl Default for Router {
     }
 }
 
-impl ISMPRouter for Router {
+impl IsmpRouter for Router {
     fn dispatch(&self, request: Request) -> DispatchResult {
         self.inner.dispatch(request)
     }

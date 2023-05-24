@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Ismp Errors conversions
 use codec::{Decode, Encode};
 use ismp_rs::{
     consensus::{ConsensusClientId, StateMachineHeight},
@@ -22,6 +23,7 @@ use ismp_rs::{
 use sp_std::prelude::*;
 
 #[derive(Clone, Debug, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
+#[allow(missing_docs)]
 pub enum HandlingError {
     ChallengePeriodNotElapsed {
         update_time: u64,

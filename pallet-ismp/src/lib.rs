@@ -58,7 +58,7 @@ use ismp_primitives::{
     mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex},
     LeafIndexQuery,
 };
-use ismp_rs::{host::ISMPHost, messaging::Message, router::ISMPRouter};
+use ismp_rs::{host::IsmpHost, messaging::Message, router::IsmpRouter};
 pub use pallet::*;
 use sp_std::prelude::*;
 
@@ -84,7 +84,7 @@ pub mod pallet {
         handlers::{self},
         host::StateMachine,
         messaging::Message,
-        router::ISMPRouter,
+        router::IsmpRouter,
     };
     use sp_core::H256;
     use weight_info::get_weight;
@@ -115,7 +115,7 @@ pub mod pallet {
         type TimeProvider: UnixTime;
 
         /// Configurable router that dispatches calls to modules
-        type IsmpRouter: ISMPRouter + Default;
+        type IsmpRouter: IsmpRouter + Default;
 
         /// Provides concrete implementations of consensus clients
         type ConsensusClientProvider: ConsensusClientProvider;
@@ -223,7 +223,7 @@ pub mod pallet {
     {
         fn on_initialize(_n: T::BlockNumber) -> Weight {
             // return Mmr finalization weight here
-            Weight::zero()
+            <T as Config>::WeightInfo::on_finalize(Self::number_of_leaves() as u32)
         }
 
         fn on_finalize(_n: T::BlockNumber) {
@@ -294,14 +294,24 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// Emitted when a state machine is successfully updated to a new height
-        StateMachineUpdated { state_machine_id: StateMachineId, latest_height: u64 },
+        StateMachineUpdated {
+            /// State machine height
+            state_machine_id: StateMachineId,
+            /// State machine latest height
+            latest_height: u64,
+        },
         /// Signifies that a client has begun it's challenge period
         ChallengePeriodStarted {
+            /// Consensus client id
             consensus_client_id: ConsensusClientId,
+            /// Tuple of previous height and latest height for state machines
             state_machines: BTreeSet<(StateMachineHeight, StateMachineHeight)>,
         },
         /// Indicates that a consensus client has been created
-        ConsensusClientCreated { consensus_client_id: ConsensusClientId },
+        ConsensusClientCreated {
+            /// Consensus client id
+            consensus_client_id: ConsensusClientId,
+        },
         /// An Outgoing Response has been deposited
         Response {
             /// Chain that this response will be routed to
@@ -321,11 +331,16 @@ pub mod pallet {
             request_nonce: u64,
         },
         /// Some errors handling some ismp messages
-        HandlingErrors { errors: Vec<HandlingError> },
+        HandlingErrors {
+            /// Message handling errors
+            errors: Vec<HandlingError>,
+        },
     }
 
+    /// Pallet errors
     #[pallet::error]
     pub enum Error<T> {
+        /// Invalid ISMP message
         InvalidMessage,
         /// Encountered an error while creating the consensus client.
         ConsensusClientCreationFailed,
@@ -422,7 +437,20 @@ where
     pub fn mmr_leaf_count() -> LeafIndex {
         Self::number_of_leaves()
     }
+}
 
+/// Digest log for mmr root hash
+#[derive(RuntimeDebug, Encode, Decode)]
+pub struct RequestResponseLog<T: Config> {
+    /// The mmr root hash
+    mmr_root_hash: <T as frame_system::Config>::Hash,
+}
+
+impl<T: Config> Pallet<T>
+where
+    <T as frame_system::Config>::Hash: From<H256>,
+{
+    /// Returns the offchain key for a request leaf index
     pub fn request_leaf_index_offchain_key(
         source_chain: StateMachine,
         dest_chain: StateMachine,
@@ -431,6 +459,7 @@ where
         (T::INDEXING_PREFIX, "requests_leaf_indices", source_chain, dest_chain, nonce).encode()
     }
 
+    /// Returns the offchain key for a response leaf index
     pub fn response_leaf_index_offchain_key(
         source_chain: StateMachine,
         dest_chain: StateMachine,
@@ -439,10 +468,12 @@ where
         (T::INDEXING_PREFIX, "responses_leaf_indices", source_chain, dest_chain, nonce).encode()
     }
 
+    /// Stores the leaf index  or the given key
     pub fn store_leaf_index_offchain(key: Vec<u8>, leaf_index: LeafIndex) {
         sp_io::offchain_index::set(&key, &leaf_index.encode());
     }
 
+    /// Gets the request from the offchain storage
     pub fn get_request(leaf_index: LeafIndex) -> Option<Request> {
         let key = Pallet::<T>::offchain_key(leaf_index);
         if let Some(elem) = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &key) {
@@ -458,6 +489,7 @@ where
         None
     }
 
+    /// Gets the response from the offchain storage
     pub fn get_response(leaf_index: LeafIndex) -> Option<Response> {
         let key = Pallet::<T>::offchain_key(leaf_index);
         if let Some(elem) = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, &key) {
@@ -473,6 +505,7 @@ where
         None
     }
 
+    /// Gets the leaf index for a request or response from the offchain storage
     pub fn get_leaf_index(
         source_chain: StateMachine,
         dest_chain: StateMachine,
@@ -535,6 +568,7 @@ where
         leaf_indices.into_iter().filter_map(|leaf_index| Self::get_response(leaf_index)).collect()
     }
 
+    /// Insert a leaf into the mmr
     pub fn mmr_push(leaf: Leaf) -> Option<NodeIndex> {
         let offchain_key = match &leaf {
             Leaf::Request(req) => Pallet::<T>::request_leaf_index_offchain_key(
@@ -557,26 +591,32 @@ where
 }
 
 impl<T: Config> Pallet<T> {
+    /// Get a node from runtime storage
     fn get_node(pos: NodeIndex) -> Option<DataOrHash<T>> {
         Nodes::<T>::get(pos).map(DataOrHash::Hash)
     }
 
+    /// Remove a node from storage
     fn remove_node(pos: NodeIndex) {
         Nodes::<T>::remove(pos);
     }
 
+    /// Insert a node into storage
     fn insert_node(pos: NodeIndex, node: <T as frame_system::Config>::Hash) {
         Nodes::<T>::insert(pos, node)
     }
 
+    /// Returns the number of leaves in the mmr
     fn get_num_leaves() -> LeafIndex {
         NumberOfLeaves::<T>::get()
     }
 
+    /// Set the number of leaves in the mmr
     fn set_num_leaves(num_leaves: LeafIndex) {
         NumberOfLeaves::<T>::put(num_leaves)
     }
 
+    /// Returns the offchain key for an index
     fn offchain_key(pos: NodeIndex) -> Vec<u8> {
         (T::INDEXING_PREFIX, "leaves", pos).encode()
     }
@@ -586,11 +626,6 @@ impl<T: Config> Pallet<T> {
         Nonce::<T>::put(nonce + 1);
         nonce
     }
-}
-
-#[derive(RuntimeDebug, Encode, Decode)]
-pub struct RequestResponseLog<T: Config> {
-    mmr_root_hash: <T as frame_system::Config>::Hash,
 }
 
 impl<T: Config> IsmpDispatch for Pallet<T> {

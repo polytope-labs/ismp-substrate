@@ -19,29 +19,30 @@ use core::fmt::Formatter;
 
 use codec::{Decode, Encode};
 use ismp::{
-    host::ISMPHost,
+    host::IsmpHost,
     router::{Request, Response},
     util::{hash_request, hash_response},
 };
 use primitive_types::H256;
 use sp_runtime::traits;
 
-/// A leaf index
+/// Index of a leaf in the MMR
 pub type LeafIndex = u64;
-/// A Node index
+/// Index of a node in the MMR
 pub type NodeIndex = u64;
 
-/// A lead in the MMr tree
+/// A concrete Leaf for the MMR
 #[derive(Debug, Clone, Decode, Encode, PartialEq, Eq)]
 pub enum Leaf {
     /// A request variant
     Request(Request),
-    /// A response variant.
+    /// A response variant
     Response(Response),
 }
 
 impl Leaf {
-    fn hash<H: ISMPHost>(&self) -> H256 {
+    /// Returns the hash of a leaf
+    fn hash<H: IsmpHost>(&self) -> H256 {
         match self {
             Leaf::Request(req) => hash_request::<H>(req),
             Leaf::Response(res) => hash_response::<H>(res),
@@ -82,7 +83,7 @@ where
     ///
     /// Depending on the node type it's going to either be a contained value for [DataOrHash::Hash]
     /// node, or a hash of SCALE-encoded [DataOrHash::Data] data.
-    pub fn hash<H: ISMPHost>(
+    pub fn hash<H: IsmpHost>(
         &self,
     ) -> <<T as frame_system::Config>::Hashing as traits::Hash>::Output {
         match *self {
@@ -99,7 +100,7 @@ impl<T, H> merkle_mountain_range::Merge for MmrHasher<T, H>
 where
     T: frame_system::Config,
     T::Hash: From<H256>,
-    H: ISMPHost,
+    H: IsmpHost,
 {
     type Item = DataOrHash<T>;
 

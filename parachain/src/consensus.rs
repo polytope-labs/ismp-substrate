@@ -26,12 +26,11 @@ use ismp::{
         StateMachineId,
     },
     error::Error,
-    host::{ISMPHost, StateMachine},
+    host::{IsmpHost, StateMachine},
     messaging::Proof,
-    router::RequestResponse,
+    router::{Request, RequestResponse},
+    util::hash_request,
 };
-use ismp::router::Request;
-use ismp::util::hash_request;
 use ismp_primitives::mmr::{DataOrHash, Leaf, MmrHasher};
 use merkle_mountain_range::MerkleProof;
 use pallet_ismp::host::Host;
@@ -116,7 +115,7 @@ where
 {
     fn verify_consensus(
         &self,
-        host: &dyn ISMPHost,
+        host: &dyn IsmpHost,
         state: Vec<u8>,
         proof: Vec<u8>,
     ) -> Result<(Vec<u8>, Vec<IntermediateState>), Error> {
@@ -236,7 +235,7 @@ where
 
     fn verify_membership(
         &self,
-        _host: &dyn ISMPHost,
+        _host: &dyn IsmpHost,
         item: RequestResponse,
         state: StateCommitment,
         proof: &Proof,
@@ -289,12 +288,12 @@ where
                             let commitment = hash_request::<Host<T>>(&request).0.to_vec();
                             let key = pallet_ismp::RequestAcks::<T>::hashed_key_for(commitment);
                             keys.push(key);
-                        },
+                        }
                         Request::Get(_) => continue,
                     }
                 }
-            },
-            RequestResponse::Response(_) => {},
+            }
+            RequestResponse::Response(_) => {}
         }
 
         keys
@@ -302,7 +301,7 @@ where
 
     fn verify_state_proof(
         &self,
-        _host: &dyn ISMPHost,
+        _host: &dyn IsmpHost,
         keys: Vec<Vec<u8>>,
         root: StateCommitment,
         proof: &Proof,

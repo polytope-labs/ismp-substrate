@@ -64,7 +64,8 @@ pub mod pallet {
     #[pallet::storage]
     pub type ConsensusUpdated<T: Config> = StorageValue<_, bool>;
 
-    /// List of parachains who's headers will be inserted in the `update_parachain_consensus` inherent
+    /// List of parachains who's headers will be inserted in the `update_parachain_consensus`
+    /// inherent
     #[pallet::storage]
     pub type Parachains<T: Config> = StorageMap<_, Identity, u32, ()>;
 

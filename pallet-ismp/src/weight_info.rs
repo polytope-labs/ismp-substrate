@@ -14,6 +14,8 @@
 // limitations under the License.
 
 //! Users of ismp should benchmark consensus clients and module callbacks
+//! This module provides a guide on how to provide static weights for consensus clients and module
+//! callbacks
 
 use crate::Config;
 use alloc::boxed::Box;
@@ -76,9 +78,12 @@ impl IsmpModuleWeight for () {
     }
 }
 
+/// Provides references to consensus and module weight providers
 pub trait WeightProvider {
+    /// Returns a reference to the weight provider for a consensus client
     fn consensus_client(id: ConsensusClientId) -> Option<Box<dyn ConsensusClientWeight>>;
 
+    /// Returns a reference to the weight provider for a module
     fn module_callback(dest_module: &[u8]) -> Option<Box<dyn IsmpModuleWeight>>;
 }
 
@@ -92,15 +97,27 @@ impl WeightProvider for () {
     }
 }
 
-/// These functions account fot storage reads and writes in the ismp message handlers
+/// These functions account for storage reads and writes in the ismp message handlers
+/// They do not take into account proof verification, that is delegated to the Consensus client
+/// weight provider
 pub trait WeightInfo {
+    /// Returns the weight used in finalizing the mmr
+    fn on_finalize(n: u32) -> Weight;
+    /// Returns the weight consumed in creating a consensus client
     fn create_consensus_client() -> Weight;
+    /// Returns the weight consumed in handling a request
     fn handle_request_message() -> Weight;
+    /// Returns the weight consumed in handling a response
     fn handle_response_message() -> Weight;
+    /// Returns the weight consumed in handling a timeout
     fn handle_timeout_message() -> Weight;
 }
 
 impl WeightInfo for () {
+    fn on_finalize(_n: u32) -> Weight {
+        Weight::zero()
+    }
+
     fn create_consensus_client() -> Weight {
         Weight::zero()
     }
@@ -118,6 +135,7 @@ impl WeightInfo for () {
     }
 }
 
+/// Returns the weight that would be consumed when executing a batch of messages
 pub fn get_weight<T: Config>(messages: &[Message]) -> Weight {
     messages.into_iter().fold(Weight::zero(), |acc, msg| {
         match msg {

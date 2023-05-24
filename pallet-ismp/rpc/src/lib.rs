@@ -15,7 +15,7 @@
 
 #![deny(missing_docs)]
 
-//! ISMP RPC Implementation.
+//! RPC Implementation for the Interoperable State Machine Protocol
 
 use jsonrpsee::{
     core::{Error as RpcError, RpcResult as Result},

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Pallet primitives
 use core::time::Duration;
 use frame_support::RuntimeDebug;
 use ismp_primitives::mmr::{LeafIndex, NodeIndex};
@@ -40,6 +41,7 @@ pub struct Proof<Hash> {
 
 /// Merkle Mountain Range operation error.
 #[derive(RuntimeDebug, codec::Encode, codec::Decode, PartialEq, Eq)]
+#[allow(missing_docs)]
 pub enum Error {
     InvalidNumericOp,
     Push,
@@ -53,15 +55,21 @@ pub enum Error {
     InvalidBestKnownBlock,
 }
 
+/// A trait that returns a reference to a consensus client based on its Id
+/// This trait should be implemented in the runtime
 pub trait ConsensusClientProvider {
+    /// Returns a reference to a consensus client
     fn consensus_client(
         id: ConsensusClientId,
     ) -> Result<Box<dyn ConsensusClient>, ismp_rs::error::Error>;
 
+    /// Returns the challenge period configured for a consensus client
     fn challenge_period(id: ConsensusClientId) -> Duration;
 }
 
+/// An internal message type for pallet ISMP
 pub enum IsmpMessage {
+    /// A post request
     Post {
         /// The destination state machine of this request.
         dest_chain: StateMachine,
@@ -74,6 +82,7 @@ pub enum IsmpMessage {
         /// Encoded Request.
         data: Vec<u8>,
     },
+    /// A get request
     Get {
         /// The destination state machine of this request.
         dest_chain: StateMachine,
@@ -86,12 +95,17 @@ pub enum IsmpMessage {
         /// Host Timestamp which this request expires in seconds
         timeout_timestamp: u64,
     },
+    /// A response
     Response {
+        /// Post request
         post: Post,
+        /// Opaque response bytes
         response: Vec<u8>,
     },
 }
 
+/// A trait that exposes an interface for modules to dispatch ismp messages to the router
 pub trait IsmpDispatch {
+    /// Dispatch an ismp message to the router
     fn dispatch_message(msg: IsmpMessage) -> Result<(), ismp_rs::router::DispatchError>;
 }

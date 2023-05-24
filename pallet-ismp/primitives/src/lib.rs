@@ -18,6 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
 
+//! Primitives for the MMR implementation
 use ismp::host::StateMachine;
 
 pub mod mmr;
