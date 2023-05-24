@@ -4,10 +4,10 @@ Implementation of the Interoperable State Machine Protocol for substrate runtime
 
 ## Goals
 
-This repo holds all the required components for substrate runtimes to use ISMP
-    * [pallet-ismp](./)
-    * [ismp-runtime-api](./pallet-ismp/runtime-api)
-    * [ismp-rpc](./pallet-ismp/rpc)
+This repo holds all the required components for substrate runtimes to use ISMP  
+    * [pallet-ismp](./)  
+    * [ismp-runtime-api](./pallet-ismp/runtime-api)  
+    * [ismp-rpc](./pallet-ismp/rpc)  
 
 ## Documentation
 
