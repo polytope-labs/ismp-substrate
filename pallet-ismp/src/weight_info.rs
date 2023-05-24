@@ -1,6 +1,6 @@
-// Users of ismp should benchmark consensus clients and module callbacks
-// This module provides a guide on how to provide static weights for consensus clients and module
-// callbacks
+//! Users of ismp should benchmark consensus clients and module callbacks
+//! This module provides a guide on how to provide static weights for consensus clients and module
+//! callbacks
 
 use crate::Config;
 use alloc::boxed::Box;
@@ -120,6 +120,7 @@ impl WeightInfo for () {
     }
 }
 
+/// Returns the weight that would be consumed when executing a batch of messages
 pub fn get_weight<T: Config>(messages: &[Message]) -> Weight {
     messages.into_iter().fold(Weight::zero(), |acc, msg| {
         match msg {

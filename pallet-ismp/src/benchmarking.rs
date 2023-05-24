@@ -1,3 +1,4 @@
+//! Benchmarking
 // Only enable this module for benchmarking.
 #![cfg(feature = "runtime-benchmarks")]
 
@@ -5,14 +6,11 @@ use crate::*;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 
-// Running the benchmarks correctly
-// Add the [`BenchmarkClient`] as one of the consensus clients available to pallet-ismp in the
-// runtime configuration
-// In your module router configuration add the [`BenchmarkIsmpModule`] as one of the ismp modules
-// using the pallet id defined here as it's module id.
-
-// Details on using the benchmarks macro can be seen at:
-//   https://paritytech.github.io/substrate/master/frame_benchmarking/trait.Benchmarking.html#tymethod.benchmarks
+/// Running the benchmarks correctly.
+/// Add the [`BenchmarkClient`] as one of the consensus clients available to pallet-ismp in the
+/// runtime configuration.
+/// In your module router configuration add the [`BenchmarkIsmpModule`] as one of the ismp modules
+/// using the pallet id defined here as it's module id.
 #[benchmarks(
     where
         <T as frame_system::Config>::Hash: From<H256>,
@@ -28,11 +26,13 @@ pub mod benchmarks {
         consensus::{ConsensusClient, IntermediateState, StateCommitment, StateMachineHeight},
         error::Error as IsmpError,
         messaging::{Message, Proof, RequestMessage, ResponseMessage, TimeoutMessage},
-        module::ISMPModule,
+        module::IsmpModule,
         router::{Post, RequestResponse},
         util::hash_request,
     };
+    use sp_std::prelude::Vec;
 
+    /// Verify the the last event emitted
     fn assert_last_event<T: Config>(generic_event: <T as Config>::RuntimeEvent) {
         let events = frame_system::Pallet::<T>::events();
         let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
@@ -40,15 +40,17 @@ pub mod benchmarks {
         assert_eq!(event, &system_event);
     }
 
+    /// A mock consensus client for benchmarking
     #[derive(Default)]
     pub struct BenchmarkClient;
 
+    /// Consensus client id for benchmarking consensus client
     pub const BENCHMARK_CONSENSUS_CLIENT_ID: [u8; 4] = [1u8; 4];
 
     impl ConsensusClient for BenchmarkClient {
         fn verify_consensus(
             &self,
-            _host: &dyn ISMPHost,
+            _host: &dyn IsmpHost,
             _trusted_consensus_state: Vec<u8>,
             _proof: Vec<u8>,
         ) -> Result<(Vec<u8>, Vec<IntermediateState>), IsmpError> {
@@ -61,7 +63,7 @@ pub mod benchmarks {
 
         fn verify_membership(
             &self,
-            _host: &dyn ISMPHost,
+            _host: &dyn IsmpHost,
             _item: RequestResponse,
             _root: StateCommitment,
             _proof: &Proof,
@@ -69,13 +71,13 @@ pub mod benchmarks {
             Ok(())
         }
 
-        fn state_trie_key(&self, _request: RequestResponse) -> Vec<Vec<u8>> {
+        fn state_trie_key(&self, _request: Vec<Request>) -> Vec<Vec<u8>> {
             Default::default()
         }
 
         fn verify_state_proof(
             &self,
-            _host: &dyn ISMPHost,
+            _host: &dyn IsmpHost,
             _keys: Vec<Vec<u8>>,
             _root: StateCommitment,
             _proof: &Proof,
@@ -90,8 +92,9 @@ pub mod benchmarks {
 
     /// This module should be added to the module router in runtime for benchmarks to pass
     pub struct BenchmarkIsmpModule;
+    /// module id for the mock benchmarking module
     pub const MODULE_ID: PalletId = PalletId(*b"benchmak");
-    impl ISMPModule for BenchmarkIsmpModule {
+    impl IsmpModule for BenchmarkIsmpModule {
         fn on_accept(_request: Request) -> Result<(), IsmpError> {
             Ok(())
         }
@@ -105,6 +108,7 @@ pub mod benchmarks {
         }
     }
 
+    /// Sets the current timestamp
     fn set_timestamp<T: pallet_timestamp::Config>()
     where
         <T as pallet_timestamp::Config>::Moment: From<u64>,
@@ -146,7 +150,7 @@ pub mod benchmarks {
         );
     }
 
-    fn setup_mock_client<H: ISMPHost>(host: &H) -> IntermediateState {
+    fn setup_mock_client<H: IsmpHost>(host: &H) -> IntermediateState {
         let intermediate_state = IntermediateState {
             height: StateMachineHeight {
                 id: StateMachineId {

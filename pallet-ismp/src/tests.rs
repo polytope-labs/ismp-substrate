@@ -232,7 +232,7 @@ fn should_handle_post_request_timeouts_correctly() {
     })
 }
 
-fn setup_mock_client<H: ISMPHost>(host: &H) -> IntermediateState {
+fn setup_mock_client<H: IsmpHost>(host: &H) -> IntermediateState {
     let intermediate_state = IntermediateState {
         height: StateMachineHeight {
             id: StateMachineId {

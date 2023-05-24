@@ -14,15 +14,21 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![deny(missing_docs)]
 
+//! Primitives for the MMR implementation
 use ismp::host::StateMachine;
 
 pub mod mmr;
 
+/// A query to fetch a leaf index from the offchain db
 #[derive(codec::Encode, codec::Decode)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub struct LeafIndexQuery {
+    /// Source chain
     pub source_chain: StateMachine,
+    /// Destination chain
     pub dest_chain: StateMachine,
+    /// Request nonce
     pub nonce: u64,
 }

@@ -26,7 +26,7 @@ use ismp::{
         StateMachineId,
     },
     error::Error,
-    host::{ISMPHost, StateMachine},
+    host::{IsmpHost, StateMachine},
     messaging::Proof,
     router::RequestResponse,
 };
@@ -112,7 +112,7 @@ where
 {
     fn verify_consensus(
         &self,
-        host: &dyn ISMPHost,
+        host: &dyn IsmpHost,
         state: Vec<u8>,
         proof: Vec<u8>,
     ) -> Result<(Vec<u8>, Vec<IntermediateState>), Error> {
@@ -232,7 +232,7 @@ where
 
     fn verify_membership(
         &self,
-        _host: &dyn ISMPHost,
+        _host: &dyn IsmpHost,
         item: RequestResponse,
         state: StateCommitment,
         proof: &Proof,
@@ -279,7 +279,7 @@ where
 
     fn verify_state_proof(
         &self,
-        _host: &dyn ISMPHost,
+        _host: &dyn IsmpHost,
         keys: Vec<Vec<u8>>,
         root: StateCommitment,
         proof: &Proof,

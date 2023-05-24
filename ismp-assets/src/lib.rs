@@ -22,7 +22,7 @@ extern crate alloc;
 use alloc::string::ToString;
 use frame_support::{traits::fungible::Mutate, PalletId};
 use ismp::{
-    module::ISMPModule,
+    module::IsmpModule,
     router::{Request, Response},
 };
 pub use pallet::*;
@@ -136,7 +136,7 @@ fn ismp_dispatch_error(msg: &'static str) -> ismp::error::Error {
     ismp::error::Error::ImplementationSpecific(msg.to_string())
 }
 
-impl<T: Config> ISMPModule for Pallet<T> {
+impl<T: Config> IsmpModule for Pallet<T> {
     fn on_accept(request: Request) -> Result<(), ismp::error::Error> {
         let source_chain = request.source_chain();
         let data = match request {

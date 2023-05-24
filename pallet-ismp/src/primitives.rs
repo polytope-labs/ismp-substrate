@@ -1,3 +1,4 @@
+//! pallet primitives
 use core::time::Duration;
 use frame_support::RuntimeDebug;
 use ismp_primitives::mmr::{LeafIndex, NodeIndex};
@@ -25,6 +26,7 @@ pub struct Proof<Hash> {
 
 /// Merkle Mountain Range operation error.
 #[derive(RuntimeDebug, codec::Encode, codec::Decode, PartialEq, Eq)]
+#[allow(missing_docs)]
 pub enum Error {
     InvalidNumericOp,
     Push,
@@ -52,6 +54,7 @@ pub trait ConsensusClientProvider {
 
 /// An internal message type for pallet ISMP
 pub enum IsmpMessage {
+    /// A post request
     Post {
         /// The destination state machine of this request.
         dest_chain: StateMachine,
@@ -64,6 +67,7 @@ pub enum IsmpMessage {
         /// Encoded Request.
         data: Vec<u8>,
     },
+    /// A get request
     Get {
         /// The destination state machine of this request.
         dest_chain: StateMachine,
@@ -76,6 +80,7 @@ pub enum IsmpMessage {
         /// Host Timestamp which this request expires in seconds
         timeout_timestamp: u64,
     },
+    /// A response
     Response {
         /// Post request
         post: Post,
