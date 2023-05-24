@@ -5,6 +5,7 @@ use ismp_rs::{
     host::StateMachine,
 };
 
+/// Ismp Core Protocol Events
 #[derive(Clone, codec::Encode, codec::Decode, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub enum Event {
@@ -37,6 +38,7 @@ pub enum Event {
     },
 }
 
+/// Convert from pallet event to Ismp event
 pub fn to_core_protocol_event<T: Config>(event: PalletEvent<T>) -> Option<Event> {
     match event {
         PalletEvent::StateMachineUpdated { state_machine_id, latest_height } => {

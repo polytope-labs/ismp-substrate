@@ -215,7 +215,7 @@ pub mod pallet {
     {
         fn on_initialize(_n: T::BlockNumber) -> Weight {
             // return Mmr finalization weight here
-            Weight::zero()
+            <T as Config>::WeightInfo::on_finalize(Self::number_of_leaves() as u32)
         }
 
         fn on_finalize(_n: T::BlockNumber) {

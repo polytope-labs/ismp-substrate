@@ -18,6 +18,7 @@ use sp_core::H256;
 use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
+/// An implementation for the IsmpHost
 #[derive(Clone)]
 pub struct Host<T: Config>(core::marker::PhantomData<T>);
 

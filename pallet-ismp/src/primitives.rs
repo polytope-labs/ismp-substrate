@@ -38,14 +38,19 @@ pub enum Error {
     InvalidBestKnownBlock,
 }
 
+/// A trait that returns a reference to a consensus client based on its Id
+/// This trait should be implemented in the runtime
 pub trait ConsensusClientProvider {
+    /// Returns a reference to a consensus client
     fn consensus_client(
         id: ConsensusClientId,
     ) -> Result<Box<dyn ConsensusClient>, ismp_rs::error::Error>;
 
+    /// Returns the challenge period configured for a consensus client
     fn challenge_period(id: ConsensusClientId) -> Duration;
 }
 
+/// An internal message type for pallet ISMP
 pub enum IsmpMessage {
     Post {
         /// The destination state machine of this request.
@@ -72,11 +77,15 @@ pub enum IsmpMessage {
         timeout_timestamp: u64,
     },
     Response {
+        /// Post request
         post: Post,
+        /// Opaque response bytes
         response: Vec<u8>,
     },
 }
 
+/// A trait that exposes an interface for modules to dispatch ismp messages to the router
 pub trait IsmpDispatch {
+    /// Dispatch an ismp message to the router
     fn dispatch_message(msg: IsmpMessage) -> Result<(), ismp_rs::router::DispatchError>;
 }

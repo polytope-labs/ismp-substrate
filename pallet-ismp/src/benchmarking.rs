@@ -22,7 +22,7 @@ use frame_system::RawOrigin;
 pub mod benchmarks {
     use super::*;
     use crate::router::Receipt;
-    use frame_support::PalletId;
+    use frame_support::{traits::Hooks, PalletId};
     use frame_system::EventRecord;
     use ismp_rs::{
         consensus::{ConsensusClient, IntermediateState, StateCommitment, StateMachineHeight},
@@ -266,6 +266,31 @@ pub mod benchmarks {
         handle(RawOrigin::Signed(caller), vec![Message::Timeout(msg)]);
 
         assert!(RequestAcks::<T>::get(commitment.0.to_vec()).is_none());
+    }
+
+    #[benchmark]
+    fn on_finalize(x: Linear<1, 100>) {
+        for nonce in 0..x {
+            let post = ismp_rs::router::Post {
+                source_chain: StateMachine::Kusama(2000),
+                dest_chain: StateMachine::Kusama(2001),
+                nonce: nonce.into(),
+                from: vec![0u8; 32],
+                to: vec![1u8; 32],
+                timeout_timestamp: 100,
+                data: vec![2u8; 64],
+            };
+
+            let request = Request::Post(post);
+            let leaf = Leaf::Request(request);
+
+            Pallet::<T>::mmr_push(leaf.clone()).unwrap();
+        }
+
+        #[block]
+        {
+            Pallet::<T>::on_finalize(2u32.into())
+        }
     }
 
     impl_benchmark_test_suite!(Pallet, crate::tests::new_test_ext(), crate::mock::Test);
