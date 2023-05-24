@@ -30,6 +30,8 @@ use ismp::{
     messaging::Proof,
     router::RequestResponse,
 };
+use ismp::router::Request;
+use ismp::util::hash_request;
 use ismp_primitives::mmr::{DataOrHash, Leaf, MmrHasher};
 use merkle_mountain_range::MerkleProof;
 use pallet_ismp::host::Host;
@@ -70,7 +72,9 @@ pub struct ParachainConsensusProof {
 /// Hashing algorithm for the state proof
 #[derive(Debug, Encode, Decode)]
 pub enum HashAlgorithm {
+    /// For chains that use keccak as their hashing algo
     Keccak,
+    /// For chains that use blake2 as their hashing algo
     Blake2,
 }
 
@@ -273,8 +277,27 @@ where
         Ok(())
     }
 
-    fn state_trie_key(&self, _request: RequestResponse) -> Vec<Vec<u8>> {
-        todo!()
+    fn state_trie_key(&self, request: RequestResponse) -> Vec<Vec<u8>> {
+        let mut keys = vec![];
+
+        match request {
+            RequestResponse::Request(requests) => {
+                for req in requests {
+                    match req {
+                        Request::Post(post) => {
+                            let request = Request::Post(post);
+                            let commitment = hash_request::<Host<T>>(&request).0.to_vec();
+                            let key = pallet_ismp::RequestAcks::<T>::hashed_key_for(commitment);
+                            keys.push(key);
+                        },
+                        Request::Get(_) => continue,
+                    }
+                }
+            },
+            RequestResponse::Response(_) => {},
+        }
+
+        keys
     }
 
     fn verify_state_proof(

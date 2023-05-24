@@ -12,6 +12,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+//! MMR utilities
+
 use core::fmt::Formatter;
 
 use codec::{Decode, Encode};
@@ -23,12 +26,17 @@ use ismp::{
 use primitive_types::H256;
 use sp_runtime::traits;
 
+/// A leaf index
 pub type LeafIndex = u64;
+/// A Node index
 pub type NodeIndex = u64;
 
+/// A lead in the MMr tree
 #[derive(Debug, Clone, Decode, Encode, PartialEq, Eq)]
 pub enum Leaf {
+    /// A request variant
     Request(Request),
+    /// A response variant.
     Response(Response),
 }
 

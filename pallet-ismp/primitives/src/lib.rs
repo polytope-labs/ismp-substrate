@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! The primitive types used by pallet-ismp
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
 
@@ -20,10 +22,14 @@ use ismp::host::StateMachine;
 
 pub mod mmr;
 
+/// Queries a request leaf in the mmr
 #[derive(codec::Encode, codec::Decode)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub struct LeafIndexQuery {
+    /// The source of the request
     pub source_chain: StateMachine,
+    /// the request destination
     pub dest_chain: StateMachine,
+    /// The request nonce
     pub nonce: u64,
 }

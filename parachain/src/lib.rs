@@ -45,10 +45,12 @@ pub mod pallet {
     #[pallet::pallet]
     pub struct Pallet<T>(_);
 
+    /// The config trait
     #[pallet::config]
     pub trait Config:
         frame_system::Config + pallet_ismp::Config + parachain_system::Config
     {
+        /// The overarching event type
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
     }
 
@@ -62,10 +64,11 @@ pub mod pallet {
     #[pallet::storage]
     pub type ConsensusUpdated<T: Config> = StorageValue<_, bool>;
 
-    /// Tracks whether we've already seen the `update_parachain_consensus` inherent
+    /// List of parachains who's headers will be inserted in the `update_parachain_consensus` inherent
     #[pallet::storage]
     pub type Parachains<T: Config> = StorageMap<_, Identity, u32, ()>;
 
+    /// Events emitted by this pallet
     #[pallet::event]
     pub enum Event<T: Config> {}
 
@@ -174,6 +177,7 @@ pub mod pallet {
         }
     }
 
+    /// The genesis config
     #[pallet::genesis_config]
     pub struct GenesisConfig {
         /// List of parachains to track at genesis
