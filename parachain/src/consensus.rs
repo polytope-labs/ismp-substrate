@@ -276,24 +276,19 @@ where
         Ok(())
     }
 
-    fn state_trie_key(&self, request: RequestResponse) -> Vec<Vec<u8>> {
+    fn state_trie_key(&self, requests: Vec<Request>) -> Vec<Vec<u8>> {
         let mut keys = vec![];
 
-        match request {
-            RequestResponse::Request(requests) => {
-                for req in requests {
-                    match req {
-                        Request::Post(post) => {
-                            let request = Request::Post(post);
-                            let commitment = hash_request::<Host<T>>(&request).0.to_vec();
-                            let key = pallet_ismp::RequestAcks::<T>::hashed_key_for(commitment);
-                            keys.push(key);
-                        }
-                        Request::Get(_) => continue,
-                    }
+        for req in requests {
+            match req {
+                Request::Post(post) => {
+                    let request = Request::Post(post);
+                    let commitment = hash_request::<Host<T>>(&request).0.to_vec();
+                    let key = pallet_ismp::RequestAcks::<T>::hashed_key_for(commitment);
+                    keys.push(key);
                 }
+                Request::Get(_) => continue,
             }
-            RequestResponse::Response(_) => {}
         }
 
         keys

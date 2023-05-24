@@ -621,6 +621,7 @@ impl<T: Config> Pallet<T> {
         (T::INDEXING_PREFIX, "leaves", pos).encode()
     }
 
+    /// Returns the next available nonce
     fn next_nonce() -> u64 {
         let nonce = Nonce::<T>::get();
         Nonce::<T>::put(nonce + 1);
