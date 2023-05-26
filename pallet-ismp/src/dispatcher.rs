@@ -36,8 +36,7 @@ pub enum Receipt {
     Ok,
 }
 
-/// The module router, This allows handling inc
-/// to a destination chain.
+/// The dispatcher commits outgoing requests and responses to the mmr
 pub struct Dispatcher<T>(PhantomData<T>);
 
 impl<T> Default for Dispatcher<T> {
