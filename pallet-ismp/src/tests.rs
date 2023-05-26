@@ -201,7 +201,8 @@ fn dispatcher_should_write_receipts_for_outgoing_requests_and_responses() {
     ext.execute_with(|| {
         set_timestamp(None);
         let host = Host::<Test>::default();
-        write_outgoing_commitments(&host).unwrap();
+        let dispatcher = Dispatcher::<Test>::default();
+        write_outgoing_commitments(&host, &dispatcher).unwrap();
     })
 }
 
@@ -245,7 +246,8 @@ fn should_handle_post_request_timeouts_correctly() {
     ext.execute_with(|| {
         set_timestamp(None);
         let host = Host::<Test>::default();
-        timeout_post_processing_check(&host).unwrap()
+        let dispatcher = Dispatcher::<Test>::default();
+        timeout_post_processing_check(&host, &dispatcher).unwrap()
     })
 }
 
