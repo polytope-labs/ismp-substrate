@@ -185,9 +185,10 @@ where
     }
 
     fn is_consensus_client_frozen(&self, client: ConsensusClientId) -> Result<(), Error> {
-        FrozenConsensusClients::<T>::get(client)
-            .then(|| ())
-            .ok_or_else(|| Error::FrozenConsensusClient { id: client })
+        if FrozenConsensusClients::<T>::get(client) {
+            Err(Error::FrozenConsensusClient { id: client })?
+        }
+        Ok(())
     }
 
     fn next_nonce(&self) -> u64 {

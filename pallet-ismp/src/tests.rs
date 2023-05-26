@@ -195,7 +195,7 @@ fn set_timestamp(now: Option<u64>) {
 }
 
 #[test]
-fn check_for_duplicate_requests_and_responses() {
+fn dispatcher_should_write_receipts_for_outgoing_requests_and_responses() {
     let mut ext = new_test_ext();
 
     ext.execute_with(|| {
