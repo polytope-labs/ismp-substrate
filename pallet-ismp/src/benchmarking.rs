@@ -34,7 +34,7 @@ use frame_system::RawOrigin;
 )]
 pub mod benchmarks {
     use super::*;
-    use crate::router::Receipt;
+    use crate::dispatcher::Receipt;
     use frame_support::{traits::Hooks, PalletId};
     use frame_system::EventRecord;
     use ismp_rs::{
