@@ -17,7 +17,7 @@
 
 use core::{marker::PhantomData, time::Duration};
 
-use alloc::{collections::BTreeMap, format, vec, vec::Vec};
+use alloc::{boxed::Box, collections::BTreeMap, format, vec, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use ismp::{
