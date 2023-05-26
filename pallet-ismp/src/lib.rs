@@ -178,7 +178,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn latest_state_height)]
     pub type LatestStateMachineHeight<T: Config> =
-        StorageMap<_, Blake2_128Concat, StateMachineId, u64, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, StateMachineId, u64, ValueQuery>;
 
     /// Holds the timestamp at which a consensus client was recently updated.
     /// Used in ensuring that the configured challenge period elapses.
@@ -552,7 +552,7 @@ where
 
     /// Return the latest height of the state machine
     pub fn get_latest_state_machine_height(id: StateMachineId) -> Option<u64> {
-        LatestStateMachineHeight::<T>::get(id)
+        Some(LatestStateMachineHeight::<T>::get(id))
     }
 
     /// Get Request Leaf Indices

@@ -54,9 +54,7 @@ where
     }
 
     fn latest_commitment_height(&self, id: StateMachineId) -> Result<u64, Error> {
-        LatestStateMachineHeight::<T>::get(id).map(|height| height).ok_or_else(|| {
-            Error::ImplementationSpecific("Missing latest state machine height".to_string())
-        })
+        Ok(LatestStateMachineHeight::<T>::get(id))
     }
 
     fn state_machine_commitment(
