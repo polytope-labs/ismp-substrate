@@ -41,6 +41,7 @@ pub mod pallet {
             tokens::Balance,
         },
     };
+    use frame_support::traits::tokens::{Fortitude, Precision};
     use frame_system::pallet_prelude::*;
     use ismp::{
         host::StateMachine,
@@ -125,7 +126,7 @@ pub mod pallet {
             dispatcher
                 .dispatch_request(DispatchRequest::Post(post))
                 .map_err(|_| Error::<T>::TransferFailed)?;
-            <T::NativeCurrency as Mutate<T::AccountId>>::burn_from(&origin, params.amount.into())?;
+            <T::NativeCurrency as Mutate<T::AccountId>>::burn_from(&origin, params.amount.into(), Precision::Exact, Fortitude::Force)?;
             Self::deposit_event(Event::<T>::BalanceTransferred {
                 from: payload.from,
                 to: payload.to,
