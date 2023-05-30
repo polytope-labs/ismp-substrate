@@ -51,7 +51,7 @@ impl Leaf {
 }
 
 /// An element representing either full data or its hash.
-#[derive(Clone, PartialEq, Eq, Encode, Decode)]
+#[derive(Clone, PartialEq, Eq, Encode, Decode, scale_info::TypeInfo)]
 pub enum DataOrHash<T: frame_system::Config> {
     /// Arbitrary data in its full form.
     Data(Leaf),
