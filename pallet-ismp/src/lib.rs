@@ -25,6 +25,7 @@ pub mod benchmarking;
 pub mod dispatcher;
 mod errors;
 pub mod events;
+pub mod handlers;
 pub mod host;
 mod mmr;
 #[cfg(test)]
@@ -32,7 +33,6 @@ pub mod mock;
 pub mod primitives;
 #[cfg(test)]
 pub mod tests;
-pub mod handlers;
 pub mod weight_info;
 
 pub use mmr::utils::NodesUtils;
