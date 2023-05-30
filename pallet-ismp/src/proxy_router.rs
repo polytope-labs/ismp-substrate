@@ -5,6 +5,7 @@ use crate::{
     dispatcher::Receipt, host::Host, Config, Event, IncomingRequestAcks, IncomingResponseAcks,
     Pallet,
 };
+use alloc::{boxed::Box, string::ToString};
 use core::marker::PhantomData;
 use ismp_primitives::mmr::Leaf;
 use ismp_rs::{
