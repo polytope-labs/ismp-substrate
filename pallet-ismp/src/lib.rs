@@ -30,6 +30,7 @@ mod mmr;
 #[cfg(test)]
 pub mod mock;
 pub mod primitives;
+pub mod proxy_router;
 #[cfg(test)]
 pub mod tests;
 pub mod weight_info;
@@ -586,7 +587,7 @@ where
     }
 
     /// Insert a leaf into the mmr
-    pub fn mmr_push(leaf: Leaf) -> Option<NodeIndex> {
+    pub(crate) fn mmr_push(leaf: Leaf) -> Option<NodeIndex> {
         let offchain_key = match &leaf {
             Leaf::Request(req) => Pallet::<T>::request_leaf_index_offchain_key(
                 req.source_chain(),
