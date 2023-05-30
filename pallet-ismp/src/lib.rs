@@ -30,9 +30,9 @@ mod mmr;
 #[cfg(test)]
 pub mod mock;
 pub mod primitives;
-pub mod proxy_router;
 #[cfg(test)]
 pub mod tests;
+pub mod handlers;
 pub mod weight_info;
 
 pub use mmr::utils::NodesUtils;
