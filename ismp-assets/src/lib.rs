@@ -44,7 +44,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use ismp::{
         host::StateMachine,
-        router::{DispatchPost, DispatchRequest, IsmpDispatcher},
+        router::{DispatchGet, DispatchPost, DispatchRequest, IsmpDispatcher},
     };
 
     #[pallet::pallet]
@@ -52,7 +52,7 @@ pub mod pallet {
 
     /// Pallet Configuration
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_balances::Config {
         /// Overarching event
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// Native balance
@@ -74,7 +74,7 @@ pub mod pallet {
             /// Destination account
             to: T::AccountId,
             /// Amount being transferred
-            amount: T::Balance,
+            amount: <T as Config>::Balance,
             /// Destination chain's Id
             dest_chain: StateMachine,
         },
@@ -85,9 +85,21 @@ pub mod pallet {
             /// Receiving account
             to: T::AccountId,
             /// Amount that was received
-            amount: T::Balance,
+            amount: <T as Config>::Balance,
             /// Source chain's Id
             source_chain: StateMachine,
+        },
+
+        /// Get request dispatched
+        GetRequestDispatched,
+        /// Token issuance on some counterparty parachain
+        CounterpartyIssuance {
+            /// Parachain Id
+            chain: StateMachine,
+            /// Total issuance on counterparty parachain
+            total_issuance: u128,
+            /// Inactive issuance on counterparty parachain
+            inactive_issuance: u128,
         },
     }
 
@@ -96,6 +108,8 @@ pub mod pallet {
     pub enum Error<T> {
         /// Error encountered when initializing transfer
         TransferFailed,
+        /// Failed to dispatch get request
+        GetDispatchFailed,
     }
 
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
@@ -105,11 +119,11 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Transfer some funds over ISMP
-        #[pallet::weight(1_000_000)]
+        #[pallet::weight(Weight::from_parts(1_000_000, 0))]
         #[pallet::call_index(0)]
         pub fn transfer(
             origin: OriginFor<T>,
-            params: TransferParams<T::AccountId, T::Balance>,
+            params: TransferParams<T::AccountId, <T as Config>::Balance>,
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
             let payload = Payload { to: params.to, from: origin.clone(), amount: params.amount };
@@ -137,6 +151,36 @@ pub mod pallet {
                 amount: payload.amount,
                 dest_chain: params.dest_chain,
             });
+            Ok(())
+        }
+
+        /// Get the total issuance and inactive issuance of the native token in a counterparty
+        /// parachain
+        #[pallet::weight(Weight::from_parts(1_000_000, 0))]
+        #[pallet::call_index(1)]
+        pub fn counterparty_issuance(
+            origin: OriginFor<T>,
+            dest_chain: StateMachine,
+            height: u64,
+            timeout: u64,
+        ) -> DispatchResult {
+            ensure_signed(origin)?;
+            let get = DispatchGet {
+                dest_chain,
+                from: PALLET_ID.0.to_vec(),
+                keys: vec![
+                    pallet_balances::TotalIssuance::<T>::hashed_key().to_vec(),
+                    pallet_balances::InactiveIssuance::<T>::hashed_key().to_vec(),
+                ],
+                height,
+                timeout_timestamp: timeout,
+            };
+
+            let dispatcher = T::IsmpDispatcher::default();
+            dispatcher
+                .dispatch_request(DispatchRequest::Get(get))
+                .map_err(|_| Error::<T>::GetDispatchFailed)?;
+            Self::deposit_event(Event::<T>::GetRequestDispatched);
             Ok(())
         }
     }
@@ -184,8 +228,9 @@ impl<T: Config> IsmpModule for Pallet<T> {
             _ => Err(ismp_dispatch_error("Only Post requests allowed, found Get"))?,
         };
 
-        let payload = <Payload<T::AccountId, T::Balance> as codec::Decode>::decode(&mut &*data)
-            .map_err(|_| ismp_dispatch_error("Failed to decode request data"))?;
+        let payload =
+            <Payload<T::AccountId, <T as Config>::Balance> as codec::Decode>::decode(&mut &*data)
+                .map_err(|_| ismp_dispatch_error("Failed to decode request data"))?;
         <T::NativeCurrency as Mutate<T::AccountId>>::mint_into(&payload.to, payload.amount.into())
             .map_err(|_| ismp_dispatch_error("Failed to mint funds"))?;
         Pallet::<T>::deposit_event(Event::<T>::BalanceReceived {
@@ -197,8 +242,42 @@ impl<T: Config> IsmpModule for Pallet<T> {
         Ok(())
     }
 
-    fn on_response(_response: Response) -> Result<(), ismp::error::Error> {
-        Err(ismp_dispatch_error("Balance transfer protocol does not accept responses"))
+    fn on_response(response: Response) -> Result<(), ismp::error::Error> {
+        match response {
+            Response::Post(_) => {
+                Err(ismp_dispatch_error("Balance transfer protocol does not accept post responses"))
+            }
+            Response::Get(get_res) => {
+                let total_issuance = get_res
+                    .values
+                    .get(pallet_balances::TotalIssuance::<T>::hashed_key().to_vec().as_slice())
+                    .cloned()
+                    .flatten();
+                let inactive_issuance = get_res
+                    .values
+                    .get(pallet_balances::InactiveIssuance::<T>::hashed_key().to_vec().as_slice())
+                    .cloned()
+                    .flatten();
+
+                match (total_issuance, inactive_issuance) {
+                    (Some(total_issuance), Some(inactive_issuance)) => {
+                        let total_issuance: u128 = codec::Decode::decode(&mut &*total_issuance)
+                            .map_err(|_| ismp_dispatch_error("Failed to decode total issuance"))?;
+                        let inactive_issuance: u128 =
+                            codec::Decode::decode(&mut &*inactive_issuance).map_err(|_| {
+                                ismp_dispatch_error("Failed to decode total issuance")
+                            })?;
+                        Pallet::<T>::deposit_event(Event::<T>::CounterpartyIssuance {
+                            chain: get_res.get.source_chain,
+                            total_issuance,
+                            inactive_issuance,
+                        });
+                        Ok(())
+                    }
+                    _ => Err(ismp_dispatch_error("Incomplete values received")),
+                }
+            }
+        }
     }
 
     fn on_timeout(request: Request) -> Result<(), ismp::error::Error> {
@@ -207,8 +286,9 @@ impl<T: Config> IsmpModule for Pallet<T> {
             Request::Post(post) => post.data,
             _ => Err(ismp_dispatch_error("Only Post requests allowed, found Get"))?,
         };
-        let payload = <Payload<T::AccountId, T::Balance> as codec::Decode>::decode(&mut &*data)
-            .map_err(|_| ismp_dispatch_error("Failed to decode request data"))?;
+        let payload =
+            <Payload<T::AccountId, <T as Config>::Balance> as codec::Decode>::decode(&mut &*data)
+                .map_err(|_| ismp_dispatch_error("Failed to decode request data"))?;
         <T::NativeCurrency as Mutate<T::AccountId>>::mint_into(
             &payload.from,
             payload.amount.into(),
