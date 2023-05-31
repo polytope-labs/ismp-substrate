@@ -19,6 +19,7 @@ use ismp_rs::{
     consensus::{ConsensusClientId, StateMachineHeight},
     error::Error as IsmpError,
     host::StateMachine,
+    router::DispatchResult,
 };
 use sp_std::prelude::*;
 
@@ -93,6 +94,56 @@ pub enum HandlingError {
         dest: StateMachine,
     },
     InsufficientProofHeight,
+}
+
+#[derive(Clone, Debug, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
+pub struct DispatchError {
+    /// Descriptive error message
+    pub msg: Vec<u8>,
+    /// Request nonce
+    pub nonce: u64,
+    /// Source chain for request or response
+    pub source: StateMachine,
+    /// Destination chain for request or response
+    pub dest: StateMachine,
+}
+
+#[derive(Clone, Debug, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
+pub struct DispatchSuccess {
+    /// Destination chain for request or response
+    pub dest_chain: StateMachine,
+    /// Source chain for request or response
+    pub source_chain: StateMachine,
+    /// Request nonce
+    pub nonce: u64,
+}
+
+#[derive(Clone, Debug, Default, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
+pub struct ModuleCallbackResults {
+    pub results: Vec<Result<DispatchSuccess, DispatchError>>,
+}
+
+impl From<Vec<DispatchResult>> for ModuleCallbackResults {
+    fn from(values: Vec<DispatchResult>) -> Self {
+        Self {
+            results: values
+                .into_iter()
+                .map(|res| match res {
+                    Ok(res) => Ok(DispatchSuccess {
+                        dest_chain: res.dest_chain,
+                        source_chain: res.source_chain,
+                        nonce: res.nonce,
+                    }),
+                    Err(res) => Err(DispatchError {
+                        msg: res.msg.as_bytes().to_vec(),
+                        dest: res.dest,
+                        source: res.source,
+                        nonce: res.nonce,
+                    }),
+                })
+                .collect(),
+        }
+    }
 }
 
 impl From<ismp_rs::error::Error> for HandlingError {

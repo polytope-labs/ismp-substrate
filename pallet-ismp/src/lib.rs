@@ -50,7 +50,10 @@ use ismp_rs::{
 };
 use sp_core::{offchain::StorageKind, H256};
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use crate::{errors::HandlingError, mmr::mmr::Mmr};
+use crate::{
+    errors::{HandlingError, ModuleCallbackResults},
+    mmr::mmr::Mmr,
+};
 use ismp_primitives::{
     mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex},
     LeafIndexQuery,
@@ -353,6 +356,8 @@ pub mod pallet {
             /// Message handling errors
             errors: Vec<HandlingError>,
         },
+        /// Module Callback Results
+        ModuleCallbackResults(ModuleCallbackResults),
     }
 
     /// Pallet errors
@@ -388,6 +393,7 @@ where
         // Define a host
         let host = Host::<T>::default();
         let mut errors: Vec<HandlingError> = vec![];
+        let mut module_dispatch_results = vec![];
 
         for message in messages {
             match handle_incoming_message(&host, message) {
@@ -429,18 +435,34 @@ where
                         );
                     }
                 }
-                Ok(_) => {
-                    // Do nothing, event should have been deposited by the ismp router
+                Ok(MessageResult::Response(res)) => {
+                    let results: ModuleCallbackResults = res.into();
+                    module_dispatch_results.extend(results.results);
+                }
+                Ok(MessageResult::Request(res)) => {
+                    let results: ModuleCallbackResults = res.into();
+                    module_dispatch_results.extend(results.results);
+                }
+                Ok(MessageResult::Timeout(res)) => {
+                    let results: ModuleCallbackResults = res.into();
+                    module_dispatch_results.extend(results.results);
                 }
                 Err(err) => {
                     errors.push(err.into());
                 }
+                _ => {}
             }
         }
 
         if !errors.is_empty() {
             debug!(target: "ismp-rust", "Handling Errors {:?}", errors);
             Self::deposit_event(Event::<T>::HandlingErrors { errors })
+        }
+
+        if !module_dispatch_results.is_empty() {
+            Self::deposit_event(Event::<T>::ModuleCallbackResults(ModuleCallbackResults {
+                results: module_dispatch_results,
+            }))
         }
 
         Ok(())

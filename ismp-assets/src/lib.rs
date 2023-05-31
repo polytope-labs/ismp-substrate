@@ -34,6 +34,7 @@ pub const PALLET_ID: PalletId = PalletId(*b"ismp-ast");
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use alloc::vec;
     use frame_support::{
         pallet_prelude::*,
         traits::{
@@ -98,8 +99,6 @@ pub mod pallet {
             chain: StateMachine,
             /// Total issuance on counterparty parachain
             total_issuance: u128,
-            /// Inactive issuance on counterparty parachain
-            inactive_issuance: u128,
         },
     }
 
@@ -154,7 +153,7 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Get the total issuance and inactive issuance of the native token in a counterparty
+        /// Get the total issuance of the native token in a counterparty
         /// parachain
         #[pallet::weight(Weight::from_parts(1_000_000, 0))]
         #[pallet::call_index(1)]
@@ -168,10 +167,7 @@ pub mod pallet {
             let get = DispatchGet {
                 dest_chain,
                 from: PALLET_ID.0.to_vec(),
-                keys: vec![
-                    pallet_balances::TotalIssuance::<T>::hashed_key().to_vec(),
-                    pallet_balances::InactiveIssuance::<T>::hashed_key().to_vec(),
-                ],
+                keys: vec![pallet_balances::TotalIssuance::<T>::hashed_key().to_vec()],
                 height,
                 timeout_timestamp: timeout,
             };
@@ -216,7 +212,7 @@ pub mod pallet {
 }
 
 /// Ismp dispatch error
-fn ismp_dispatch_error(msg: &'static str) -> ismp::error::Error {
+fn ismp_dispatch_error(msg: &str) -> ismp::error::Error {
     ismp::error::Error::ImplementationSpecific(msg.to_string())
 }
 
@@ -253,28 +249,18 @@ impl<T: Config> IsmpModule for Pallet<T> {
                     .get(pallet_balances::TotalIssuance::<T>::hashed_key().to_vec().as_slice())
                     .cloned()
                     .flatten();
-                let inactive_issuance = get_res
-                    .values
-                    .get(pallet_balances::InactiveIssuance::<T>::hashed_key().to_vec().as_slice())
-                    .cloned()
-                    .flatten();
 
-                match (total_issuance, inactive_issuance) {
-                    (Some(total_issuance), Some(inactive_issuance)) => {
+                match total_issuance {
+                    Some(total_issuance) => {
                         let total_issuance: u128 = codec::Decode::decode(&mut &*total_issuance)
                             .map_err(|_| ismp_dispatch_error("Failed to decode total issuance"))?;
-                        let inactive_issuance: u128 =
-                            codec::Decode::decode(&mut &*inactive_issuance).map_err(|_| {
-                                ismp_dispatch_error("Failed to decode total issuance")
-                            })?;
                         Pallet::<T>::deposit_event(Event::<T>::CounterpartyIssuance {
-                            chain: get_res.get.source_chain,
+                            chain: get_res.get.dest_chain,
                             total_issuance,
-                            inactive_issuance,
                         });
                         Ok(())
                     }
-                    _ => Err(ismp_dispatch_error("Incomplete values received")),
+                    _ => Err(ismp_dispatch_error("Received None")),
                 }
             }
         }
