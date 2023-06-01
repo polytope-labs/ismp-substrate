@@ -97,19 +97,19 @@ pub enum HandlingError {
 }
 
 #[derive(Clone, Debug, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
-pub struct DispatchError {
+pub struct ModuleDispatchError {
     /// Descriptive error message
     pub msg: Vec<u8>,
     /// Request nonce
     pub nonce: u64,
     /// Source chain for request or response
-    pub source: StateMachine,
+    pub source_chain: StateMachine,
     /// Destination chain for request or response
-    pub dest: StateMachine,
+    pub dest_chain: StateMachine,
 }
 
 #[derive(Clone, Debug, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
-pub struct DispatchSuccess {
+pub struct ModuleDispatchSuccess {
     /// Destination chain for request or response
     pub dest_chain: StateMachine,
     /// Source chain for request or response
@@ -118,32 +118,68 @@ pub struct DispatchSuccess {
     pub nonce: u64,
 }
 
-#[derive(Clone, Debug, Default, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
-pub struct ModuleCallbackResults {
-    pub results: Vec<Result<DispatchSuccess, DispatchError>>,
+#[derive(Clone, Debug, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
+pub enum ModuleCallbackResult {
+    Response(Result<ModuleDispatchSuccess, ModuleDispatchError>),
+    Request(Result<ModuleDispatchSuccess, ModuleDispatchError>),
+    Timeout(Result<ModuleDispatchSuccess, ModuleDispatchError>),
 }
 
-impl From<Vec<DispatchResult>> for ModuleCallbackResults {
-    fn from(values: Vec<DispatchResult>) -> Self {
-        Self {
-            results: values
-                .into_iter()
-                .map(|res| match res {
-                    Ok(res) => Ok(DispatchSuccess {
-                        dest_chain: res.dest_chain,
-                        source_chain: res.source_chain,
-                        nonce: res.nonce,
-                    }),
-                    Err(res) => Err(DispatchError {
-                        msg: res.msg.as_bytes().to_vec(),
-                        dest: res.dest,
-                        source: res.source,
-                        nonce: res.nonce,
-                    }),
-                })
-                .collect(),
-        }
-    }
+pub fn to_response_results(values: Vec<DispatchResult>) -> Vec<ModuleCallbackResult> {
+    values
+        .into_iter()
+        .map(|res| match res {
+            Ok(res) => ModuleCallbackResult::Response(Ok(ModuleDispatchSuccess {
+                dest_chain: res.dest_chain,
+                source_chain: res.source_chain,
+                nonce: res.nonce,
+            })),
+            Err(res) => ModuleCallbackResult::Response(Err(ModuleDispatchError {
+                msg: res.msg.as_bytes().to_vec(),
+                dest_chain: res.dest,
+                source_chain: res.source,
+                nonce: res.nonce,
+            })),
+        })
+        .collect()
+}
+
+pub fn to_request_results(values: Vec<DispatchResult>) -> Vec<ModuleCallbackResult> {
+    values
+        .into_iter()
+        .map(|res| match res {
+            Ok(res) => ModuleCallbackResult::Request(Ok(ModuleDispatchSuccess {
+                dest_chain: res.dest_chain,
+                source_chain: res.source_chain,
+                nonce: res.nonce,
+            })),
+            Err(res) => ModuleCallbackResult::Request(Err(ModuleDispatchError {
+                msg: res.msg.as_bytes().to_vec(),
+                dest_chain: res.dest,
+                source_chain: res.source,
+                nonce: res.nonce,
+            })),
+        })
+        .collect()
+}
+
+pub fn to_timeout_results(values: Vec<DispatchResult>) -> Vec<ModuleCallbackResult> {
+    values
+        .into_iter()
+        .map(|res| match res {
+            Ok(res) => ModuleCallbackResult::Timeout(Ok(ModuleDispatchSuccess {
+                dest_chain: res.dest_chain,
+                source_chain: res.source_chain,
+                nonce: res.nonce,
+            })),
+            Err(res) => ModuleCallbackResult::Timeout(Err(ModuleDispatchError {
+                msg: res.msg.as_bytes().to_vec(),
+                dest_chain: res.dest,
+                source_chain: res.source,
+                nonce: res.nonce,
+            })),
+        })
+        .collect()
 }
 
 impl From<ismp_rs::error::Error> for HandlingError {

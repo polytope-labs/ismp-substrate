@@ -51,7 +51,7 @@ use ismp_rs::{
 use sp_core::{offchain::StorageKind, H256};
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use crate::{
-    errors::{HandlingError, ModuleCallbackResults},
+    errors::{to_request_results, to_response_results, to_timeout_results, HandlingError},
     mmr::mmr::Mmr,
 };
 use ismp_primitives::{
@@ -356,8 +356,6 @@ pub mod pallet {
             /// Message handling errors
             errors: Vec<HandlingError>,
         },
-        /// Module Callback Results
-        ModuleCallbackResults(ModuleCallbackResults),
     }
 
     /// Pallet errors
@@ -436,16 +434,16 @@ where
                     }
                 }
                 Ok(MessageResult::Response(res)) => {
-                    let results: ModuleCallbackResults = res.into();
-                    module_dispatch_results.extend(results.results);
+                    let results = to_response_results(res);
+                    module_dispatch_results.extend(results);
                 }
                 Ok(MessageResult::Request(res)) => {
-                    let results: ModuleCallbackResults = res.into();
-                    module_dispatch_results.extend(results.results);
+                    let results = to_request_results(res);
+                    module_dispatch_results.extend(results);
                 }
                 Ok(MessageResult::Timeout(res)) => {
-                    let results: ModuleCallbackResults = res.into();
-                    module_dispatch_results.extend(results.results);
+                    let results = to_timeout_results(res);
+                    module_dispatch_results.extend(results);
                 }
                 Err(err) => {
                     errors.push(err.into());
@@ -455,14 +453,12 @@ where
         }
 
         if !errors.is_empty() {
-            debug!(target: "ismp-rust", "Handling Errors {:?}", errors);
+            debug!(target: "pallet-ismp", "Handling Errors {:?}", errors);
             Self::deposit_event(Event::<T>::HandlingErrors { errors })
         }
 
         if !module_dispatch_results.is_empty() {
-            Self::deposit_event(Event::<T>::ModuleCallbackResults(ModuleCallbackResults {
-                results: module_dispatch_results,
-            }))
+            debug!(target: "ismp-modules", "Module Callback Results {:?}", module_dispatch_results);
         }
 
         Ok(())
