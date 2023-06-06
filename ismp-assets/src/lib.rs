@@ -136,13 +136,8 @@ pub mod pallet {
 
             // next, construct the request to be sent out
             let payload = Payload { to: params.to, from: origin.clone(), amount: params.amount };
-            let dest = match T::StateMachine::get() {
-                StateMachine::Kusama(_) => StateMachine::Kusama(params.dest_id),
-                StateMachine::Polkadot(_) => StateMachine::Polkadot(params.dest_id),
-                _ => Err(DispatchError::Other("Pallet only supports parachain hosts"))?,
-            };
             let post = DispatchPost {
-                dest_chain: dest,
+                dest_chain: params.dest_chain,
                 from: PALLET_ID.0.to_vec(),
                 to: PALLET_ID.0.to_vec(),
                 timeout_timestamp: params.timeout,
