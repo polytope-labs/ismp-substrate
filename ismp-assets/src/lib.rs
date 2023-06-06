@@ -137,8 +137,8 @@ pub mod pallet {
             // next, construct the request to be sent out
             let payload = Payload { to: params.to, from: origin.clone(), amount: params.amount };
             let dest = match T::StateMachine::get() {
-                StateMachine::Kusama(_) => StateMachine::Kusama(params.dest_id),
-                StateMachine::Polkadot(_) => StateMachine::Polkadot(params.dest_id),
+                StateMachine::Kusama(_) => StateMachine::Kusama(params.para_id),
+                StateMachine::Polkadot(_) => StateMachine::Polkadot(params.para_id),
                 _ => Err(DispatchError::Other("Pallet only supports parachain hosts"))?,
             };
             let post = DispatchPost {
@@ -172,11 +172,17 @@ pub mod pallet {
         #[pallet::call_index(1)]
         pub fn counterparty_issuance(
             origin: OriginFor<T>,
-            dest_chain: StateMachine,
+            para_id: u32,
             height: u64,
             timeout: u64,
         ) -> DispatchResult {
             ensure_signed(origin)?;
+            let dest_chain = match T::StateMachine::get() {
+                StateMachine::Kusama(_) => StateMachine::Kusama(para_id),
+                StateMachine::Polkadot(_) => StateMachine::Polkadot(para_id),
+                _ => Err(DispatchError::Other("Pallet only supports parachain hosts"))?,
+            };
+
             let get = DispatchGet {
                 dest_chain,
                 from: PALLET_ID.0.to_vec(),
@@ -215,10 +221,13 @@ pub mod pallet {
     pub struct TransferParams<AccountId, Balance> {
         /// Destination account
         pub to: AccountId,
+
         /// Amount to transfer
         pub amount: Balance,
+
         /// Destination parachain Id
-        pub dest_id: u32,
+        pub para_id: u32,
+
         /// Timeout timestamp on destination chain in seconds
         pub timeout: u64,
     }
