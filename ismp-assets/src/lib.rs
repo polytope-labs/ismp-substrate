@@ -197,7 +197,7 @@ pub mod pallet {
     /// Transfer payload
     /// This would be encoded to bytes as the request data
     #[derive(
-    Clone, codec::Encode, codec::Decode, scale_info::TypeInfo, PartialEq, Eq, RuntimeDebug,
+        Clone, codec::Encode, codec::Decode, scale_info::TypeInfo, PartialEq, Eq, RuntimeDebug,
     )]
     pub struct Payload<AccountId, Balance> {
         /// Destination account
@@ -210,7 +210,7 @@ pub mod pallet {
 
     /// Extrinsic Parameters for initializing a cross chain transfer
     #[derive(
-    Clone, codec::Encode, codec::Decode, scale_info::TypeInfo, PartialEq, Eq, RuntimeDebug,
+        Clone, codec::Encode, codec::Decode, scale_info::TypeInfo, PartialEq, Eq, RuntimeDebug,
     )]
     pub struct TransferParams<AccountId, Balance> {
         /// Destination account
@@ -236,7 +236,7 @@ impl<T: Config> IsmpModule for Pallet<T> {
         let payload = <Payload<T::AccountId, <T as Config>::Balance> as codec::Decode>::decode(
             &mut &*request.data,
         )
-            .map_err(|_| ismp_dispatch_error("Failed to decode request data"))?;
+        .map_err(|_| ismp_dispatch_error("Failed to decode request data"))?;
         <T::NativeCurrency as Mutate<T::AccountId>>::mint_into(&payload.to, payload.amount.into())
             .map_err(|_| ismp_dispatch_error("Failed to mint funds"))?;
         Pallet::<T>::deposit_event(Event::<T>::BalanceReceived {
@@ -289,7 +289,7 @@ impl<T: Config> IsmpModule for Pallet<T> {
             &payload.from,
             payload.amount.into(),
         )
-            .map_err(|_| ismp_dispatch_error("Failed to mint funds"))?;
+        .map_err(|_| ismp_dispatch_error("Failed to mint funds"))?;
         Pallet::<T>::deposit_event(Event::<T>::BalanceReceived {
             from: payload.from,
             to: payload.to,

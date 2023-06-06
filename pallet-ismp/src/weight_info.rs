@@ -184,7 +184,7 @@ pub fn get_weight<T: Config>(messages: &[Message]) -> Weight {
             let consensus_handler = <T as Config>::WeightProvider::consensus_client(
                 msg.proof.height.id.consensus_client,
             )
-                .unwrap_or(Box::new(()));
+            .unwrap_or(Box::new(()));
 
             let proof_verification_weight =
                 consensus_handler.verify_membership(state_machine, msg.requests.len(), &msg.proof);
@@ -209,7 +209,7 @@ pub fn get_weight<T: Config>(messages: &[Message]) -> Weight {
                 let consensus_handler = <T as Config>::WeightProvider::consensus_client(
                     proof.height.id.consensus_client,
                 )
-                    .unwrap_or(Box::new(()));
+                .unwrap_or(Box::new(()));
 
                 let proof_verification_weight =
                     consensus_handler.verify_membership(state_machine, responses.len(), &proof);
@@ -236,7 +236,7 @@ pub fn get_weight<T: Config>(messages: &[Message]) -> Weight {
                 let consensus_handler = <T as Config>::WeightProvider::consensus_client(
                     proof.height.id.consensus_client,
                 )
-                    .unwrap_or(Box::new(()));
+                .unwrap_or(Box::new(()));
 
                 let proof_verification_weight =
                     consensus_handler.verify_state_proof(state_machine, requests.len(), &proof);
@@ -262,7 +262,7 @@ pub fn get_weight<T: Config>(messages: &[Message]) -> Weight {
                 let consensus_handler = <T as Config>::WeightProvider::consensus_client(
                     timeout_proof.height.id.consensus_client,
                 )
-                    .unwrap_or(Box::new(()));
+                .unwrap_or(Box::new(()));
 
                 let proof_verification_weight = consensus_handler.verify_state_proof(
                     state_machine,

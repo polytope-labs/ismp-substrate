@@ -149,8 +149,8 @@ pub mod benchmarks {
 
     /// Sets the current timestamp
     fn set_timestamp<T: pallet_timestamp::Config>()
-        where
-            <T as pallet_timestamp::Config>::Moment: From<u64>,
+    where
+        <T as pallet_timestamp::Config>::Moment: From<u64>,
     {
         pallet_timestamp::Pallet::<T>::set_timestamp(1000_000_000u64.into());
     }
@@ -210,7 +210,7 @@ pub mod benchmarks {
             intermediate_state.height,
             intermediate_state.commitment,
         )
-            .unwrap();
+        .unwrap();
 
         intermediate_state
     }
