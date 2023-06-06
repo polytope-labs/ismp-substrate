@@ -27,10 +27,10 @@ use frame_system::RawOrigin;
 /// In your module router configuration add the [`BenchmarkIsmpModule`] as one of the ismp modules
 /// using the pallet id defined here as it's module id.
 #[benchmarks(
-    where
-        <T as frame_system::Config>::Hash: From<H256>,
-        T: pallet_timestamp::Config,
-        <T as pallet_timestamp::Config>::Moment: From<u64>
+where
+<T as frame_system::Config>::Hash: From<H256>,
+T: pallet_timestamp::Config,
+<T as pallet_timestamp::Config>::Moment: From<u64>
 )]
 pub mod benchmarks {
     use super::*;
@@ -149,8 +149,8 @@ pub mod benchmarks {
 
     /// Sets the current timestamp
     fn set_timestamp<T: pallet_timestamp::Config>()
-    where
-        <T as pallet_timestamp::Config>::Moment: From<u64>,
+        where
+            <T as pallet_timestamp::Config>::Moment: From<u64>,
     {
         pallet_timestamp::Pallet::<T>::set_timestamp(1000_000_000u64.into());
     }
@@ -210,7 +210,7 @@ pub mod benchmarks {
             intermediate_state.height,
             intermediate_state.commitment,
         )
-        .unwrap();
+            .unwrap();
 
         intermediate_state
     }
