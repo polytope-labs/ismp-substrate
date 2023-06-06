@@ -21,9 +21,8 @@ use frame_support::traits::{ConstU32, ConstU64, Get};
 use frame_system::EnsureRoot;
 use ismp_rs::{
     consensus::ConsensusClient,
-    router::{DispatchResult, DispatchSuccess, IsmpRouter},
+    router::{DispatchResult, DispatchSuccess, IsmpRouter, Post},
 };
-use ismp_rs::router::Post;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
