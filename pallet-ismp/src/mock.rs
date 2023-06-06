@@ -23,6 +23,7 @@ use ismp_rs::{
     consensus::ConsensusClient,
     router::{DispatchResult, DispatchSuccess, IsmpRouter},
 };
+use ismp_rs::router::Post;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -116,10 +117,10 @@ impl Config for Test {
 pub struct ModuleRouter;
 
 impl IsmpRouter for ModuleRouter {
-    fn handle_request(&self, request: Request) -> DispatchResult {
-        let dest = request.dest_chain();
-        let source = request.source_chain();
-        let nonce = request.nonce();
+    fn handle_request(&self, request: Post) -> DispatchResult {
+        let dest = request.dest_chain;
+        let source = request.source_chain;
+        let nonce = request.nonce;
 
         Ok(DispatchSuccess { dest_chain: dest, source_chain: source, nonce })
     }
