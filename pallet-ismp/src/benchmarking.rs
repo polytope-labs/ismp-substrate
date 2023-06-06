@@ -134,7 +134,7 @@ pub mod benchmarks {
     /// module id for the mock benchmarking module
     pub const MODULE_ID: PalletId = PalletId(*b"benchmak");
     impl IsmpModule for BenchmarkIsmpModule {
-        fn on_accept(_request: Request) -> Result<(), IsmpError> {
+        fn on_accept(_request: Post) -> Result<(), IsmpError> {
             Ok(())
         }
 
@@ -232,7 +232,7 @@ pub mod benchmarks {
         };
 
         let msg = RequestMessage {
-            requests: vec![Request::Post(post.clone())],
+            requests: vec![post.clone()],
             proof: Proof { height: intermediate_state.height, proof: vec![] },
         };
         let caller = whitelisted_caller();
