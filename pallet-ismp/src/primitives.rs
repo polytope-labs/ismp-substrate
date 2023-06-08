@@ -19,7 +19,7 @@ use frame_support::{PalletId, RuntimeDebug};
 use ismp_primitives::mmr::{LeafIndex, NodeIndex};
 use ismp_rs::consensus::{ConsensusClient, ConsensusClientId};
 use scale_info::TypeInfo;
-use sp_core::crypto::AccountId32;
+use sp_core::{crypto::AccountId32, H160};
 use sp_std::prelude::*;
 
 /// The `ConsensusEngineId` of ISMP.
@@ -71,4 +71,6 @@ pub enum ModuleId {
     Pallet(PalletId),
     /// Contract account id
     Contract(AccountId32),
+    /// Evm contract
+    Evm(H160),
 }
