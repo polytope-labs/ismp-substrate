@@ -47,7 +47,7 @@ pub mod benchmarks {
         messaging::{
             Message, Proof, RequestMessage, ResponseMessage, StateCommitmentHeight, TimeoutMessage,
         },
-        module::{DispatchSuccess, IsmpModule},
+        module::IsmpModule,
         router::{Post, PostResponse, RequestResponse},
         util::{hash_request, hash_response},
     };
@@ -134,28 +134,16 @@ pub mod benchmarks {
     /// module id for the mock benchmarking module
     pub const MODULE_ID: ModuleId = ModuleId::Pallet(PalletId(*b"benchmak"));
     impl IsmpModule for BenchmarkIsmpModule {
-        fn on_accept(&self, _request: Post) -> ismp_rs::module::DispatchResult {
-            Ok(DispatchSuccess {
-                dest_chain: StateMachine::Ethereum,
-                source_chain: StateMachine::Ethereum,
-                nonce: 0,
-            })
+        fn on_accept(&self, _request: Post) -> Result<(), ismp_rs::error::Error> {
+            Ok(())
         }
 
-        fn on_response(&self, _response: Response) -> ismp_rs::module::DispatchResult {
-            Ok(DispatchSuccess {
-                dest_chain: StateMachine::Ethereum,
-                source_chain: StateMachine::Ethereum,
-                nonce: 0,
-            })
+        fn on_response(&self, _response: Response) -> Result<(), ismp_rs::error::Error> {
+            Ok(())
         }
 
-        fn on_timeout(&self, _request: Request) -> ismp_rs::module::DispatchResult {
-            Ok(DispatchSuccess {
-                dest_chain: StateMachine::Ethereum,
-                source_chain: StateMachine::Ethereum,
-                nonce: 0,
-            })
+        fn on_timeout(&self, _request: Request) -> Result<(), ismp_rs::error::Error> {
+            Ok(())
         }
     }
 

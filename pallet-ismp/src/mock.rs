@@ -21,7 +21,7 @@ use frame_support::traits::{ConstU32, ConstU64, Get};
 use frame_system::EnsureRoot;
 use ismp_rs::{
     consensus::ConsensusClient,
-    module::{DispatchResult, DispatchSuccess, IsmpModule},
+    module::IsmpModule,
     router::{IsmpRouter, Post},
 };
 use sp_core::H256;
@@ -117,28 +117,16 @@ impl Config for Test {
 pub struct MockModule;
 
 impl IsmpModule for MockModule {
-    fn on_accept(&self, _request: Post) -> DispatchResult {
-        Ok(DispatchSuccess {
-            dest_chain: StateMachine::Ethereum,
-            source_chain: StateMachine::Ethereum,
-            nonce: 0,
-        })
+    fn on_accept(&self, _request: Post) -> Result<(), ismp_rs::error::Error> {
+        Ok(())
     }
 
-    fn on_response(&self, _response: Response) -> DispatchResult {
-        Ok(DispatchSuccess {
-            dest_chain: StateMachine::Ethereum,
-            source_chain: StateMachine::Ethereum,
-            nonce: 0,
-        })
+    fn on_response(&self, _response: Response) -> Result<(), ismp_rs::error::Error> {
+        Ok(())
     }
 
-    fn on_timeout(&self, _request: Request) -> DispatchResult {
-        Ok(DispatchSuccess {
-            dest_chain: StateMachine::Ethereum,
-            source_chain: StateMachine::Ethereum,
-            nonce: 0,
-        })
+    fn on_timeout(&self, _request: Request) -> Result<(), ismp_rs::error::Error> {
+        Ok(())
     }
 }
 
