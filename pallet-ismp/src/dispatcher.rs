@@ -21,10 +21,8 @@ use core::marker::PhantomData;
 use ismp_primitives::mmr::Leaf;
 use ismp_rs::{
     host::IsmpHost,
-    router::{
-        DispatchError, DispatchRequest, DispatchResult, DispatchSuccess, Get, IsmpDispatcher, Post,
-        PostResponse, Request, Response,
-    },
+    module::{DispatchError, DispatchResult, DispatchSuccess},
+    router::{DispatchRequest, Get, IsmpDispatcher, Post, PostResponse, Request, Response},
     util::{hash_request, hash_response},
 };
 use sp_core::H256;

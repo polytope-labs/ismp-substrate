@@ -19,7 +19,7 @@ use ismp_rs::{
     consensus::{ConsensusClientId, StateMachineHeight},
     error::Error as IsmpError,
     host::StateMachine,
-    router::DispatchResult,
+    module::DispatchResult,
 };
 use sp_std::prelude::*;
 
@@ -94,6 +94,7 @@ pub enum HandlingError {
         dest: StateMachine,
     },
     InsufficientProofHeight,
+    ModuleNotFound(Vec<u8>),
 }
 
 #[derive(Clone, Debug, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
@@ -251,6 +252,7 @@ impl From<ismp_rs::error::Error> for HandlingError {
                 HandlingError::RequestTimeoutVerificationFailed { nonce, source, dest }
             }
             IsmpError::InsufficientProofHeight => HandlingError::InsufficientProofHeight,
+            IsmpError::ModuleNotFound(id) => HandlingError::ModuleNotFound(id),
         }
     }
 }

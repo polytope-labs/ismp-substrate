@@ -7,7 +7,8 @@ use crate::{
 use alloc::string::ToString;
 use ismp_primitives::mmr::Leaf;
 use ismp_rs::{
-    router::{DispatchError, DispatchResult, DispatchSuccess, Request, Response},
+    module::{DispatchError, DispatchResult, DispatchSuccess},
+    router::{Request, Response},
     util::{hash_request, hash_response},
 };
 use sp_core::H256;
