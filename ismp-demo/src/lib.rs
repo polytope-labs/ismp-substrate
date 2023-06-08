@@ -38,7 +38,7 @@ pub const PALLET_ID: ModuleId = ModuleId::Pallet(PalletId(*b"ismp-ast"));
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use alloc::{collections::BTreeMap, vec};
+    use alloc::{vec, vec::Vec};
     use frame_support::{
         pallet_prelude::*,
         traits::{
@@ -95,10 +95,8 @@ pub mod pallet {
             source_chain: StateMachine,
         },
 
-        /// Get request dispatched
-        GetRequestDispatched,
-        /// Token issuance on some counterparty parachain
-        GetResponse(BTreeMap<Vec<u8>, Option<Vec<u8>>>),
+        /// Get response recieved
+        GetResponse(Vec<Option<Vec<u8>>>),
     }
 
     /// Pallet Errors
@@ -189,7 +187,6 @@ pub mod pallet {
             dispatcher
                 .dispatch_request(DispatchRequest::Get(get))
                 .map_err(|_| Error::<T>::GetDispatchFailed)?;
-            Self::deposit_event(Event::<T>::GetRequestDispatched);
             Ok(())
         }
     }
@@ -309,7 +306,9 @@ impl<T: Config> IsmpModule for IsmpModuleCallback<T> {
                 source_chain,
                 dest_chain,
             ))?,
-            Response::Get(res) => Pallet::<T>::deposit_event(Event::<T>::GetResponse(res.values)),
+            Response::Get(res) => Pallet::<T>::deposit_event(Event::<T>::GetResponse(
+                res.values.into_values().collect(),
+            )),
         };
 
         Ok(IsmpDispatchSuccess { dest_chain, source_chain, nonce })
