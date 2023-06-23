@@ -30,7 +30,7 @@ use ismp_primitives::{
 };
 use ismp_rs::{
     consensus::{ConsensusClientId, StateMachineId},
-    router::{Get, Post, Request, Response},
+    router::{Get, Request, Response},
 };
 use ismp_runtime_api::IsmpRuntimeApi;
 use sc_client_api::{BlockBackend, ProofProvider};
@@ -132,10 +132,6 @@ where
     /// Query pending get requests that have a `state_machine_height` <=  `height`.
     #[method(name = "ismp_pendingGetRequests")]
     fn pending_get_requests(&self, height: u64) -> Result<Vec<Get>>;
-
-    /// Query undelivered post requests
-    #[method(name = "ismp_undeliveredPostRequests")]
-    fn undelivered_post_requests(&self) -> Result<Vec<Post>>;
 }
 
 /// An implementation of ISMP specific RPC methods.
@@ -274,14 +270,6 @@ where
         api.pending_get_requests(at)
             .map(|reqs| reqs.into_iter().filter(|req| req.height <= height).collect())
             .map_err(|_| runtime_error_into_rpc_error("Error fetching get requests"))
-    }
-
-    fn undelivered_post_requests(&self) -> Result<Vec<Post>> {
-        let api = self.client.runtime_api();
-        let at = self.client.info().best_hash;
-
-        api.undelivered_post_requests(at)
-            .map_err(|_| runtime_error_into_rpc_error("Error fetching post requests"))
     }
 
     fn query_events(
