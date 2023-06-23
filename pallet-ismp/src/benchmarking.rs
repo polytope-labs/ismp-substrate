@@ -34,7 +34,7 @@ T: pallet_timestamp::Config,
 )]
 pub mod benchmarks {
     use super::*;
-    use crate::{dispatcher::Receipt, primitives::ModuleId};
+    use crate::primitives::ModuleId;
     use alloc::collections::BTreeMap;
     use frame_support::{traits::Hooks, PalletId};
     use frame_system::EventRecord;
@@ -261,7 +261,14 @@ pub mod benchmarks {
         let request = Request::Post(post.clone());
 
         let commitment = hash_request::<Host<T>>(&request);
-        OutgoingRequestAcks::<T>::insert(commitment.0.to_vec(), Receipt::Ok);
+        OutgoingRequestAcks::<T>::insert(
+            commitment.0.to_vec(),
+            LeafIndexQuery {
+                source_chain: post.source_chain,
+                dest_chain: post.dest_chain,
+                nonce: post.nonce,
+            },
+        );
 
         let response = Response::Post(PostResponse { post, response: vec![] });
         let response_commitment = hash_response::<Host<T>>(&response);
@@ -295,7 +302,14 @@ pub mod benchmarks {
         let request = Request::Post(post.clone());
 
         let commitment = hash_request::<Host<T>>(&request);
-        OutgoingRequestAcks::<T>::insert(commitment.0.to_vec(), Receipt::Ok);
+        OutgoingRequestAcks::<T>::insert(
+            commitment.0.to_vec(),
+            LeafIndexQuery {
+                source_chain: post.source_chain,
+                dest_chain: post.dest_chain,
+                nonce: post.nonce,
+            },
+        );
 
         let msg = TimeoutMessage::Post {
             requests: vec![request],

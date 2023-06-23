@@ -18,7 +18,7 @@ use crate::{host::Host, Config, Event, OutgoingRequestAcks, OutgoingResponseAcks
 use alloc::string::ToString;
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use ismp_primitives::mmr::Leaf;
+use ismp_primitives::{mmr::Leaf, LeafIndexQuery};
 use ismp_rs::{
     error::Error as IsmpError,
     host::IsmpHost,
@@ -91,7 +91,10 @@ where
             dest_chain,
         });
         // We need this step since it's not trivial to check the mmr for commitments on chain
-        OutgoingRequestAcks::<T>::insert(commitment, Receipt::Ok);
+        OutgoingRequestAcks::<T>::insert(
+            commitment,
+            LeafIndexQuery { source_chain, dest_chain, nonce },
+        );
         Ok(())
     }
 

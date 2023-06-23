@@ -58,7 +58,7 @@ use ismp_primitives::{
     mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex},
     LeafIndexQuery,
 };
-use ismp_rs::{host::IsmpHost, messaging::Message};
+use ismp_rs::{host::IsmpHost, messaging::Message, router::Post};
 pub use pallet::*;
 use sp_std::prelude::*;
 
@@ -196,7 +196,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn outgoing_request_acks)]
     pub type OutgoingRequestAcks<T: Config> =
-        StorageMap<_, Blake2_128Concat, Vec<u8>, Receipt, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, Vec<u8>, LeafIndexQuery, OptionQuery>;
 
     /// Acknowledgements for outgoing responses
     /// The key is the response commitment
@@ -549,6 +549,37 @@ where
             return LeafIndex::decode(&mut &*elem).ok()
         }
         None
+    }
+
+    /// Get unfulfilled Get requests
+    pub fn pending_get_requests() -> Vec<ismp_rs::router::Get> {
+        OutgoingRequestAcks::<T>::iter_values()
+            .filter_map(|query| {
+                let leaf_index =
+                    Self::get_leaf_index(query.source_chain, query.dest_chain, query.nonce, true)?;
+                let req = Self::get_request(leaf_index)?;
+                req.is_type_get().then(|| req.get_request().ok()).flatten()
+            })
+            .collect()
+    }
+
+    /// Get unfulfilled Post requests
+    pub fn undelivered_post_requests() -> Vec<Post> {
+        OutgoingRequestAcks::<T>::iter_values()
+            .filter_map(|query| {
+                let leaf_index =
+                    Self::get_leaf_index(query.source_chain, query.dest_chain, query.nonce, true)?;
+                let req = Self::get_request(leaf_index)?;
+                if !req.is_type_get() {
+                    match req {
+                        Request::Post(post) => Some(post),
+                        Request::Get(_) => None,
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     /// Return the scale encoded consensus state
