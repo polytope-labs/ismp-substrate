@@ -21,7 +21,7 @@
 
 use anyhow::anyhow;
 use codec::Encode;
-use cumulus_primitives_core::PersistedValidationData;
+use cumulus_primitives_core::{relay_chain::BlockId, PersistedValidationData};
 use cumulus_relay_chain_interface::{PHash, RelayChainInterface};
 use ismp::{
     consensus::{StateMachineHeight, StateMachineId},
@@ -59,6 +59,7 @@ impl ConsensusInherentProvider {
         let head = client.info().best_hash;
         let para_ids = client.runtime_api().para_ids(head)?;
 
+        // insert para headers we care about
         if !para_ids.is_empty() {
             let keys = para_ids.iter().map(|id| parachain_header_storage_key(*id).0).collect();
             let storage_proof = relay_chain_interface
@@ -80,8 +81,6 @@ impl ConsensusInherentProvider {
             messages.push(Message::Consensus(message));
         }
 
-        // check the events in the last block
-
         // relay chain state machine id is 0. todo: make it a constant
         let relay_chain = match client.runtime_api().host_state_machine(head)? {
             StateMachine::Polkadot(_) => StateMachine::Polkadot(0),
@@ -89,6 +88,7 @@ impl ConsensusInherentProvider {
             s => Err(anyhow!("Invalid host state machine, expected Polkadot/Kusama found {s:?}"))?,
         };
 
+        // check the events in the last block
         let query = client
             .runtime_api()
             .block_events(head)?
@@ -118,31 +118,35 @@ impl ConsensusInherentProvider {
 
         // for every request, read the keys in the relay chain storage.
         for request in requests {
-            let root =
-                match client.runtime_api().relay_chain_state_root(head, request.height as u32)? {
-                    Some(root) => root,
-                    // ignore unkown heights, they'll timeout naturally.
-                    None => continue,
-                };
+            match client.runtime_api().relay_chain_state_root(head, request.height as u32)? {
+                Some(_) => {}
+                // ignore unkown heights, they'll timeout naturally.
+                None => continue,
+            };
+
+            // doesn't exist yet
+            let hash = relay_chain_interface.header(BlockId::Number(request.heigh)).await?.hash();
 
             let proof = relay_chain_interface
-                .prove_read(root, &request.keys)
+                .prove_read(hash, &request.keys)
                 .await?
                 .into_iter_nodes()
                 .collect::<Vec<_>>();
 
-            messages.push(Message::Response(ResponseMessage::Get {
-                requests: vec![Request::Get(request.clone())],
-                proof: Proof {
-                    height: StateMachineHeight {
-                        id: StateMachineId {
-                            state_id: relay_chain,
-                            consensus_client: consensus::PARACHAIN_CONSENSUS_ID,
-                        },
-                        height: request.height,
+            let proof = Proof {
+                height: StateMachineHeight {
+                    id: StateMachineId {
+                        state_id: relay_chain,
+                        consensus_client: consensus::PARACHAIN_CONSENSUS_ID,
                     },
-                    proof: proof.encode(),
+                    height: request.height,
                 },
+                proof: proof.encode(),
+            };
+
+            messages.push(Message::Response(ResponseMessage::Get {
+                requests: vec![Request::Get(request)],
+                proof,
             }));
         }
 
