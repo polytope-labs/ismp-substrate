@@ -129,6 +129,7 @@ pub mod pallet {
             let state = RelaychainDataProvider::<T>::current_relay_chain_state();
             if !RelayChainState::<T>::contains_key(state.number) {
                 RelayChainState::<T>::insert(state.number, state.state_root);
+                LatestRelayHeight::<T>::put(state.number);
 
                 let digest = sp_runtime::generic::DigestItem::Consensus(
                     consensus::PARACHAIN_CONSENSUS_ID,
