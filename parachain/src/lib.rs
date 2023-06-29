@@ -130,13 +130,6 @@ pub mod pallet {
             if !RelayChainState::<T>::contains_key(state.number) {
                 RelayChainState::<T>::insert(state.number, state.state_root);
                 LatestRelayHeight::<T>::put(state.number);
-
-                let digest = sp_runtime::generic::DigestItem::Consensus(
-                    consensus::PARACHAIN_CONSENSUS_ID,
-                    state.number.encode(),
-                );
-
-                <frame_system::Pallet<T>>::deposit_log(digest);
             }
         }
 
