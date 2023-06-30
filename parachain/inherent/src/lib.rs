@@ -38,10 +38,10 @@ use primitive_types::H256;
 use sp_runtime::traits::Block as BlockT;
 use std::sync::Arc;
 
-/// Implements [`InherentDataProvider`] for providing parachain consensus updates as inherents.
-pub struct ConsensusInherentProvider(Option<Vec<Message>>);
+/// Implements [`InherentDataProvider`] for providing ISMP updates as inherents.
+pub struct IsmpInherentProvider(Option<Vec<Message>>);
 
-impl ConsensusInherentProvider {
+impl IsmpInherentProvider {
     /// Create the [`ConsensusMessage`] at the given `relay_parent`. Will be [`None`] if no para ids
     /// have been confguired.
     pub async fn create<C, B>(
@@ -49,7 +49,7 @@ impl ConsensusInherentProvider {
         relay_parent: PHash,
         relay_chain_interface: &impl RelayChainInterface,
         validation_data: PersistedValidationData,
-    ) -> Result<ConsensusInherentProvider, anyhow::Error>
+    ) -> Result<IsmpInherentProvider, anyhow::Error>
     where
         C: sp_api::ProvideRuntimeApi<B> + sp_blockchain::HeaderBackend<B>,
         C::Api: IsmpParachainApi<B> + IsmpRuntimeApi<B, H256>,
@@ -151,15 +151,15 @@ impl ConsensusInherentProvider {
         }
 
         if messages.is_empty() {
-            return Ok(ConsensusInherentProvider(None))
+            return Ok(IsmpInherentProvider(None))
         }
 
-        Ok(ConsensusInherentProvider(Some(messages)))
+        Ok(IsmpInherentProvider(Some(messages)))
     }
 }
 
 #[async_trait::async_trait]
-impl sp_inherents::InherentDataProvider for ConsensusInherentProvider {
+impl sp_inherents::InherentDataProvider for IsmpInherentProvider {
     async fn provide_inherent_data(
         &self,
         inherent_data: &mut sp_inherents::InherentData,
