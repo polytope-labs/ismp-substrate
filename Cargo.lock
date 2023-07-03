@@ -2640,6 +2640,9 @@ dependencies = [
 [[package]]
 name = "grandpa-client"
 version = "0.1.0"
+dependencies = [
+ "grandpa-light-client-primitives",
+]
 
 [[package]]
 name = "grandpa-light-client-primitives"
