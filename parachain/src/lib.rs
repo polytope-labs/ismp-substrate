@@ -25,7 +25,6 @@ extern crate core;
 pub mod consensus;
 
 use alloc::{vec, vec::Vec};
-use core::time::Duration;
 use cumulus_primitives_core::relay_chain;
 use ismp::handlers;
 pub use pallet::*;
