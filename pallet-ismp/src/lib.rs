@@ -343,11 +343,8 @@ pub mod pallet {
 
             let host = Host::<T>::default();
 
-            host.store_unbonding_period(
-                message.consensus_state_id,
-                message.unbonding_period,
-            )
-            .map_err(|_| Error::<T>::UnbondingPeriodUpdateFailed)?;
+            host.store_unbonding_period(message.consensus_state_id, message.unbonding_period)
+                .map_err(|_| Error::<T>::UnbondingPeriodUpdateFailed)?;
 
             Ok(())
         }
