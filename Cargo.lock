@@ -2638,24 +2638,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "grandpa-client"
-version = "0.1.0"
-dependencies = [
- "cumulus-primitives-core",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "frame-system",
- "grandpa-light-client-primitives",
- "ismp",
- "parity-scale-codec",
- "primitive-types",
- "scale-info",
- "sp-consensus-aura",
- "sp-io 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
- "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
-]
-
-[[package]]
 name = "grandpa-light-client-primitives"
 version = "0.1.0"
 dependencies = [
@@ -4872,6 +4854,25 @@ dependencies = [
  "scale-info",
  "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
  "sp-std 5.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
+]
+
+[[package]]
+name = "pallet-grandpa-client"
+version = "0.1.0"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
+ "frame-system",
+ "grandpa-light-client-primitives",
+ "grandpa-light-client-verifier",
+ "ismp",
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+ "sp-consensus-aura",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
+ "sp-runtime 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
+ "sp-trie 7.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42)",
 ]
 
 [[package]]

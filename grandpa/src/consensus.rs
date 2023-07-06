@@ -8,8 +8,6 @@
 // grandpa client should extract state for both standalone and parachains
 // parachain_header will be an option when defining the header struct, height is not needed
 
-
-
 use core::marker::PhantomData;
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -22,7 +20,8 @@ use ismp::{
     router::{Request, RequestResponse},
     util::hash_request,
 };
-use primitives::{FinalityProof, ParachainHeaderProofs};
+use primitives::{ConsensusState, FinalityProof, ParachainHeaderProofs, ParachainHeadersWithFinalityProof};
+use verifier::{verify_grandpa_finality_proof, verify_parachain_headers_with_grandpa_finality_proof};
 use crate::consensus_message::{ConsensusMessage};
 
 pub const POLKADOT_CONSENSUS_STATE_ID: [u8; 8] = *b"polkadot";
@@ -35,28 +34,53 @@ pub const KUSAMA_CONSENSUS_STATE_ID: [u8; 8] = *b"__kusama";
 // extrinsic(adding or removing) of para ids to a relay chain
 // extrinsic of state machine to a consensus state
 
-pub struct GrandpaConsensusClient<T, R>(PhantomData<(T, R)>);
+pub struct GrandpaConsensusClient<T>(PhantomData<(T)>);
 
-impl<T, R> Default for ParachainConsensusClient<T, R> {
+impl<T> Default for ParachainConsensusClient<T> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<T, R> ConsensusClient for GrandpaConsensusClient<T, R>
+impl<T> ConsensusClient for GrandpaConsensusClient<T>
     where
-        R: RelayChainOracle,
-        T: pallet_ismp::Config + super::Config,
         T::BlockNumber: Into<u32>,
         T::Hash: From<H256>,
 {
     fn verify_consensus(&self, host: &dyn IsmpHost, trusted_consensus_state: Vec<u8>, proof: Vec<u8>) -> Result<(Vec<u8>, BTreeMap<StateMachine, StateCommitmentHeight>), Error> {
-        let update: FinalityProof<T> =
+        // decode the proof into consensus message
+        let consensus_message: ConsensusMessage =
             codec::Decode::decode(&mut &proof[..]).map_err(|e| {
                 Error::ImplementationSpecific(format!(
-                    "Cannot decode finality consensus proof: {e:?}"
+                    "Cannot decode consensus message from proof: {e:?}",
                 ))
             })?;
+
+        // decode the consensus state
+        let consensus_state: ConsensusState =
+            codec::Decode::decode(&mut &trusted_consensus_state[..]).map_err(|e| {
+                Error::ImplementationSpecific(format!(
+                    "Cannot decode consensus state from trusted consensus state bytes: {e:?}",
+                ))
+            })?;
+
+        // match over the message
+         match consensus_message {
+            ConsensusMessage::StandaloneChainMessage(standalone_chain_message) => {
+                verify_grandpa_finality_proof(consensus_state.clone(), standalone_chain_message.finality_proof)?;
+            }
+
+            ConsensusMessage::RelayChainMessage(relay_chain_message) => {
+                let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
+                    finality_proof: relay_chain_message.finality_proof,
+                    parachain_headers: relay_chain_message.parachain_headers,
+                };
+
+                verify_parachain_headers_with_grandpa_finality_proof(consensus_state.clone(), headers_with_finality_proof)?;
+            }
+        };
+
+        Ok(())
 
         // check if there's a state machine set for that consensus state id(PENDING)
 
