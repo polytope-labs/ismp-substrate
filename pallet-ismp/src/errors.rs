@@ -178,6 +178,16 @@ impl From<ismp_rs::error::Error> for HandlingError {
             }
             IsmpError::InsufficientProofHeight => HandlingError::InsufficientProofHeight,
             IsmpError::ModuleNotFound(id) => HandlingError::ModuleNotFound(id),
+            IsmpError::ConsensusStateIdNotRecognized { .. } => {
+                HandlingError::InsufficientProofHeight
+            }
+            IsmpError::ChallengePeriodNotConfigured { .. } => {
+                HandlingError::InsufficientProofHeight
+            }
+            IsmpError::DuplicateConsensusStateId { .. } => HandlingError::InsufficientProofHeight,
+            IsmpError::UnnbondingPeriodNotConfigured { .. } => {
+                HandlingError::InsufficientProofHeight
+            }
         }
     }
 }

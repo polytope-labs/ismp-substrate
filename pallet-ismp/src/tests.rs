@@ -24,6 +24,7 @@ use frame_support::traits::OnFinalize;
 use ismp_primitives::mmr::MmrHasher;
 use ismp_rs::{
     consensus::{IntermediateState, StateCommitment, StateMachineHeight},
+    host::Ethereum,
     messaging::{Proof, ResponseMessage, TimeoutMessage},
     router::{DispatchGet, DispatchRequest, IsmpDispatcher},
     util::hash_request,
@@ -256,8 +257,8 @@ fn setup_mock_client<H: IsmpHost>(host: &H) -> IntermediateState {
     let intermediate_state = IntermediateState {
         height: StateMachineHeight {
             id: StateMachineId {
-                state_id: StateMachine::Ethereum,
-                consensus_client: MOCK_CONSENSUS_CLIENT_ID,
+                state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
+                consensus_state_id: MOCK_CONSENSUS_CLIENT_ID,
             },
             height: 3,
         },
@@ -285,7 +286,7 @@ fn should_handle_get_request_timeouts_correctly() {
             .into_iter()
             .map(|i| {
                 let msg = DispatchGet {
-                    dest_chain: StateMachine::Ethereum,
+                    dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
                     from: vec![0u8; 32],
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],
                     height: 2,
@@ -296,7 +297,7 @@ fn should_handle_get_request_timeouts_correctly() {
                 dispatcher.dispatch_request(DispatchRequest::Get(msg)).unwrap();
                 let get = ismp_rs::router::Get {
                     source_chain: host.host_state_machine(),
-                    dest_chain: StateMachine::Ethereum,
+                    dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
                     nonce: i,
                     from: vec![0u8; 32],
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],
@@ -329,7 +330,7 @@ fn should_handle_get_request_responses_correctly() {
             .into_iter()
             .map(|i| {
                 let msg = DispatchGet {
-                    dest_chain: StateMachine::Ethereum,
+                    dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
                     from: vec![0u8; 32],
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],
                     height: 3,
@@ -340,7 +341,7 @@ fn should_handle_get_request_responses_correctly() {
                 dispatcher.dispatch_request(DispatchRequest::Get(msg)).unwrap();
                 let get = ismp_rs::router::Get {
                     source_chain: host.host_state_machine(),
-                    dest_chain: StateMachine::Ethereum,
+                    dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
                     nonce: i,
                     from: vec![0u8; 32],
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],
@@ -358,8 +359,8 @@ fn should_handle_get_request_responses_correctly() {
             proof: Proof {
                 height: StateMachineHeight {
                     id: StateMachineId {
-                        state_id: StateMachine::Ethereum,
-                        consensus_client: MOCK_CONSENSUS_CLIENT_ID,
+                        state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
+                        consensus_state_id: MOCK_CONSENSUS_CLIENT_ID,
                     },
                     height: 3,
                 },

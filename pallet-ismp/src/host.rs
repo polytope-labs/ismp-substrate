@@ -16,8 +16,9 @@
 //! Host implementation for ISMP
 use crate::{
     dispatcher::Receipt, primitives::ConsensusClientProvider, Config, ConsensusClientUpdateTime,
-    ConsensusStates, FrozenConsensusClients, FrozenHeights, LatestStateMachineHeight, Nonce,
-    RequestCommitments, RequestReceipts, ResponseReceipts, StateCommitments,
+    ConsensusStateClient, ConsensusStates, FrozenConsensusClients, FrozenHeights,
+    LatestStateMachineHeight, Nonce, RequestCommitments, RequestReceipts, ResponseReceipts,
+    StateCommitments, UnbondingPeriod,
 };
 use alloc::{format, string::ToString};
 use core::time::Duration;
@@ -216,7 +217,7 @@ where
         &self,
         consensus_state_id: ConsensusStateId,
     ) -> Option<ConsensusClientId> {
-        todo!()
+        ConsensusStateClient::<T>::get(&consensus_state_id)
     }
 
     fn store_consensus_state_id(
@@ -224,10 +225,20 @@ where
         consensus_state_id: ConsensusStateId,
         client_id: ConsensusClientId,
     ) -> Result<(), Error> {
-        todo!()
+        ConsensusStateClient::<T>::insert(consensus_state_id, client_id);
+        Ok(())
     }
 
     fn unbonding_period(&self, consensus_state_id: ConsensusStateId) -> Option<Duration> {
-        todo!()
+        UnbondingPeriod::<T>::get(&consensus_state_id)
+    }
+
+    fn store_unbonding_period(
+        &self,
+        consensus_state_id: ConsensusStateId,
+        period: Duration,
+    ) -> Result<(), Error> {
+        UnbondingPeriod::<T>::insert(consensus_state_id, period);
+        Ok(())
     }
 }

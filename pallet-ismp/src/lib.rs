@@ -179,6 +179,11 @@ pub mod pallet {
     pub type ConsensusStateClient<T: Config> =
         StorageMap<_, Blake2_128Concat, ConsensusStateId, ConsensusClientId, OptionQuery>;
 
+    /// A mapping of ConsensusStateId to Unbonding periods
+    #[pallet::storage]
+    pub type UnbondingPeriod<T: Config> =
+        StorageMap<_, Blake2_128Concat, ConsensusStateId, Duration, OptionQuery>;
+
     /// Holds a map of consensus clients frozen due to byzantine
     /// behaviour
     #[pallet::storage]
@@ -404,10 +409,9 @@ where
             match handle_incoming_message(&host, message) {
                 Ok(MessageResult::ConsensusMessage(res)) => {
                     // check if this is a trusted state machine
-                    let is_trusted_state_machine = matches!(
-                        host.challenge_period(res.consensus_client_id.clone()).ok_or_else(),
-                        Some()
-                    );
+                    let is_trusted_state_machine = host
+                        .challenge_period(res.consensus_client_id.clone()) ==
+                        Some(Duration::from_secs(0));
 
                     if is_trusted_state_machine {
                         for (_, latest_height) in res.state_updates.into_iter() {
