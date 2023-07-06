@@ -51,6 +51,7 @@ pub mod benchmarks {
         router::{Post, PostResponse, RequestResponse},
         util::hash_request,
     };
+    use ismp_rs::host::Ethereum;
     use sp_std::prelude::Vec;
 
     /// Verify the the last event emitted
@@ -164,7 +165,7 @@ pub mod benchmarks {
             consensus_client_id: BENCHMARK_CONSENSUS_CLIENT_ID,
             state_machine_commitments: vec![(
                 StateMachineId {
-                    state_id: StateMachine::Ethereum,
+                    state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
                     consensus_client: BENCHMARK_CONSENSUS_CLIENT_ID,
                 },
                 StateCommitmentHeight {
@@ -191,7 +192,7 @@ pub mod benchmarks {
         let intermediate_state = IntermediateState {
             height: StateMachineHeight {
                 id: StateMachineId {
-                    state_id: StateMachine::Ethereum,
+                    state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
                     consensus_client: BENCHMARK_CONSENSUS_CLIENT_ID,
                 },
                 height: 1,
@@ -222,7 +223,7 @@ pub mod benchmarks {
         let host = Host::<T>::default();
         let intermediate_state = setup_mock_client(&host);
         let post = Post {
-            source_chain: StateMachine::Ethereum,
+            source_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
             dest_chain: <T as Config>::StateMachine::get(),
             nonce: 0,
             from: MODULE_ID.encode(),
@@ -251,7 +252,7 @@ pub mod benchmarks {
         let intermediate_state = setup_mock_client(&host);
         let post = Post {
             source_chain: <T as Config>::StateMachine::get(),
-            dest_chain: StateMachine::Ethereum,
+            dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
             nonce: 0,
             from: MODULE_ID.encode(),
             to: MODULE_ID.encode(),
@@ -292,7 +293,7 @@ pub mod benchmarks {
         let intermediate_state = setup_mock_client(&host);
         let post = Post {
             source_chain: <T as Config>::StateMachine::get(),
-            dest_chain: StateMachine::Ethereum,
+            dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
             nonce: 0,
             from: MODULE_ID.encode(),
             to: MODULE_ID.encode(),
