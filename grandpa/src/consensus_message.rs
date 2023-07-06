@@ -2,6 +2,7 @@ use primitives::{FinalityProof, ParachainHeaderProofs};
 use alloc::{collections::BTreeMap, vec::Vec};
 use codec::{Decode, Encode};
 use codec::alloc::collections::BTreeMap;
+use ismp::consensus::StateMachineId;
 use sp_core::H256;
 use sp_runtime::traits::BlakeTwo256;
 
@@ -22,7 +23,7 @@ pub struct Header {
 
 /// [`ClientMessage`] definition
 #[derive(Clone, Debug, Encode, Decode,)]
-pub enum ClientMessage {
+pub enum ConsensusMessage {
     /// This is the variant representing the standalone chain
     StandaloneChainMessage(StandaloneChainMessage),
     /// This is the variant representing the relay chain
@@ -33,6 +34,8 @@ pub enum ClientMessage {
 pub struct StandaloneChainMessage {
     /// finality proof
     pub finality_proof: FinalityProof<SubstrateHeader>,
+    /// state machine id
+    pub state_machine_id: StateMachineId,
 }
 
 #[derive(Clone, Debug, Encode, Decode)]

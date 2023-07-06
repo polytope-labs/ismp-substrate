@@ -247,7 +247,7 @@ where
 	H: Encode,
 	N: Encode,
 {
-	log::trace!(target: "pallet_ibc", "Justification Message {:?}", (round, set_id));
+	log::trace!(target: "pallet_grandpa", "Justification Message {:?}", (round, set_id));
 	let buf = (message, round, set_id).encode();
 
 	if !Host::ed25519_verify(signature.as_ref(), &buf, id.as_ref()) {

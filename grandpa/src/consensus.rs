@@ -8,7 +8,7 @@
 // grandpa client should extract state for both standalone and parachains
 // parachain_header will be an option when defining the header struct, height is not needed
 
-pub mod client_message;
+
 
 use core::marker::PhantomData;
 use std::collections::BTreeMap;
@@ -23,26 +23,23 @@ use ismp::{
     util::hash_request,
 };
 use primitives::{FinalityProof, ParachainHeaderProofs};
-use crate::client_message::{ClientMessage};
+use crate::consensus_message::{ConsensusMessage};
+
+pub const POLKADOT_CONSENSUS_STATE_ID: [u8; 8] = *b"polkadot";
+pub const KUSAMA_CONSENSUS_STATE_ID: [u8; 8] = *b"__kusama";
+
+// map of consensus state id(bytes) to b tree set of state machine
+// expose an extrinsic to update the map, takes consensus state id and a vector of state machine
+// map for a relay chain... consensus state id, b tree set of para ids
+// map for standalone chain... consensus state to 1 state machine
+// extrinsic(adding or removing) of para ids to a relay chain
+// extrinsic of state machine to a consensus state
 
 pub struct GrandpaConsensusClient<T, R>(PhantomData<(T, R)>);
 
 impl<T, R> Default for ParachainConsensusClient<T, R> {
     fn default() -> Self {
         Self(PhantomData)
-    }
-}
-
-
-/// Interface that exposes the grandpa state roots.
-pub trait RelayChainOracle {
-    /// Returns the state root for a given height if it exists.
-    fn state_root(height: relay_chain::BlockNumber) -> Option<relay_chain::Hash>;
-}
-
-impl<T: Config> RelayChainOracle for Pallet<T> {
-    fn state_root(height: relay_chain::BlockNumber) -> Option<relay_chain::Hash> {
-        RelayChainState::<T>::get(height)
     }
 }
 
@@ -61,25 +58,18 @@ impl<T, R> ConsensusClient for GrandpaConsensusClient<T, R>
                 ))
             })?;
 
-        // first check our oracle's registry
-        let root = R::state_root(update.relay_height)
-            // not in our registry? ask parachain_system.
-            .or_else(|| {
-                let state = RelaychainDataProvider::<T>::current_relay_chain_state();
+        // check if there's a state machine set for that consensus state id(PENDING)
 
-                if state.number == update.relay_height {
-                    Some(state.state_root)
-                } else {
-                    None
-                }
-            })
-            // well, we couldn't find it
-            .ok_or_else(|| {
-                Error::ImplementationSpecific(format!(
-                    "Cannot find relay chain height: {}",
-                    update.relay_height
-                ))
-            })?;
+        // decode the proof into consensus message
+        // match over the message
+
+        // for standalone, just verify finality proof
+        // take the highest  unknown headers(with the highest block number)
+        // extract the ismp root and state root from header
+
+        // create a pallet to map consensus state id to state machine
+
+        // for the relay chain, it's the same with the standalone but no extraction is to be done
     }
 
     fn verify_fraud_proof(&self, host: &dyn IsmpHost, trusted_consensus_state: Vec<u8>, proof_1: Vec<u8>, proof_2: Vec<u8>) -> Result<(), Error> {

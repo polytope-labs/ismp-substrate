@@ -61,7 +61,7 @@ pub struct FinalityProof<H: codec::Codec> {
 
 /// Previous light client state.
 #[derive(Clone)]
-pub struct ClientState {
+pub struct ConsenseusState {
     /// Current authority set
     pub current_authorities: AuthorityList,
     /// Id of the current authority set.
@@ -81,7 +81,7 @@ pub struct ClientState {
 pub struct ParachainHeaderProofs {
     /// State proofs that prove a parachain header exists at a given relay chain height
     pub state_proof: Vec<Vec<u8>>,
-    /// Timestamp extrinsic for ibc
+    /// Timestamp extrinsic
     pub extrinsic: Vec<u8>,
     /// Timestamp extrinsic proof for previously proven parachain header.
     pub extrinsic_proof: Vec<Vec<u8>>,
