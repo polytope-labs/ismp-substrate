@@ -62,8 +62,8 @@ impl ConsensusClientProvider for ConsensusProvider {
         Ok(Box::new(ismp_testsuite::mocks::MockClient))
     }
 
-    fn challenge_period(_id: ConsensusClientId) -> Duration {
-        Duration::from_secs(60 * 60)
+    fn challenge_period(_id: ConsensusClientId) -> Option<Duration> {
+        Some(Duration::from_secs(60 * 60))
     }
 }
 

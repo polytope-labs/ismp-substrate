@@ -45,7 +45,7 @@ use ismp_rs::{
     consensus::{ConsensusClientId, StateMachineId},
     handlers::{handle_incoming_message, MessageResult},
     host::StateMachine,
-    messaging::CreateConsensusClient,
+    messaging::CreateConsensusState,
     router::{Request, Response},
 };
 use sp_core::{offchain::StorageKind, H256};
@@ -80,7 +80,10 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use ismp_primitives::mmr::{LeafIndex, NodeIndex};
     use ismp_rs::{
-        consensus::{ConsensusClientId, StateCommitment, StateMachineHeight, StateMachineId},
+        consensus::{
+            ConsensusClientId, ConsensusStateId, StateCommitment, StateMachineHeight,
+            StateMachineId,
+        },
         handlers::{self},
         host::StateMachine,
         messaging::Message,
@@ -171,12 +174,17 @@ pub mod pallet {
     pub type FrozenHeights<T: Config> =
         StorageMap<_, Blake2_128Concat, StateMachineId, u64, OptionQuery>;
 
+    /// A mapping of ConsensusStateId to ConsensusClientId
+    #[pallet::storage]
+    pub type ConsensusStateClient<T: Config> =
+        StorageMap<_, Blake2_128Concat, ConsensusStateId, ConsensusClientId, OptionQuery>;
+
     /// Holds a map of consensus clients frozen due to byzantine
     /// behaviour
     #[pallet::storage]
     #[pallet::getter(fn frozen_consensus_clients)]
     pub type FrozenConsensusClients<T: Config> =
-        StorageMap<_, Blake2_128Concat, ConsensusClientId, bool, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, ConsensusStateId, bool, ValueQuery>;
 
     /// The latest verified height for a state machine
     #[pallet::storage]
@@ -295,7 +303,7 @@ pub mod pallet {
         #[pallet::call_index(1)]
         pub fn create_consensus_client(
             origin: OriginFor<T>,
-            message: CreateConsensusClient,
+            message: CreateConsensusState,
         ) -> DispatchResult {
             T::AdminOrigin::ensure_origin(origin)?;
             let host = Host::<T>::default();
@@ -396,9 +404,10 @@ where
             match handle_incoming_message(&host, message) {
                 Ok(MessageResult::ConsensusMessage(res)) => {
                     // check if this is a trusted state machine
-                    let is_trusted_state_machine = host
-                        .challenge_period(res.consensus_client_id.clone()) ==
-                        Duration::from_secs(0);
+                    let is_trusted_state_machine = matches!(
+                        host.challenge_period(res.consensus_client_id.clone()).ok_or_else(),
+                        Some()
+                    );
 
                     if is_trusted_state_machine {
                         for (_, latest_height) in res.state_updates.into_iter() {
