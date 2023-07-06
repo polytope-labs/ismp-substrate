@@ -230,7 +230,7 @@ where
     }
 
     fn unbonding_period(&self, consensus_state_id: ConsensusStateId) -> Option<Duration> {
-        UnbondingPeriod::<T>::get(&consensus_state_id)
+        UnbondingPeriod::<T>::get(&consensus_state_id).map(Duration::from_secs)
     }
 
     fn store_unbonding_period(
@@ -238,7 +238,7 @@ where
         consensus_state_id: ConsensusStateId,
         period: Duration,
     ) -> Result<(), Error> {
-        UnbondingPeriod::<T>::insert(consensus_state_id, period);
+        UnbondingPeriod::<T>::insert(consensus_state_id, period.as_secs());
         Ok(())
     }
 }

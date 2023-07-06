@@ -182,7 +182,7 @@ pub mod pallet {
     /// A mapping of ConsensusStateId to Unbonding periods
     #[pallet::storage]
     pub type UnbondingPeriod<T: Config> =
-        StorageMap<_, Blake2_128Concat, ConsensusStateId, Duration, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, ConsensusStateId, u64, OptionQuery>;
 
     /// Holds a map of consensus clients frozen due to byzantine
     /// behaviour
@@ -288,6 +288,15 @@ pub mod pallet {
         fn offchain_worker(_n: T::BlockNumber) {}
     }
 
+    /// Params to update the unbonding period for a consensus state
+    #[derive(Debug, Clone, Encode, Decode, scale_info::TypeInfo, PartialEq, Eq)]
+    pub struct UnbondingUpdate {
+        /// Consensus state identifier
+        consensus_state_id: ConsensusStateId,
+        /// Unbonding duration
+        unbonding_period: u64,
+    }
+
     #[pallet::call]
     impl<T: Config> Pallet<T>
     where
@@ -319,6 +328,26 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::ConsensusClientCreated {
                 consensus_client_id: result.consensus_client_id,
             });
+
+            Ok(())
+        }
+
+        /// Set the unbonding period for a consensus state.
+        #[pallet::weight(0)]
+        #[pallet::call_index(2)]
+        pub fn set_unbonding_period(
+            origin: OriginFor<T>,
+            message: UnbondingUpdate,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            let host = Host::<T>::default();
+
+            host.store_unbonding_period(
+                message.consensus_state_id,
+                Duration::from_secs(message.unbonding_period),
+            )
+            .map_err(|_| Error::<T>::UnbondingPeriodUpdateFailed)?;
 
             Ok(())
         }
@@ -378,6 +407,8 @@ pub mod pallet {
         InvalidMessage,
         /// Encountered an error while creating the consensus client.
         ConsensusClientCreationFailed,
+        /// Couldn't update unbonding period
+        UnbondingPeriodUpdateFailed,
     }
 }
 
