@@ -236,9 +236,9 @@ where
     fn store_unbonding_period(
         &self,
         consensus_state_id: ConsensusStateId,
-        period: Duration,
+        period: u64,
     ) -> Result<(), Error> {
-        UnbondingPeriod::<T>::insert(consensus_state_id, period.as_secs());
+        UnbondingPeriod::<T>::insert(consensus_state_id, period);
         Ok(())
     }
 }

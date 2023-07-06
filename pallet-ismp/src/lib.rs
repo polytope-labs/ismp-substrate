@@ -345,7 +345,7 @@ pub mod pallet {
 
             host.store_unbonding_period(
                 message.consensus_state_id,
-                Duration::from_secs(message.unbonding_period),
+                message.unbonding_period,
             )
             .map_err(|_| Error::<T>::UnbondingPeriodUpdateFailed)?;
 

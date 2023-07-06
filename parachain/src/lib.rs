@@ -202,7 +202,7 @@ pub mod pallet {
             let message = CreateConsensusState {
                 // insert empty bytes
                 consensus_state: vec![],
-                unbonding_period: Duration::from_secs(u64::MAX),
+                unbonding_period: u64::MAX,
                 consensus_state_id: consensus::PARACHAIN_CONSENSUS_ID,
                 consensus_client_id: consensus::PARACHAIN_CONSENSUS_ID,
                 state_machine_commitments: vec![],
