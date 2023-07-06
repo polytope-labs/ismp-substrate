@@ -31,7 +31,7 @@ use hash_db::Hasher;
 use primitives::{
     error,
     justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
-    parachain_header_storage_key, ClientState, HostFunctions, ParachainHeaderProofs,
+    parachain_header_storage_key, ConsenseusState, HostFunctions, ParachainHeaderProofs,
     ParachainHeadersWithFinalityProof,
 };
 use sp_core::H256;
@@ -43,9 +43,9 @@ use sp_trie::{LayoutV0, StorageProof};
 /// Next, we prove the finality of parachain headers, by verifying patricia-merkle trie state proofs
 /// of these headers, stored at the recently finalized relay chain heights.
 pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
-    mut client_state: ClientState,
+    mut client_state: ConsenseusState,
     proof: ParachainHeadersWithFinalityProof<H>,
-) -> Result<ClientState, error::Error>
+) -> Result<ConsenseusState, error::Error>
     where
         H: Header<Hash = H256, Number = u32>,
         H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
@@ -55,6 +55,7 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
     let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = proof;
 
     // 1. First validate unknown headers.
+    // verify grandpa finality proof, make it a function(relay chain and standalone chain calls it)
     let headers = AncestryChain::<H>::new(&finality_proof.unknown_headers);
 
     let target = finality_proof
@@ -73,6 +74,7 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
     if justification.commit.target_hash != finality_proof.block {
         Err(anyhow!("Justification target hash and finality proof block hash mismatch"))?;
     }
+    // function ends here
 
     let from = client_state.latest_relay_hash;
 
