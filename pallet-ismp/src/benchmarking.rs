@@ -44,6 +44,7 @@ pub mod benchmarks {
             StateMachineHeight,
         },
         error::Error as IsmpError,
+        host::Ethereum,
         messaging::{
             Message, Proof, RequestMessage, ResponseMessage, StateCommitmentHeight, TimeoutMessage,
         },
@@ -51,7 +52,6 @@ pub mod benchmarks {
         router::{Post, PostResponse, RequestResponse},
         util::hash_request,
     };
-    use ismp_rs::host::Ethereum;
     use sp_std::prelude::Vec;
 
     /// Verify the the last event emitted
