@@ -61,7 +61,7 @@ pub struct FinalityProof<H: codec::Codec> {
 
 /// Previous light client state.
 #[derive(Clone)]
-pub struct ConsenseusState {
+pub struct ConsensusState {
     /// Current authority set
     pub current_authorities: AuthorityList,
     /// Id of the current authority set.
