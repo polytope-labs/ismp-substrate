@@ -73,6 +73,7 @@ pub mod benchmarks {
         fn verify_consensus(
             &self,
             _host: &dyn IsmpHost,
+            _cs_id: ismp_rs::consensus::ConsensusStateId,
             _trusted_consensus_state: Vec<u8>,
             _proof: Vec<u8>,
         ) -> Result<(Vec<u8>, BTreeMap<StateMachine, StateCommitmentHeight>), IsmpError> {
@@ -87,10 +88,6 @@ pub mod benchmarks {
             _proof_2: Vec<u8>,
         ) -> Result<(), IsmpError> {
             Ok(())
-        }
-
-        fn unbonding_period(&self) -> Duration {
-            Duration::from_secs(60 * 60 * 60)
         }
 
         fn state_machine(
@@ -160,13 +157,15 @@ pub mod benchmarks {
     fn create_consensus_client() {
         set_timestamp::<T>();
 
-        let message = CreateConsensusClient {
+        let message = CreateConsensusState {
             consensus_state: Default::default(),
             consensus_client_id: BENCHMARK_CONSENSUS_CLIENT_ID,
+            consensus_state_id: BENCHMARK_CONSENSUS_CLIENT_ID,
+            unbonding_period: u64::MAX,
             state_machine_commitments: vec![(
                 StateMachineId {
                     state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
-                    consensus_client: BENCHMARK_CONSENSUS_CLIENT_ID,
+                    consensus_state_id: BENCHMARK_CONSENSUS_CLIENT_ID,
                 },
                 StateCommitmentHeight {
                     commitment: StateCommitment {
@@ -193,7 +192,7 @@ pub mod benchmarks {
             height: StateMachineHeight {
                 id: StateMachineId {
                     state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
-                    consensus_client: BENCHMARK_CONSENSUS_CLIENT_ID,
+                    consensus_state_id: BENCHMARK_CONSENSUS_CLIENT_ID,
                 },
                 height: 1,
             },

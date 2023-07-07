@@ -133,6 +133,8 @@ pub trait WeightInfo {
     fn on_finalize(n: u32) -> Weight;
     /// Returns the weight consumed in creating a consensus client
     fn create_consensus_client() -> Weight;
+    /// Returns the weight consumed in setting the unbonding period
+    fn set_unbonding_period() -> Weight;
     /// Returns the weight consumed in handling a request
     fn handle_request_message() -> Weight;
     /// Returns the weight consumed in handling a response
@@ -147,6 +149,10 @@ impl WeightInfo for () {
     }
 
     fn create_consensus_client() -> Weight {
+        Weight::zero()
+    }
+
+    fn set_unbonding_period() -> Weight {
         Weight::zero()
     }
 

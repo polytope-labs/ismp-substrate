@@ -333,7 +333,7 @@ pub mod pallet {
         }
 
         /// Set the unbonding period for a consensus state.
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as Config>::WeightInfo::create_consensus_client())]
         #[pallet::call_index(2)]
         pub fn set_unbonding_period(
             origin: OriginFor<T>,
