@@ -27,6 +27,8 @@ mod errors;
 pub mod events;
 pub mod handlers;
 pub mod host;
+#[cfg(any(feature = "runtime-benchmarks", test))]
+mod ismp_mocks;
 mod mmr;
 #[cfg(test)]
 pub mod mock;
@@ -490,6 +492,7 @@ where
         }
 
         if !errors.is_empty() {
+            println!("Handling errors {:?}", errors);
             debug!(target: "pallet-ismp", "Handling Errors {:?}", errors);
             Self::deposit_event(Event::<T>::HandlingErrors { errors })
         }

@@ -19,7 +19,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::dispatcher::Dispatcher;
+use crate::{
+    dispatcher::Dispatcher,
+    ismp_mocks::{setup_mock_client, MOCK_CONSENSUS_STATE_ID},
+};
 use frame_support::traits::OnFinalize;
 use ismp_primitives::mmr::MmrHasher;
 use ismp_rs::{
@@ -38,8 +41,6 @@ use sp_core::{
     offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
     H256,
 };
-
-pub const MOCK_CONSENSUS_STATE_ID: [u8; 4] = *b"mock";
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
@@ -261,7 +262,7 @@ fn should_handle_get_request_timeouts_correctly() {
     let mut ext = new_test_ext();
     ext.execute_with(|| {
         let host = Host::<Test>::default();
-        setup_mock_client(&host);
+        setup_mock_client::<_, Test>(&host);
         let requests = (0..2)
             .into_iter()
             .map(|i| {
@@ -305,7 +306,7 @@ fn should_handle_get_request_responses_correctly() {
     let mut ext = new_test_ext();
     ext.execute_with(|| {
         let host = Host::<Test>::default();
-        setup_mock_client(&host);
+        setup_mock_client::<_, Test>(&host);
         let requests = (0..2)
             .into_iter()
             .map(|i| {

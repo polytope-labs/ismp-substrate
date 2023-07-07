@@ -16,18 +16,12 @@
 use crate as pallet_ismp;
 use crate::*;
 
-use crate::{primitives::ConsensusClientProvider, tests::MOCK_CONSENSUS_STATE_ID};
+use crate::primitives::ConsensusClientProvider;
 use frame_support::traits::{ConstU32, ConstU64, Get};
 use frame_system::EnsureRoot;
-use ismp_rs::{
-    consensus::{ConsensusClient, StateCommitment, StateMachineHeight},
-    host::Ethereum,
-    messaging::StateCommitmentHeight,
-    module::IsmpModule,
-    handlers,
-    router::{IsmpRouter, Post},
-};
-use ismp_testsuite::mocks::MOCK_CONSENSUS_CLIENT_ID;
+use ismp_rs::{consensus::ConsensusClient, module::IsmpModule, router::IsmpRouter};
+
+use crate::ismp_mocks::{MockConsensusClient, MockModule};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -63,7 +57,7 @@ impl ConsensusClientProvider for ConsensusProvider {
     fn consensus_client(
         _id: ConsensusClientId,
     ) -> Result<Box<dyn ConsensusClient>, ismp_rs::error::Error> {
-        Ok(Box::new(ismp_testsuite::mocks::MockClient))
+        Ok(Box::new(MockConsensusClient))
     }
 
     fn challenge_period(_id: ConsensusClientId) -> Option<Duration> {
@@ -118,62 +112,10 @@ impl Config for Test {
 }
 
 #[derive(Default)]
-pub struct MockModule;
-
-impl IsmpModule for MockModule {
-    fn on_accept(&self, _request: Post) -> Result<(), ismp_rs::error::Error> {
-        Ok(())
-    }
-
-    fn on_response(&self, _response: Response) -> Result<(), ismp_rs::error::Error> {
-        Ok(())
-    }
-
-    fn on_timeout(&self, _request: Request) -> Result<(), ismp_rs::error::Error> {
-        Ok(())
-    }
-}
-
-#[derive(Default)]
 pub struct ModuleRouter;
 
 impl IsmpRouter for ModuleRouter {
     fn module_for_id(&self, _bytes: Vec<u8>) -> Result<Box<dyn IsmpModule>, ismp_rs::error::Error> {
         Ok(Box::new(MockModule))
-    }
-}
-
-pub fn setup_mock_client<H: IsmpHost>(host: &H) -> StateMachineHeight {
-    handlers::create_client(
-        host,
-        CreateConsensusState {
-            consensus_state: vec![],
-            consensus_client_id: MOCK_CONSENSUS_CLIENT_ID,
-            consensus_state_id: MOCK_CONSENSUS_STATE_ID,
-            unbonding_period: 1_000_000,
-            state_machine_commitments: vec![(
-                StateMachineId {
-                    state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
-                    consensus_state_id: MOCK_CONSENSUS_STATE_ID,
-                },
-                StateCommitmentHeight {
-                    commitment: StateCommitment {
-                        timestamp: 1000,
-                        overlay_root: None,
-                        state_root: Default::default(),
-                    },
-                    height: 3,
-                },
-            )],
-        },
-    )
-    .unwrap();
-
-    StateMachineHeight {
-        id: StateMachineId {
-            state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
-            consensus_state_id: MOCK_CONSENSUS_STATE_ID,
-        },
-        height: 3,
     }
 }
