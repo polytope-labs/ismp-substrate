@@ -23,21 +23,23 @@ use crate::dispatcher::Dispatcher;
 use frame_support::traits::OnFinalize;
 use ismp_primitives::mmr::MmrHasher;
 use ismp_rs::{
-    consensus::{IntermediateState, StateCommitment, StateMachineHeight},
+    consensus::StateMachineHeight,
     host::Ethereum,
     messaging::{Proof, ResponseMessage, TimeoutMessage},
     router::{DispatchGet, DispatchRequest, IsmpDispatcher},
     util::hash_request,
 };
 use ismp_testsuite::{
-    check_challenge_period, check_client_expiry, frozen_check, mocks::MOCK_CONSENSUS_CLIENT_ID,
-    timeout_post_processing_check, write_outgoing_commitments,
+    check_challenge_period, check_client_expiry, frozen_check, timeout_post_processing_check,
+    write_outgoing_commitments,
 };
 use mmr_lib::MerkleProof;
 use sp_core::{
     offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
     H256,
 };
+
+pub const MOCK_CONSENSUS_STATE_ID: [u8; 4] = *b"mock";
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
     frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
@@ -237,6 +239,7 @@ fn should_reject_expired_check_clients() {
     ext.execute_with(|| {
         set_timestamp(None);
         let host = Host::<Test>::default();
+        host.store_unbonding_period(MOCK_CONSENSUS_STATE_ID, 1_000_000).unwrap();
         check_client_expiry(&host).unwrap()
     })
 }
@@ -253,35 +256,12 @@ fn should_handle_post_request_timeouts_correctly() {
     })
 }
 
-fn setup_mock_client<H: IsmpHost>(host: &H) -> IntermediateState {
-    let intermediate_state = IntermediateState {
-        height: StateMachineHeight {
-            id: StateMachineId {
-                state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
-                consensus_state_id: MOCK_CONSENSUS_CLIENT_ID,
-            },
-            height: 3,
-        },
-        commitment: StateCommitment {
-            timestamp: 1000,
-            overlay_root: None,
-            state_root: Default::default(),
-        },
-    };
-
-    host.store_consensus_state(MOCK_CONSENSUS_CLIENT_ID, vec![]).unwrap();
-    host.store_state_machine_commitment(intermediate_state.height, intermediate_state.commitment)
-        .unwrap();
-    host.store_consensus_update_time(MOCK_CONSENSUS_CLIENT_ID, Duration::from_secs(1000)).unwrap();
-    intermediate_state
-}
-
 #[test]
 fn should_handle_get_request_timeouts_correctly() {
     let mut ext = new_test_ext();
     ext.execute_with(|| {
         let host = Host::<Test>::default();
-        let _ = setup_mock_client(&host);
+        setup_mock_client(&host);
         let requests = (0..2)
             .into_iter()
             .map(|i| {
@@ -325,7 +305,7 @@ fn should_handle_get_request_responses_correctly() {
     let mut ext = new_test_ext();
     ext.execute_with(|| {
         let host = Host::<Test>::default();
-        let _ = setup_mock_client(&host);
+        setup_mock_client(&host);
         let requests = (0..2)
             .into_iter()
             .map(|i| {
@@ -360,7 +340,7 @@ fn should_handle_get_request_responses_correctly() {
                 height: StateMachineHeight {
                     id: StateMachineId {
                         state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
-                        consensus_state_id: MOCK_CONSENSUS_CLIENT_ID,
+                        consensus_state_id: MOCK_CONSENSUS_STATE_ID,
                     },
                     height: 3,
                 },

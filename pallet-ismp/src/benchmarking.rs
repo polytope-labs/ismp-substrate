@@ -17,7 +17,7 @@
 // Only enable this module for benchmarking.
 #![cfg(feature = "runtime-benchmarks")]
 
-use crate::*;
+use crate::{mock::setup_mock_client, *};
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 
@@ -40,8 +40,7 @@ pub mod benchmarks {
     use frame_system::EventRecord;
     use ismp_rs::{
         consensus::{
-            ConsensusClient, IntermediateState, StateCommitment, StateMachineClient,
-            StateMachineHeight,
+            ConsensusClient, StateCommitment, StateMachineClient,
         },
         error::Error as IsmpError,
         host::Ethereum,
@@ -187,40 +186,12 @@ pub mod benchmarks {
         );
     }
 
-    fn setup_mock_client<H: IsmpHost>(host: &H) -> IntermediateState {
-        let intermediate_state = IntermediateState {
-            height: StateMachineHeight {
-                id: StateMachineId {
-                    state_id: StateMachine::Ethereum(Ethereum::ExecutionLayer),
-                    consensus_state_id: BENCHMARK_CONSENSUS_CLIENT_ID,
-                },
-                height: 1,
-            },
-            commitment: StateCommitment {
-                timestamp: 1000,
-                overlay_root: None,
-                state_root: Default::default(),
-            },
-        };
-
-        host.store_consensus_state(BENCHMARK_CONSENSUS_CLIENT_ID, vec![]).unwrap();
-        host.store_consensus_update_time(BENCHMARK_CONSENSUS_CLIENT_ID, Duration::from_secs(1000))
-            .unwrap();
-        host.store_state_machine_commitment(
-            intermediate_state.height,
-            intermediate_state.commitment,
-        )
-        .unwrap();
-
-        intermediate_state
-    }
-
     // The Benchmark consensus client should be added to the runtime for these benchmarks to work
     #[benchmark]
     fn handle_request_message() {
         set_timestamp::<T>();
         let host = Host::<T>::default();
-        let intermediate_state = setup_mock_client(&host);
+        let height = setup_mock_client(&host);
         let post = Post {
             source_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
             dest_chain: <T as Config>::StateMachine::get(),
@@ -231,10 +202,8 @@ pub mod benchmarks {
             data: "handle_request_message".as_bytes().to_vec(),
         };
 
-        let msg = RequestMessage {
-            requests: vec![post.clone()],
-            proof: Proof { height: intermediate_state.height, proof: vec![] },
-        };
+        let msg =
+            RequestMessage { requests: vec![post.clone()], proof: Proof { height, proof: vec![] } };
         let caller = whitelisted_caller();
 
         #[extrinsic_call]
@@ -248,7 +217,7 @@ pub mod benchmarks {
     fn handle_response_message() {
         set_timestamp::<T>();
         let host = Host::<T>::default();
-        let intermediate_state = setup_mock_client(&host);
+        let height = setup_mock_client(&host);
         let post = Post {
             source_chain: <T as Config>::StateMachine::get(),
             dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
@@ -274,7 +243,7 @@ pub mod benchmarks {
         let request_commitment = hash_request::<Host<T>>(&response.request());
         let msg = ResponseMessage::Post {
             responses: vec![response],
-            proof: Proof { height: intermediate_state.height, proof: vec![] },
+            proof: Proof { height, proof: vec![] },
         };
 
         let caller = whitelisted_caller();
@@ -289,7 +258,7 @@ pub mod benchmarks {
     fn handle_timeout_message() {
         set_timestamp::<T>();
         let host = Host::<T>::default();
-        let intermediate_state = setup_mock_client(&host);
+        let height = setup_mock_client(&host);
         let post = Post {
             source_chain: <T as Config>::StateMachine::get(),
             dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
@@ -313,7 +282,7 @@ pub mod benchmarks {
 
         let msg = TimeoutMessage::Post {
             requests: vec![request],
-            timeout_proof: Proof { height: intermediate_state.height, proof: vec![] },
+            timeout_proof: Proof { height, proof: vec![] },
         };
         let caller = whitelisted_caller();
 
