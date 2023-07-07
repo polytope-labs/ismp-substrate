@@ -492,7 +492,6 @@ where
         }
 
         if !errors.is_empty() {
-            println!("Handling errors {:?}", errors);
             debug!(target: "pallet-ismp", "Handling Errors {:?}", errors);
             Self::deposit_event(Event::<T>::HandlingErrors { errors })
         }
