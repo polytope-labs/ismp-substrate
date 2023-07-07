@@ -3064,7 +3064,7 @@ dependencies = [
  "frame-system",
  "ismp",
  "pallet-balances",
- "pallet-ismp",
+ "pallet-ismp 0.1.0",
  "parity-scale-codec",
  "scale-info",
  "sp-core 7.0.0",
@@ -3083,8 +3083,8 @@ dependencies = [
  "hash-db",
  "hex-literal 0.4.1",
  "ismp",
- "ismp-primitives",
- "pallet-ismp",
+ "ismp-primitives 0.1.0",
+ "pallet-ismp 0.1.0",
  "parity-scale-codec",
  "primitive-types",
  "scale-info",
@@ -3136,16 +3136,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "ismp-primitives"
+version = "0.1.0"
+source = "git+https://github.com/polytope-labs/substrate-ismp?branch=main#e15c8fedc201bf55982b7d4d0265701055a6ffbe"
+dependencies = [
+ "ckb-merkle-mountain-range",
+ "frame-system",
+ "ismp",
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+ "sp-runtime",
+]
+
+[[package]]
 name = "ismp-rpc"
 version = "0.1.0"
 dependencies = [
  "frame-system",
  "hex-literal 0.3.4",
  "ismp",
- "ismp-primitives",
+ "ismp-primitives 0.1.0",
  "ismp-runtime-api",
  "jsonrpsee",
- "pallet-ismp",
+ "pallet-ismp 0.1.0",
  "parity-scale-codec",
  "sc-client-api",
  "serde",
@@ -3161,8 +3175,8 @@ name = "ismp-runtime-api"
 version = "0.1.0"
 dependencies = [
  "ismp",
- "ismp-primitives",
- "pallet-ismp",
+ "ismp-primitives 0.1.0",
+ "pallet-ismp 0.1.0",
  "parity-scale-codec",
  "serde",
  "sp-api",
@@ -4696,13 +4710,35 @@ dependencies = [
  "frame-support",
  "frame-system",
  "ismp",
- "ismp-primitives",
+ "ismp-primitives 0.1.0",
  "ismp-testsuite",
  "log",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-api",
+ "sp-core 7.0.0",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 5.0.0",
+]
+
+[[package]]
+name = "pallet-ismp"
+version = "0.1.0"
+source = "git+https://github.com/polytope-labs/substrate-ismp?branch=main#e15c8fedc201bf55982b7d4d0265701055a6ffbe"
+dependencies = [
+ "ckb-merkle-mountain-range",
+ "derive_more",
+ "enum-as-inner",
+ "frame-support",
+ "frame-system",
+ "ismp",
+ "ismp-primitives 0.1.0 (git+https://github.com/polytope-labs/substrate-ismp?branch=main)",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
  "sp-api",
  "sp-core 7.0.0",
  "sp-io",
@@ -8782,6 +8818,19 @@ dependencies = [
  "tracing-core",
  "tracing-log",
  "tracing-serde",
+]
+
+[[package]]
+name = "transaction-payment"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-ismp 0.1.0 (git+https://github.com/polytope-labs/substrate-ismp?branch=main)",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "sp-std 5.0.0",
 ]
 
 [[package]]
