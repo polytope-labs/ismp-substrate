@@ -21,7 +21,9 @@ use alloc::{boxed::Box, collections::BTreeMap, format, vec, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use ismp::{
-    consensus::{ConsensusClient, ConsensusClientId, StateCommitment, StateMachineClient},
+    consensus::{
+        ConsensusClient, ConsensusClientId, ConsensusStateId, StateCommitment, StateMachineClient,
+    },
     error::Error,
     host::{IsmpHost, StateMachine},
     messaging::{Proof, StateCommitmentHeight},
@@ -75,7 +77,8 @@ pub struct ParachainConsensusProof {
 }
 
 /// Hashing algorithm for the state proof
-#[derive(Debug, Encode, Decode)]
+#[derive(Debug, Encode, Decode, Clone)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub enum HashAlgorithm {
     /// For chains that use keccak as their hashing algo
     Keccak,
@@ -84,8 +87,8 @@ pub enum HashAlgorithm {
 }
 
 /// Holds the relevant data needed for state proof verification
-#[derive(Debug, Encode, Decode)]
-pub struct ParachainStateProof {
+#[derive(Debug, Encode, Decode, Clone)]
+pub struct SubstrateStateProof {
     /// Algorithm to use for state proof verification
     pub hasher: HashAlgorithm,
     /// Storage proof for the parachain headers
@@ -93,7 +96,7 @@ pub struct ParachainStateProof {
 }
 
 /// Holds the relevant data needed for request/response proof verification
-#[derive(Debug, Encode, Decode)]
+#[derive(Debug, Encode, Decode, Clone)]
 pub struct MembershipProof {
     /// Size of the mmr at the time this proof was generated
     pub mmr_size: u64,
@@ -122,6 +125,7 @@ where
     fn verify_consensus(
         &self,
         host: &dyn IsmpHost,
+        _consensus_state_id: ConsensusStateId,
         state: Vec<u8>,
         proof: Vec<u8>,
     ) -> Result<(Vec<u8>, BTreeMap<StateMachine, StateCommitmentHeight>), Error> {
@@ -231,11 +235,6 @@ where
         Ok((state, intermediates))
     }
 
-    fn unbonding_period(&self) -> Duration {
-        // there's no notion of client expiry, since there's shared security.
-        Duration::from_secs(u64::MAX)
-    }
-
     fn verify_fraud_proof(
         &self,
         _host: &dyn IsmpHost,
@@ -325,7 +324,7 @@ where
         root: StateCommitment,
         proof: &Proof,
     ) -> Result<BTreeMap<Vec<u8>, Option<Vec<u8>>>, Error> {
-        let state_proof: ParachainStateProof = codec::Decode::decode(&mut &*proof.proof)
+        let state_proof: SubstrateStateProof = codec::Decode::decode(&mut &*proof.proof)
             .map_err(|e| Error::ImplementationSpecific(format!("failed to decode proof: {e:?}")))?;
 
         let data = match state_proof.hasher {
