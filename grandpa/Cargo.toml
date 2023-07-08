@@ -12,8 +12,8 @@ scale-info = { version = "2.1.1", default-features = false, features = ["derive"
 
 # polytope labs
 ismp = { git = "https://github.com/polytope-labs/ismp-rs", branch = "main", default-features = false }
-primitives = { package = "grandpa-light-client-primitives", path = "./primitives", default-features = false }
-verifier = { package = "grandpa-light-client-verifier", path = "./verifier", default-features = false}
+primitives = { package = "ismp-grandpa-primitives", path = "./primitives", default-features = false }
+verifier = { package = "ismp-grandpa-verifier", path = "./verifier", default-features = false}
 
 # substrate
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

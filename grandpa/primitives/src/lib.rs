@@ -66,14 +66,16 @@ pub struct ConsensusState {
     pub current_authorities: AuthorityList,
     /// Id of the current authority set.
     pub current_set_id: u64,
-    /// latest finalized height on the relay chain.
-    pub latest_relay_height: u32,
-    /// latest finalized height on the parachain.
-    pub latest_para_height: u32,
-    /// latest finalized hash on the relay chain.
-    pub latest_relay_hash: Hash,
-    /// para_id of associated parachain
-    pub para_id: u32,
+    /// latest finalized height on relay chain or standalone chain
+    pub latest_height: u32,
+    /// State machine id StateMachine::Polkadot(0) or StateMachine::Kusama(0) or
+    ///StateMachine::Grandpa(ConsensusStateId)
+    pub state_machine: StateMachine,
+    /// latest finalized height on the parachains, this map will be empty for Standalone chains
+    /// Map of para_ids
+    pub latest_para_heights: BtreeMap<u32, bool>,
+    /// latest finalized hash on relay chain or standalone chain.
+    pub latest_hash: Hash,
 }
 
 /// Holds relavant parachain proofs for both header and timestamp extrinsic.

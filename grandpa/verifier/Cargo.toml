@@ -1,5 +1,5 @@
 [package]
-name = "grandpa-light-client-verifier"
+name = "ismp-grandpa-verifier"
 version = "0.1.0"
 edition = "2021"
 
@@ -25,8 +25,7 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 
 sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.36", default-features = false }
 
-primitives = { package = "grandpa-light-client-primitives", path = "../primitives", default-features = false }
-#light-client-common = { path = "../../../light-clients/common", default-features = false }*/
+primitives = { package = "ismp-grandpa-primitives", path = "../primitives", default-features = false }
 
 [features]
 default = ["std"]
