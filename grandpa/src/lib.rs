@@ -87,5 +87,27 @@ pub mod pallet {
             ismp_host.store_consensus_state(consensus_state_id, encoded_consensus_state)?;
             Ok(())
         }
+
+        /// Remove some parachains from the list of parachains in the relay chain consensus state
+        #[pallet::call_index(0)]
+        #[pallet::weight(0)]
+        pub fn remove_parachains(origin: OriginFor<T>, consensus_state_id_vec: Vec<u8>, para_ids: Vec<u32>) -> DispatchResult {
+            ensure_root(origin)?;
+
+            let ismp_host = Host::<T>::default();
+            let consensus_state_id = consensus_state_id_vec.as_slice().try_into().map_err(|_| Error::IncorrectConsensusStateIdLength)?;
+
+            let encoded_consensus_state = ismp_host.consensus_state(consensus_state_id).map_err(|_| Error::ErrorFetchingConsensusState)?;
+            let mut consensus_state: ConsensusState =
+                codec::Decode::decode(&mut &encoded_consensus_state[..]).map_err(|_| Error::ErrorDecodingConsensusState)?;
+
+            let mut stored_para_ids = consensus_state.latest_para_heights;
+            stored_para_ids.retain(|&key, _| !para_ids.contains(&key));
+            consensus_state.latest_para_heights = stored_para_ids;
+
+            let encoded_consensus_state = consensus_state.encode();
+            ismp_host.store_consensus_state(consensus_state_id, encoded_consensus_state)?;
+            Ok(())
+        }
     }
 }
