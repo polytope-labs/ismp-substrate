@@ -67,7 +67,7 @@ pub fn verify_grandpa_finality_proof<H, Host>(
     }
     // function ends here
 
-    let from = client_state.latest_relay_hash;
+    let from = client_state.latest_hash;
 
     let base = finality_proof
         .unknown_headers
@@ -75,8 +75,8 @@ pub fn verify_grandpa_finality_proof<H, Host>(
         .min_by_key(|h| *h.number())
         .ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
 
-    if base.number() < &client_state.latest_relay_height {
-        headers.ancestry(base.hash(), client_state.latest_relay_hash).map_err(|_| {
+    if base.number() < &client_state.latest_height {
+        headers.ancestry(base.hash(), client_state.latest_hash).map_err(|_| {
             anyhow!(
 				"[verify_parachain_headers_with_grandpa_finality_proof] Invalid ancestry (base -> latest relay block)!"
 			)
@@ -130,9 +130,8 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
     if justification.commit.target_hash != finality_proof.block {
         Err(anyhow!("Justification target hash and finality proof block hash mismatch"))?;
     }
-    // function ends here
 
-    let from = client_state.latest_relay_hash;
+    let from = client_state.latest_hash;
 
     let base = finality_proof
         .unknown_headers
@@ -140,8 +139,8 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
         .min_by_key(|h| *h.number())
         .ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
 
-    if base.number() < &client_state.latest_relay_height {
-        headers.ancestry(base.hash(), client_state.latest_relay_hash).map_err(|_| {
+    if base.number() < &client_state.latest_height {
+        headers.ancestry(base.hash(), client_state.latest_hash).map_err(|_| {
             anyhow!(
 				"[verify_parachain_headers_with_grandpa_finality_proof] Invalid ancestry (base -> latest relay block)!"
 			)
@@ -168,7 +167,8 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
 
         let ParachainHeaderProofs { extrinsic_proof, extrinsic, state_proof } = proofs;
         let proof = StorageProof::new(state_proof);
-        let key = parachain_header_storage_key(client_state.para_id);
+        //TODO: CHANGE THIS, ASK question
+        let key = parachain_header_storage_key(client_state.latest_height);
         // verify patricia-merkle state proofs
         let header = state_machine::read_proof_check::<Host::BlakeTwo256, _>(
             relay_chain_header.state_root(),
@@ -194,10 +194,10 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
     }
 
     // 4. set new client state, optionally rotating authorities
-    client_state.latest_relay_hash = target.hash();
-    client_state.latest_relay_height = (*target.number()).into();
+    client_state.latest_hash = target.hash();
+    client_state.latest_height = (*target.number()).into();
     if let Some(max_height) = para_heights.into_iter().max() {
-        client_state.latest_para_height = max_height;
+        client_state.latest_height = max_height;
     }
     if let Some(scheduled_change) = find_scheduled_change::<H>(&target) {
         client_state.current_set_id += 1;
