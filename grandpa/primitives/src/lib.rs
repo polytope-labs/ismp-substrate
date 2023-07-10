@@ -24,6 +24,7 @@ extern crate alloc;
 use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
+use ismp::host::StateMachine;
 use sp_core::{ed25519, sp_std, H256};
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
 use sp_runtime::traits::Header;
