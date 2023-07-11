@@ -102,7 +102,7 @@ pub fn verify_grandpa_finality_proof<H, Host>(
 pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
     mut consensus_state: ConsensusState,
     proof: ParachainHeadersWithFinalityProof<H>,
-) -> Result<ConsensusState, error::Error>
+) -> Result<(ConsensusState, Vec<Header>), error::Error>
     where
         H: Header<Hash = H256, Number = u32>,
         H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
@@ -114,6 +114,7 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
 
     // verifies state proofs of parachain headers in finalized relay chain headers.
     let mut para_heights = vec![];
+    let mut verified_parachain_headers = vec![];
     for (hash, proofs) in parachain_headers {
         if finalized.binary_search(&hash).is_err() {
             // seems relay hash isn't in the finalized chain.
@@ -136,7 +137,8 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
             .flatten()
             .ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
         let parachain_header = H::decode(&mut &header[..])?;
-        para_heights.push(parachain_header.number().clone().into());
+        let para_height = parachain_header.number().clone().into();
+        para_heights.push(para_height);
         // Timestamp extrinsic should be the first inherent and hence the first extrinsic
         // https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
         let key = codec::Compact(0u32).encode();
@@ -147,6 +149,11 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
             &vec![(key, Some(&extrinsic[..]))],
         )
             .map_err(|_| anyhow!("Invalid extrinsic proof"))?;
+
+        if consensus_state.latest_para_heights.contains_key(&para_height) {
+            verified_parachain_headers.push(parachain_header);
+        }
+
     }
 
     // SetS new consensus state, optionally rotating authorities
@@ -160,5 +167,5 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
         consensus_state.current_authorities = scheduled_change.next_authorities;
     }
 
-    Ok(consensus_state)
+    Ok((consensus_state, verified_parachain_headers))
 }
