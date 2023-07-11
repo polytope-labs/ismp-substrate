@@ -20,12 +20,20 @@ use ismp::{
     router::{Request, RequestResponse},
     util::hash_request,
 };
+use ismp::consensus::ConsensusStateId;
+use primitive_types::H256;
+use sp_consensus_aura::AURA_ENGINE_ID;
+use sp_runtime::DigestItem;
 use primitives::{ConsensusState, FinalityProof, ParachainHeaderProofs, ParachainHeadersWithFinalityProof};
 use verifier::{verify_grandpa_finality_proof, verify_parachain_headers_with_grandpa_finality_proof};
 use crate::consensus_message::{ConsensusMessage};
 
 pub const POLKADOT_CONSENSUS_STATE_ID: [u8; 8] = *b"polkadot";
 pub const KUSAMA_CONSENSUS_STATE_ID: [u8; 8] = *b"__kusama";
+
+/// The `ConsensusEngineId` of ISMP digest in the parachain header.
+pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
+
 
 // map of consensus state id(bytes) to b tree set of state machine
 // expose an extrinsic to update the map, takes consensus state id and a vector of state machine
@@ -47,7 +55,7 @@ impl<T> ConsensusClient for GrandpaConsensusClient<T>
         T::BlockNumber: Into<u32>,
         T::Hash: From<H256>,
 {
-    fn verify_consensus(&self, host: &dyn IsmpHost, trusted_consensus_state: Vec<u8>, proof: Vec<u8>) -> Result<(Vec<u8>, BTreeMap<StateMachine, StateCommitmentHeight>), Error> {
+    fn verify_consensus(&self, host: &dyn IsmpHost, _consensus_state_id: ConsensusStateId, trusted_consensus_state: Vec<u8>, proof: Vec<u8>) -> Result<(Vec<u8>, BTreeMap<StateMachine, StateCommitmentHeight>), Error> {
         // decode the proof into consensus message
         let consensus_message: ConsensusMessage =
             codec::Decode::decode(&mut &proof[..]).map_err(|e| {
@@ -64,23 +72,77 @@ impl<T> ConsensusClient for GrandpaConsensusClient<T>
                 ))
             })?;
 
+        let mut intermediates = BTreeMap::new();
+
         // match over the message
-         match consensus_message {
-            ConsensusMessage::StandaloneChainMessage(standalone_chain_message) => {
-                verify_grandpa_finality_proof(consensus_state.clone(), standalone_chain_message.finality_proof)?;
-            }
+        match consensus_message {
+           ConsensusMessage::RelayChainMessage(relay_chain_message) => {
+               let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
+                   finality_proof: relay_chain_message.finality_proof,
+                   parachain_headers: relay_chain_message.parachain_headers,
+               };
 
-            ConsensusMessage::RelayChainMessage(relay_chain_message) => {
-                let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
-                    finality_proof: relay_chain_message.finality_proof,
-                    parachain_headers: relay_chain_message.parachain_headers,
-                };
+               let (_derived_consensus_state, parachain_headers) =  verify_parachain_headers_with_grandpa_finality_proof(consensus_state.clone(), headers_with_finality_proof)?;
 
-                verify_parachain_headers_with_grandpa_finality_proof(consensus_state.clone(), headers_with_finality_proof)?;
-            }
-        };
+               for header in parachain_headers {
+                   let (mut timestamp, mut overlay_root) = (0, H256::default());
+                   for digest in header.digest().logs.iter() {
+                       match digest {
+                           DigestItem::PreRuntime(consensus_engine_id, value)
+                           if *consensus_engine_id == AURA_ENGINE_ID =>
+                               {
+                                   let slot = Slot::decode(&mut &value[..]).map_err(|e| {
+                                       Error::ImplementationSpecific(format!("Cannot slot: {e:?}"))
+                                   })?;
+                                   timestamp = Duration::from_millis(*slot * SLOT_DURATION).as_secs();
+                               }
+                           DigestItem::Consensus(consensus_engine_id, value)
+                           if *consensus_engine_id == ISMP_ID =>
+                               {
+                                   if value.len() != 32 {
+                                       Err(Error::ImplementationSpecific(
+                                           "Header contains an invalid ismp root".into(),
+                                       ))?
+                                   }
 
-        Ok(())
+                                   overlay_root = H256::from_slice(&value);
+                               }
+                           // don't really care about the rest
+                           _ => {}
+                       };
+                   }
+
+                   if timestamp == 0 {
+                       Err(Error::ImplementationSpecific("Timestamp or ismp root not found".into()))?
+                   }
+
+                   let height: u32 = (*header.number()).into();
+
+                   let state_id = match host.host_state_machine() {
+                       StateMachine::Kusama(_) => StateMachine::Kusama(header.number().clone().into()),
+                       StateMachine::Polkadot(_) => StateMachine::Polkadot(header.number().clone().into()),
+                       _ => Err(Error::ImplementationSpecific(
+                           "Host state machine should be a parachain".into(),
+                       ))?,
+                   };
+
+                   let intermediate = StateCommitmentHeight {
+                       commitment: StateCommitment {
+                           timestamp,
+                           overlay_root: Some(overlay_root),
+                           state_root: header.state_root,
+                       },
+                       height: height.into(),
+                   };
+
+                   intermediates.insert(state_id, intermediate);
+               }
+
+               Ok((trusted_consensus_state, intermediates))
+           }
+            _ => {}
+        }
+
 
         // check if there's a state machine set for that consensus state id(PENDING)
 
@@ -97,10 +159,6 @@ impl<T> ConsensusClient for GrandpaConsensusClient<T>
     }
 
     fn verify_fraud_proof(&self, host: &dyn IsmpHost, trusted_consensus_state: Vec<u8>, proof_1: Vec<u8>, proof_2: Vec<u8>) -> Result<(), Error> {
-        todo!()
-    }
-
-    fn unbonding_period(&self) -> Duration {
         todo!()
     }
 
