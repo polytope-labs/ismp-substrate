@@ -97,10 +97,10 @@ pub mod pallet {
             Ok(Pays::No.into())
         }
 
-        /// Add some new parachains to the list of parachains we care about
+        /// Add some new parachains to the list of parachains whitelist
         #[pallet::call_index(1)]
         #[pallet::weight(0)]
-        pub fn add_parachain(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
+        pub fn add_parachains(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
             ensure_root(origin)?;
             for id in para_ids {
                 Parachains::<T>::insert(id, ());
@@ -109,10 +109,10 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Remove some parachains from the list of parachains we care about
+        /// Remove some parachains from the list of parachains whitelist
         #[pallet::call_index(2)]
         #[pallet::weight(0)]
-        pub fn remove_parachain(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
+        pub fn remove_parachains(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
             ensure_root(origin)?;
             for id in para_ids {
                 Parachains::<T>::remove(id);
