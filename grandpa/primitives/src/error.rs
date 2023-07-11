@@ -18,8 +18,8 @@ use derive_more::{Display, From};
 ///
 #[derive(From, Debug, Display)]
 pub enum Error {
-	/// Anyhow error
-	Anyhow(anyhow::Error),
-	/// scale codec error
-	Codec(codec::Error),
+    /// Anyhow error
+    Anyhow(anyhow::Error),
+    /// scale codec error
+    Codec(codec::Error),
 }

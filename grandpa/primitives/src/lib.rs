@@ -33,9 +33,9 @@ use sp_storage::StorageKey;
 
 /// GRANPA errors
 pub mod error;
+pub mod host_functions;
 /// GRANDPA justification utilities
 pub mod justification;
-pub mod host_functions;
 
 /// Represents a Hash in this library
 pub type Hash = H256;
@@ -89,7 +89,7 @@ pub struct ParachainHeaderProofs {
     /// Timestamp extrinsic proof for previously proven parachain header.
     pub extrinsic_proof: Vec<Vec<u8>>,
     /// The parachain id
-    pub para_id: u32
+    pub para_id: u32,
 }
 
 /// Parachain headers with a Grandpa finality proof.
@@ -103,7 +103,6 @@ pub struct ParachainHeadersWithFinalityProof<H: codec::Codec> {
     /// via state proofs. Also contains extrinsic proof for timestamp.
     pub parachain_headers: BTreeMap<Hash, ParachainHeaderProofs>,
 }
-
 
 /// Host functions that allow the light client perform cryptographic operations in native.
 pub trait HostFunctions: host_functions::HostFunctions + 'static {

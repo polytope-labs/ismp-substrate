@@ -28,23 +28,29 @@ use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::Chain;
 use hash_db::Hasher;
-use primitives::{error, justification::{find_scheduled_change, AncestryChain, GrandpaJustification}, parachain_header_storage_key, ConsensusState, HostFunctions, ParachainHeaderProofs, ParachainHeadersWithFinalityProof, FinalityProof};
+use primitives::{
+    error,
+    justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
+    parachain_header_storage_key, ConsensusState, FinalityProof, HostFunctions,
+    ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
+};
 use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_trie::{LayoutV0, StorageProof};
 
-/// This function verifies the GRANDPA finality proof for both standalone chain and parachain headers.
+/// This function verifies the GRANDPA finality proof for both standalone chain and parachain
+/// headers.
 ///
 /// TODO: return verified header and the associated time stamp
 pub fn verify_grandpa_finality_proof<H, Host>(
     mut consensus_state: ConsensusState,
-    finality_proof: FinalityProof<H>
+    finality_proof: FinalityProof<H>,
 ) -> Result<(ConsensusState, Header), error::Error>
-    where
-        H: Header<Hash = H256, Number = u32>,
-        H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
-        Host: HostFunctions,
-        Host::BlakeTwo256: Hasher<Out = H256>,
+where
+    H: Header<Hash = H256, Number = u32>,
+    H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
+    Host: HostFunctions,
+    Host::BlakeTwo256: Hasher<Out = H256>,
 {
     // First validate unknown headers.
     let headers = AncestryChain::<H>::new(&finality_proof.unknown_headers);
@@ -77,18 +83,19 @@ pub fn verify_grandpa_finality_proof<H, Host>(
     if base.number() < &consensus_state.latest_height {
         headers.ancestry(base.hash(), consensus_state.latest_hash).map_err(|_| {
             anyhow!(
-				"[verify_grandpa_finality_proof] Invalid ancestry (base -> latest relay block)!"
-			)
+                "[verify_grandpa_finality_proof] Invalid ancestry (base -> latest relay block)!"
+            )
         })?;
     }
 
-    let mut finalized = headers.ancestry(from, target.hash()).map_err(|_| {
-        anyhow!("[verify_grandpa_finality_proof] Invalid ancestry!")
-    })?;
+    let mut finalized = headers
+        .ancestry(from, target.hash())
+        .map_err(|_| anyhow!("[verify_grandpa_finality_proof] Invalid ancestry!"))?;
     finalized.sort();
 
     // 2. verify justification.
-    justification.verify::<Host>(consensus_state.current_set_id, &consensus_state.current_authorities)?;
+    justification
+        .verify::<Host>(consensus_state.current_set_id, &consensus_state.current_authorities)?;
 
     Ok((consensus_state, base))
 }
@@ -96,19 +103,20 @@ pub fn verify_grandpa_finality_proof<H, Host>(
 ///
 /// Next, we prove the finality of parachain headers, by verifying patricia-merkle trie state proofs
 /// of these headers, stored at the recently finalized relay chain heights.
-/// TODO: return verified headers(compared with the consensus state para ids) and the associated time stamp
-/// TODO: remove all host functions
+/// TODO: return verified headers(compared with the consensus state para ids) and the associated
+/// time stamp TODO: remove all host functions
 pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
     mut consensus_state: ConsensusState,
     proof: ParachainHeadersWithFinalityProof<H>,
 ) -> Result<(ConsensusState, Vec<Header>), error::Error>
-    where
-        H: Header<Hash = H256, Number = u32>,
-        H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
-        Host: HostFunctions,
-        Host::BlakeTwo256: Hasher<Out = H256>,
+where
+    H: Header<Hash = H256, Number = u32>,
+    H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
+    Host: HostFunctions,
+    Host::BlakeTwo256: Hasher<Out = H256>,
 {
-    let (mut consensus_state, base_header) = verify_grandpa_finality_proof(consensus_state, finality_proof)?;
+    let (mut consensus_state, base_header) =
+        verify_grandpa_finality_proof(consensus_state, finality_proof)?;
     let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = proof;
 
     // verifies state proofs of parachain headers in finalized relay chain headers.
@@ -131,10 +139,10 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
             proof,
             &[key.as_ref()],
         )
-            .map_err(|err| anyhow!("error verifying parachain header state proof: {err}"))?
-            .remove(key.as_ref())
-            .flatten()
-            .ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
+        .map_err(|err| anyhow!("error verifying parachain header state proof: {err}"))?
+        .remove(key.as_ref())
+        .flatten()
+        .ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
         let parachain_header = H::decode(&mut &header[..])?;
         let para_height = parachain_header.number().clone().into();
         para_heights.push(para_height);
@@ -147,12 +155,11 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
             &extrinsic_proof,
             &vec![(key, Some(&extrinsic[..]))],
         )
-            .map_err(|_| anyhow!("Invalid extrinsic proof"))?;
+        .map_err(|_| anyhow!("Invalid extrinsic proof"))?;
 
         if consensus_state.latest_para_heights.contains_key(&para_height) {
             verified_parachain_headers.push(parachain_header);
         }
-
     }
 
     // SetS new consensus state, optionally rotating authorities
