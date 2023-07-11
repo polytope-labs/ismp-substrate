@@ -119,8 +119,7 @@ impl<T> ConsensusClient for GrandpaConsensusClient<T>
                    let height: u32 = (*header.number()).into();
 
                    let state_id = match host.host_state_machine() {
-                       StateMachine::Kusama(_) => StateMachine::Kusama(header.number().clone().into()),
-                       StateMachine::Polkadot(_) => StateMachine::Polkadot(header.number().clone().into()),
+                       StateMachine::Grandpa(_) => StateMachine::Kusama(header.number().clone().into()),
                        _ => Err(Error::ImplementationSpecific(
                            "Host state machine should be a parachain".into(),
                        ))?,
@@ -139,8 +138,64 @@ impl<T> ConsensusClient for GrandpaConsensusClient<T>
                }
 
                Ok((trusted_consensus_state, intermediates))
-           }
-            _ => {}
+           },
+
+            ConsensusMessage::StandaloneChainMessage(standalone_chain_message) => {
+                let (derived_consensus_state, header) = verify_grandpa_finality_proof(consensus_state.clone(), standalone_chain_message.finality_proof)?;
+                let (mut timestamp, mut overlay_root) = (0, H256::default());
+
+                for digest in header.digest().logs.iter() {
+                    match digest {
+                        DigestItem::PreRuntime(consensus_engine_id, value)
+                        if *consensus_engine_id == AURA_ENGINE_ID =>
+                            {
+                                let slot = Slot::decode(&mut &value[..]).map_err(|e| {
+                                    Error::ImplementationSpecific(format!("Cannot slot: {e:?}"))
+                                })?;
+                                timestamp = Duration::from_millis(*slot * SLOT_DURATION).as_secs();
+                            }
+                        DigestItem::Consensus(consensus_engine_id, value)
+                        if *consensus_engine_id == ISMP_ID =>
+                            {
+                                if value.len() != 32 {
+                                    Err(Error::ImplementationSpecific(
+                                        "Header contains an invalid ismp root".into(),
+                                    ))?
+                                }
+
+                                overlay_root = H256::from_slice(&value);
+                            }
+                        // don't really care about the rest
+                        _ => {}
+                    };
+                }
+
+                if timestamp == 0 {
+                    Err(Error::ImplementationSpecific("Timestamp or ismp root not found".into()))?
+                }
+
+                let height: u32 = (*header.number()).into();
+
+                let state_id = match host.host_state_machine() {
+                    StateMachine::Grandpa(_) => StateMachine::Grandpa(header.number().clone().into()),
+                    _ => Err(Error::ImplementationSpecific(
+                        "Host state machine should be grandpa".into(),
+                    ))?,
+                };
+
+                let intermediate = StateCommitmentHeight {
+                    commitment: StateCommitment {
+                        timestamp,
+                        overlay_root: Some(overlay_root),
+                        state_root: header.state_root,
+                    },
+                    height: height.into(),
+                };
+
+                intermediates.insert(state_id, intermediate);
+
+                Ok((trusted_consensus_state, intermediates))
+            }
         }
 
 

@@ -39,7 +39,7 @@ use sp_trie::{LayoutV0, StorageProof};
 pub fn verify_grandpa_finality_proof<H, Host>(
     mut consensus_state: ConsensusState,
     finality_proof: FinalityProof<H>
-) -> Result<ConsensusState, error::Error>
+) -> Result<(ConsensusState, Header), error::Error>
     where
         H: Header<Hash = H256, Number = u32>,
         H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
@@ -90,9 +90,8 @@ pub fn verify_grandpa_finality_proof<H, Host>(
     // 2. verify justification.
     justification.verify::<Host>(consensus_state.current_set_id, &consensus_state.current_authorities)?;
 
-    Ok(consensus_state)
+    Ok((consensus_state, base))
 }
-
 /// This function verifies the GRANDPA finality proof for relay chain headers.
 ///
 /// Next, we prove the finality of parachain headers, by verifying patricia-merkle trie state proofs
@@ -109,7 +108,7 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
         Host: HostFunctions,
         Host::BlakeTwo256: Hasher<Out = H256>,
 {
-    let mut consensus_state = verify_grandpa_finality_proof(consensus_state, finality_proof)?;
+    let (mut consensus_state, base_header) = verify_grandpa_finality_proof(consensus_state, finality_proof)?;
     let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = proof;
 
     // verifies state proofs of parachain headers in finalized relay chain headers.
