@@ -88,6 +88,8 @@ pub struct ParachainHeaderProofs {
     pub extrinsic: Vec<u8>,
     /// Timestamp extrinsic proof for previously proven parachain header.
     pub extrinsic_proof: Vec<Vec<u8>>,
+    /// The parachain id
+    pub para_id: u32
 }
 
 /// Parachain headers with a Grandpa finality proof.
