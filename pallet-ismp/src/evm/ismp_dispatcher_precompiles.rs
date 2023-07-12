@@ -6,7 +6,7 @@ use crate::{
         DispatchGet as SolDispatchGet, DispatchPost as SolDispatchPost,
         PostResponse as SolPostResponse,
     },
-    Config,
+    Config, GasLimits, Pallet,
 };
 use alloc::str::FromStr;
 use alloy_sol_types::SolType;
@@ -47,6 +47,7 @@ where
             SolDispatchPost::decode(input, true).map_err(|e| PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
             })?;
+        let gas_limit = post_dispatch.gasLimit;
         let post_dispatch = DispatchPost {
             dest: parse_state_machine(post_dispatch.dest)?,
             from: context.caller.0.to_vec(),
@@ -56,7 +57,11 @@ where
         };
         handle.record_cost(cost)?;
         match dispatcher.dispatch_request(DispatchRequest::Post(post_dispatch)) {
-            Ok(_) => Ok(PrecompileOutput { exit_status: ExitSucceed::Stopped, output: vec![] }),
+            Ok(_) => {
+                let nonce = Pallet::<T>::previous_nonce();
+                GasLimits::<T>::insert(nonce, gas_limit);
+                Ok(PrecompileOutput { exit_status: ExitSucceed::Stopped, output: vec![] })
+            }
             Err(e) => Err(PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("dispatch execution failed: {:?}", e).into()),
             }),
@@ -89,6 +94,7 @@ where
             SolDispatchGet::decode(input, true).map_err(|e| PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
             })?;
+        let gas_limit = get_dispatch.gasLimit;
         let get_dispatch = DispatchGet {
             dest: parse_state_machine(get_dispatch.dest)?,
             from: context.caller.0.to_vec(),
@@ -98,7 +104,11 @@ where
         };
         handle.record_cost(cost)?;
         match dispatcher.dispatch_request(DispatchRequest::Get(get_dispatch)) {
-            Ok(_) => Ok(PrecompileOutput { exit_status: ExitSucceed::Stopped, output: vec![] }),
+            Ok(_) => {
+                let nonce = Pallet::<T>::previous_nonce();
+                GasLimits::<T>::insert(nonce, gas_limit);
+                Ok(PrecompileOutput { exit_status: ExitSucceed::Stopped, output: vec![] })
+            }
             Err(e) => Err(PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("dispatch execution failed: {:?}", e).into()),
             }),

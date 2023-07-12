@@ -1,4 +1,4 @@
-//! Solidity rust binding
+//! Solidity rust bindings
 use alloy_sol_macro::sol;
 sol! {
         struct PostRequest {
@@ -27,8 +27,6 @@ sol! {
             uint256 nonce;
             // Module Id of this request origin
             bytes from;
-            // destination has to be a contract
-            bytes to;
             // timestamp by which this request times out.
             uint256 timeoutTimestamp;
             // raw storage keys
@@ -42,10 +40,10 @@ sol! {
             OptionValue value;
         }
 
-       struct OptionValue {
+        struct OptionValue {
             bytes value;
             bool isSome;
-       }
+        }
 
         struct GetResponse {
             // The request that initiated this response
@@ -71,6 +69,8 @@ sol! {
             bytes data;
             // Timeout
             uint256 timeoutTimestamp;
+            // Gas limit that should be used to execute the response or timeout for this request
+            uint64 gasLimit;
         }
 
         // An object for dispatching post requests to the IsmpDispatcher
@@ -83,15 +83,17 @@ sol! {
             bytes[] keys;
             // Timeout
             uint256 timeoutTimestamp;
+            // Gas limit that should be used to execute the response or timeout for this request
+            uint64 gasLimit;
         }
 
-        // An object that represents the standard data format for contract request and response bodies
-        // To be abi encoded as the bytes for either a request or response
-        // This is the contract data structure expected by EVM contracts executing on substrate chains
+        // An object that represents the standard data format for contract post request bodies
+        // To be abi encoded as the bytes for a request
+        // This is the data structure expected by all EVM contracts executing on substrate chains
         struct ContractData {
-            // Actual contract data
+            // Actual contract data to that would be abi decoded by contract internally
             bytes data;
-            // Gas limit to be used to execute the contract on destination
+            // Gas limit to be used to execute the contract call back
             uint64 gasLimit;
         }
 

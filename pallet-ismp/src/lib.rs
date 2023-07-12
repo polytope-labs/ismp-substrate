@@ -258,6 +258,12 @@ pub mod pallet {
     #[pallet::getter(fn nonce)]
     pub type Nonce<T> = StorageValue<_, u64, ValueQuery>;
 
+    /// Gas limits for executing responses and timeouts for evm contracts
+    /// The key is the request nonce
+    #[pallet::storage]
+    #[pallet::getter(fn gas_limits)]
+    pub(super) type GasLimits<T: Config> = StorageMap<_, Blake2_128Concat, u64, u64, OptionQuery>;
+
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
@@ -690,6 +696,10 @@ where
         let pos = mmr.push(leaf)?;
         Pallet::<T>::store_leaf_index_offchain(offchain_key, pos);
         Some(pos)
+    }
+    /// It returns the nonce used for the last known dispatch
+    pub(crate) fn previous_nonce() -> u64 {
+        Nonce::<T>::get() - 1
     }
 }
 
