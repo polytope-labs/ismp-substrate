@@ -103,11 +103,11 @@ pub mod pallet {
                 codec::Decode::decode(&mut &encoded_consensus_state[..])
                     .map_err(|_| Error::ErrorDecodingConsensusState)?;
 
-            let mut stored_para_ids = consensus_state.latest_para_heights;
+            let mut stored_para_ids = consensus_state.para_ids;
             para_ids.iter().for_each(|para_id| {
                 stored_para_ids.entry(para_id).or_insert(true);
             });
-            consensus_state.latest_para_heights = stored_para_ids;
+            consensus_state.para_ids = stored_para_ids;
 
             let encoded_consensus_state = consensus_state.encode();
             ismp_host.store_consensus_state(consensus_state_id, encoded_consensus_state)?;
@@ -137,9 +137,9 @@ pub mod pallet {
                 codec::Decode::decode(&mut &encoded_consensus_state[..])
                     .map_err(|_| Error::ErrorDecodingConsensusState)?;
 
-            let mut stored_para_ids = consensus_state.latest_para_heights;
+            let mut stored_para_ids = consensus_state.para_ids;
             stored_para_ids.retain(|&key, _| !para_ids.contains(&key));
-            consensus_state.latest_para_heights = stored_para_ids;
+            consensus_state.para_ids = stored_para_ids;
 
             let encoded_consensus_state = consensus_state.encode();
             ismp_host.store_consensus_state(consensus_state_id, encoded_consensus_state)?;
