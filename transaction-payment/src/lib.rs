@@ -1,197 +1,186 @@
-// Copyright (C) 2023 Polytope Labs.
-// SPDX-License-Identifier: Apache-2.0
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// 	http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-// use crate::Config;
-
-use codec::{Decode, Encode, MaxEncodedLen};
-use sp_runtime::{
-    traits::{DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
-    transaction_validity::InvalidTransaction,
-};
-use sp_std::marker::PhantomData;
-
 use frame_support::{
-    traits::{Currency, ExistenceRequirement, Imbalance, OnUnbalanced, WithdrawReasons},
-    unsigned::TransactionValidityError,
+    dispatch::{DispatchInfo, DispatchResult, PostDispatchInfo},
+    traits::{
+        tokens::fungibles::{Credit, Inspect},
+        IsSubType, IsType,
+    },
 };
-use frame_system::Config;
-use pallet_tx_payment::{CurrencyAdapter, OnChargeTransaction};
+use scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
+use sp_core::H256;
+use sp_runtime::{
+    traits::{DispatchInfoOf, Dispatchable, PostDispatchInfoOf, SignedExtension, Zero},
+    transaction_validity::{
+        InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
+    },
+    FixedPointOperand,
+};
+// use pallet_ismp::pallet;
+use pallet_asset_tx_payment::InitialPayment;
+use pallet_transaction_payment::OnChargeTransaction;
+use payment::OnChargeAssetTransaction;
+
+mod payment;
+// Type aliases used for interaction with `OnChargeTransaction`.
+pub(crate) type OnChargeTransactionOf<T> =
+    <T as pallet_transaction_payment::Config>::OnChargeTransaction;
+// Balance type alias.
+pub(crate) type BalanceOf<T> = <OnChargeTransactionOf<T> as OnChargeTransaction<T>>::Balance;
+
+// Type alias used for interaction with fungibles (assets).
+// Balance type alias.
+pub(crate) type AssetBalanceOf<T> =
+    <<T as pallet_asset_tx_payment::Config>::Fungibles as Inspect<
+        <T as frame_system::Config>::AccountId,
+    >>::Balance;
+
+// Type aliases used for interaction with `OnChargeAssetTransaction`.
+// Balance type alias.
+pub(crate) type ChargeAssetBalanceOf<T> =
+    <<T as Config>::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::Balance;
+// Asset id type alias.
+pub(crate) type ChargeAssetIdOf<T> =
+    <<T as Config>::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::AssetId;
+// Liquity info type alias.
+pub(crate) type ChargeAssetLiquidityOf<T> =
+    <<T as Config>::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::LiquidityInfo;
+
+// Type to track whether call is ISMP call or not
+pub(crate) type IsIsmpCall = bool;
+
+pub use pallet::*;
+
+#[frame_support::pallet]
+pub mod pallet {
+    use super::*;
+
+    #[pallet::config]
+    pub trait Config:
+        frame_system::Config + pallet_ismp::Config + pallet_asset_tx_payment::pallet::Config
+    {
+        /// The overarching event type.
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        /// The fungibles instance used to pay for transactions in assets.
+        // type Fungibles: Balanced<Self::AccountId>;
+        /// The actual transaction charging logic that charges the fees.
+        type OnChargeAssetTransaction: OnChargeAssetTransaction<Self>;
+    }
+
+    #[pallet::pallet]
+    pub struct Pallet<T>(_);
+
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        /// A transaction fee `actual_fee`, of which `tip` was added to the minimum inclusion fee,
+        /// has been paid by `who` in an asset `asset_id`.
+        AssetTxFeePaid {
+            who: T::AccountId,
+            actual_fee: AssetBalanceOf<T>,
+            tip: AssetBalanceOf<T>,
+            asset_id: Option<ChargeAssetIdOf<T>>,
+        },
+    }
+}
 
 /// Require the transactor pay for themselves and maybe include a tip to gain additional priority
-/// in the queue.
+/// in the queue. Allows paying via both `Currency` as well as `fungibles::Balanced`.
 ///
-/// # Transaction Validity
-///
-/// This extension sets the `priority` field of `TransactionValidity` depending on the amount
-/// of tip being paid per weight unit.
-///
-/// Operational transactions will receive an additional priority bump, so that they are normally
-/// considered before regular transactions.
+/// Wraps the transaction logic in [`pallet_transaction_payment`] and extends it with assets.
+/// An asset id of `None` falls back to the underlying transaction payment via the native currency.
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 #[scale_info(skip_type_params(T))]
-pub struct ChargeTransactionPayment<T: Config, D: TokenTransferDetails<T>>(
-    #[codec(compact)] BalanceOf<T>,
-);
-
-pub trait TokenTransferDetails<T: Config, AssetId> {
-    fn amount(&self) -> BalanceOf<T>;
-    fn destination_account(&self) -> T::AccountId;
-    fn asset_id(&self) -> AssetId;
+pub struct ChargeAssetTxPayment<T: Config> {
+    #[codec(compact)]
+    tip: BalanceOf<T>,
+    asset_id: Option<ChargeAssetIdOf<T>>,
 }
 
-pub trait TokenTransferModule {
-    fn asset_transfer_module() -> pallet_ismp::ModuleId;
-}
-
-impl<T: Config> ChargeTransactionPayment<T>
+impl<T: Config> ChargeAssetTxPayment<T>
 where
     T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
-    BalanceOf<T>: Send + Sync + FixedPointOperand,
+    AssetBalanceOf<T>: Send + Sync + FixedPointOperand,
+    BalanceOf<T>: Send + Sync + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
+    ChargeAssetIdOf<T>: Send + Sync,
+    Credit<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
 {
-    /// utility constructor. Used only in client/factory code.
-    pub fn from(fee: BalanceOf<T>) -> Self {
-        Self(fee)
+    /// Utility constructor. Used only in client/factory code.
+    pub fn from(tip: BalanceOf<T>, asset_id: Option<ChargeAssetIdOf<T>>) -> Self {
+        Self { tip, asset_id }
     }
 
-    /// Returns the tip as being chosen by the transaction sender.
-    pub fn tip(&self) -> BalanceOf<T> {
-        self.0
-    }
-
-    fn withdraw_fee_from_ismp_message() -> Result<
-        (
-            BalanceOf<T>,
-            <<T as Config>::OnChargeTransaction as OnChargeTransaction<T>>::LiquidityInfo,
-        ),
-        TransactionValidityError,
-    > {
-    }
-
+    /// Fee withdrawal logic that dispatches to either `OnChargeAssetTransaction` or
+    /// `OnChargeTransaction`.
     fn withdraw_fee(
         &self,
         who: &T::AccountId,
         call: &T::RuntimeCall,
         info: &DispatchInfoOf<T::RuntimeCall>,
         len: usize,
-    ) -> Result<
-        (
-            BalanceOf<T>,
-            <<T as Config>::OnChargeTransaction as OnChargeTransaction<T>>::LiquidityInfo,
-        ),
-        TransactionValidityError,
-    > {
-        let tip = self.0;
-        let fee = Pallet::<T>::compute_fee(len as u32, info, tip);
-
-        <<T as Config>::OnChargeTransaction as OnChargeTransaction<T>>::withdraw_fee(
-            who, call, info, fee, tip,
-        )
-        .map(|i| (fee, i))
-    }
-
-    /// Get an appropriate priority for a transaction with the given `DispatchInfo`, encoded length
-    /// and user-included tip.
-    ///
-    /// The priority is based on the amount of `tip` the user is willing to pay per unit of either
-    /// `weight` or `length`, depending which one is more limiting. For `Operational` extrinsics
-    /// we add a "virtual tip" to the calculations.
-    ///
-    /// The formula should simply be `tip / bounded_{weight|length}`, but since we are using
-    /// integer division, we have no guarantees it's going to give results in any reasonable
-    /// range (might simply end up being zero). Hence we use a scaling factor:
-    /// `tip * (max_block_{weight|length} / bounded_{weight|length})`, since given current
-    /// state of-the-art blockchains, number of per-block transactions is expected to be in a
-    /// range reasonable enough to not saturate the `Balance` type while multiplying by the tip.
-    pub fn get_priority(
-        info: &DispatchInfoOf<T::RuntimeCall>,
-        len: usize,
-        tip: BalanceOf<T>,
-        final_fee: BalanceOf<T>,
-    ) -> TransactionPriority {
-        // Calculate how many such extrinsics we could fit into an empty block and take
-        // the limitting factor.
-        let max_block_weight = T::BlockWeights::get().max_block;
-        let max_block_length = *T::BlockLength::get().max.get(info.class) as u64;
-
-        // TODO: Take into account all dimensions of weight
-        let max_block_weight = max_block_weight.ref_time();
-        let info_weight = info.weight.ref_time();
-
-        let bounded_weight = info_weight.clamp(1, max_block_weight);
-        let bounded_length = (len as u64).clamp(1, max_block_length);
-
-        let max_tx_per_block_weight = max_block_weight / bounded_weight;
-        let max_tx_per_block_length = max_block_length / bounded_length;
-        // Given our current knowledge this value is going to be in a reasonable range - i.e.
-        // less than 10^9 (2^30), so multiplying by the `tip` value is unlikely to overflow the
-        // balance type. We still use saturating ops obviously, but the point is to end up with some
-        // `priority` distribution instead of having all transactions saturate the priority.
-        let max_tx_per_block =
-            max_tx_per_block_length.min(max_tx_per_block_weight).saturated_into::<BalanceOf<T>>();
-        let max_reward = |val: BalanceOf<T>| val.saturating_mul(max_tx_per_block);
-
-        // To distribute no-tip transactions a little bit, we increase the tip value by one.
-        // This means that given two transactions without a tip, smaller one will be preferred.
-        let tip = tip.saturating_add(One::one());
-        let scaled_tip = max_reward(tip);
-
-        match info.class {
-            DispatchClass::Normal => {
-                // For normal class we simply take the `tip_per_weight`.
-                scaled_tip
-            }
-            DispatchClass::Mandatory => {
-                // Mandatory extrinsics should be prohibited (e.g. by the [`CheckWeight`]
-                // extensions), but just to be safe let's return the same priority as `Normal` here.
-                scaled_tip
-            }
-            DispatchClass::Operational => {
-                // A "virtual tip" value added to an `Operational` extrinsic.
-                // This value should be kept high enough to allow `Operational` extrinsics
-                // to get in even during congestion period, but at the same time low
-                // enough to prevent a possible spam attack by sending invalid operational
-                // extrinsics which push away regular transactions from the pool.
-                let fee_multiplier = T::OperationalFeeMultiplier::get().saturated_into();
-                let virtual_tip = final_fee.saturating_mul(fee_multiplier);
-                let scaled_virtual_tip = max_reward(virtual_tip);
-
-                scaled_tip.saturating_add(scaled_virtual_tip)
-            }
+    ) -> Result<(BalanceOf<T>, InitialPayment<T>), TransactionValidityError> {
+        let fee = pallet_transaction_payment::Pallet::<T>::compute_fee(len as u32, info, self.tip);
+        debug_assert!(self.tip <= fee, "tip should be included in the computed fee");
+        if fee.is_zero() {
+            Ok((fee, InitialPayment::Nothing))
+        } else if let Some(asset_id) = self.asset_id {
+            <T as pallet::Config>::OnChargeAssetTransaction::withdraw_fee(
+                who,
+                call,
+                info,
+                asset_id,
+                fee.into(),
+                self.tip.into(),
+            )
+            .map(|i| (fee, InitialPayment::Asset(i.into())))
+        } else {
+            <OnChargeTransactionOf<T> as OnChargeTransaction<T>>::withdraw_fee(
+                who, call, info, fee, self.tip,
+            )
+            .map(|i| (fee, InitialPayment::Native(i)))
+            .map_err(|_| -> TransactionValidityError { InvalidTransaction::Payment.into() })
         }
-        .saturated_into::<TransactionPriority>()
     }
 }
 
-impl<T: Config> SignedExtension for ChargeTransactionPayment<T>
+impl<T: Config> sp_std::fmt::Debug for ChargeAssetTxPayment<T> {
+    #[cfg(feature = "std")]
+    fn fmt(&self, f: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+        write!(f, "ChargeAssetTxPayment<{:?}, {:?}>", self.tip, self.asset_id.encode())
+    }
+    #[cfg(not(feature = "std"))]
+    fn fmt(&self, _: &mut sp_std::fmt::Formatter) -> sp_std::fmt::Result {
+        Ok(())
+    }
+}
+
+impl<T: Config> SignedExtension for ChargeAssetTxPayment<T>
 where
-    BalanceOf<T>: Send + Sync + From<u64> + FixedPointOperand,
-    T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
+    T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>
+        + IsSubType<pallet_ismp::Call<T>>,
+    T::Hash: From<H256>,
+    AssetBalanceOf<T>: Send + Sync + FixedPointOperand,
+    BalanceOf<T>: Send + Sync + From<u64> + FixedPointOperand + IsType<ChargeAssetBalanceOf<T>>,
+    ChargeAssetIdOf<T>: Send + Sync,
+    Credit<T::AccountId, <T as pallet_asset_tx_payment::Config>::Fungibles>:
+        IsType<ChargeAssetLiquidityOf<T>>,
 {
-    const IDENTIFIER: &'static str = "ChargeTransactionPayment";
+    const IDENTIFIER: &'static str = "ChargeAssetTxPayment";
     type AccountId = T::AccountId;
     type Call = T::RuntimeCall;
     type AdditionalSigned = ();
     type Pre = (
         // tip
         BalanceOf<T>,
-        // who paid the fee - this is an option to allow for a Default impl.
+        // who paid the fee
         Self::AccountId,
         // imbalance resulting from withdrawing the fee
-        <<T as Config>::OnChargeTransaction as OnChargeTransaction<T>>::LiquidityInfo,
+        InitialPayment<T>,
+        // asset_id for the transaction payment
+        Option<ChargeAssetIdOf<T>>,
+        // boolean to indicate whether the call is an ISMP call
+        IsIsmpCall,
     );
+
     fn additional_signed(&self) -> sp_std::result::Result<(), TransactionValidityError> {
         Ok(())
     }
@@ -203,41 +192,10 @@ where
         info: &DispatchInfoOf<Self::Call>,
         len: usize,
     ) -> TransactionValidity {
-        if let Ok((final_fee, _)) = self.withdraw_fee(who, call, info, len) {
-            let tip = self.0;
-
-            Ok(ValidTransaction {
-                priority: Self::get_priority(info, len, tip, final_fee),
-                ..Default::default()
-            })
-        } else {
-            match call.is_sub_type() {
-                Some(pallet_ismp::Call::handle { messages }) => {
-                    let post = messages.iter().find(|msg| match msg {
-                        pallet_ismp::Message::Request(req) => req.requests.iter().find(|post| {
-                            <pallet_ismp::ModuleId as Decode>::decode(&mut &*req.to);
-                            match id {
-                                Ok(id) => id == <M as TokenTransferModule>::asset_transfer_module(),
-                                _ => false,
-                            }
-                        }),
-                        _ => false,
-                    });
-                    match post {
-                        Some(post) => {
-                            let data = <D as Decode>::decode(&mut &post.data[..])
-                                .map_err(|_| TransactionValidityError::Invalid(Payment));
-                        }
-                        _ => return Err(TransactionValidityError::Invalid(Payment)),
-                    }
-                }
-                _ => Err(TransactionValidityError::Invalid(Payment)),
-            }
-            Ok(ValidTransaction {
-                priority: Self::get_priority(info, len, tip, final_fee),
-                ..Default::default()
-            })
-        }
+        use pallet_transaction_payment::ChargeTransactionPayment;
+        let (fee, _) = self.withdraw_fee(who, call, info, len)?;
+        let priority = ChargeTransactionPayment::<T>::get_priority(info, len, self.tip, fee);
+        Ok(ValidTransaction { priority, ..Default::default() })
     }
 
     fn pre_dispatch(
@@ -247,49 +205,81 @@ where
         info: &DispatchInfoOf<Self::Call>,
         len: usize,
     ) -> Result<Self::Pre, TransactionValidityError> {
-        if let Ok((_fee, imbalance)) = self.withdraw_fee(who, call, info, len) {
-            Ok((self.0, who.clone(), imbalance))
+        if let Ok((_fee, initial_payment)) = self.withdraw_fee(who, call, info, len) {
+            Ok((self.tip, who.clone(), initial_payment, self.asset_id, false))
         } else {
-            match call.is_sub_type() {
+            match call.is_sub_type().cloned() {
                 Some(pallet_ismp::Call::handle { messages }) => {
-                    let post = messages.iter().find(|msg| match msg {
-                        pallet_ismp::Message::Request(req) => req.requests.iter().find(|post| {
-                            <pallet_ismp::ModuleId as Decode>::decode(&mut &*req.to);
-                            match id {
-                                Ok(id) => id == <M as TokenTransferModule>::asset_transfer_module(),
-                                _ => false,
-                            }
-                        }),
-                        _ => false,
-                    });
-                    match post {
-                        Some(post) => {
-                            let data = <D as Decode>::decode(&mut &post.data[..])
-                                .map_err(|_| TransactionValidityError::Invalid(Payment));
-                        }
-                        _ => return Err(TransactionValidityError::Invalid(Payment)),
+                    if let Ok(_) = pallet_ismp::Pallet::<T>::handle_messages(messages) {
+                        ()
+                    } else {
+                        return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
+                    }
+                    if let Ok((_fee, initial_payment)) = self.withdraw_fee(who, call, info, len) {
+                        // Self::CallType::ISMPCall
+                        Ok((self.tip, who.clone(), initial_payment, self.asset_id, true))
+                    } else {
+                        Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
                     }
                 }
-                _ => Err(TransactionValidityError::Invalid(Payment)),
+                _ => Err(TransactionValidityError::Invalid(InvalidTransaction::Payment)),
             }
-            Ok((self.0, who.clone(), imbalance))
         }
     }
 
     fn post_dispatch(
-        maybe_pre: Option<Self::Pre>,
+        pre: Option<Self::Pre>,
         info: &DispatchInfoOf<Self::Call>,
         post_info: &PostDispatchInfoOf<Self::Call>,
         len: usize,
-        _result: &DispatchResult,
+        result: &DispatchResult,
     ) -> Result<(), TransactionValidityError> {
-        if let Some((tip, who, imbalance)) = maybe_pre {
-            let actual_fee = Pallet::<T>::compute_actual_fee(len as u32, info, post_info, tip);
-            T::OnChargeTransaction::correct_and_deposit_fee(
-                &who, info, post_info, actual_fee, tip, imbalance,
-            )?;
-            Pallet::<T>::deposit_event(Event::<T>::TransactionFeePaid { who, actual_fee, tip });
+        if let Some((tip, who, initial_payment, asset_id, is_ismp_call)) = pre {
+            // if ISMP call, withdraw fee
+            if is_ismp_call {
+                // withdraw fee
+            }
+            match initial_payment {
+                InitialPayment::Native(already_withdrawn) => {
+                    pallet_transaction_payment::ChargeTransactionPayment::<T>::post_dispatch(
+                        Some((tip, who, already_withdrawn)),
+                        info,
+                        post_info,
+                        len,
+                        result,
+                    )?;
+                }
+                InitialPayment::Asset(already_withdrawn) => {
+                    let actual_fee = pallet_transaction_payment::Pallet::<T>::compute_actual_fee(
+                        len as u32, info, post_info, tip,
+                    );
+
+                    let (converted_fee, converted_tip) =
+                        <T as pallet::Config>::OnChargeAssetTransaction::correct_and_deposit_fee(
+                            &who,
+                            info,
+                            post_info,
+                            actual_fee.into(),
+                            tip.into(),
+                            already_withdrawn.into(),
+                        )?;
+                    Pallet::<T>::deposit_event(Event::<T>::AssetTxFeePaid {
+                        who,
+                        actual_fee: converted_fee,
+                        tip: converted_tip,
+                        asset_id,
+                    });
+                }
+                InitialPayment::Nothing => {
+                    // `actual_fee` should be zero here for any signed extrinsic. It would be
+                    // non-zero here in case of unsigned extrinsics as they don't pay fees but
+                    // `compute_actual_fee` is not aware of them. In both cases it's fine to just
+                    // move ahead without adjusting the fee, though, so we do nothing.
+                    debug_assert!(tip.is_zero(), "tip should be zero if initial fee was zero.");
+                }
+            }
         }
+
         Ok(())
     }
 }

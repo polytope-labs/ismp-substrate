@@ -3138,7 +3138,7 @@ dependencies = [
 [[package]]
 name = "ismp-primitives"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/substrate-ismp?branch=main#e15c8fedc201bf55982b7d4d0265701055a6ffbe"
+source = "git+https://github.com/polytope-labs/substrate-ismp?branch=main#7fb09da6c7b818a98c25c962fee0ddde8e737306"
 dependencies = [
  "ckb-merkle-mountain-range",
  "frame-system",
@@ -3146,6 +3146,7 @@ dependencies = [
  "parity-scale-codec",
  "primitive-types",
  "scale-info",
+ "serde",
  "sp-runtime",
 ]
 
@@ -4684,6 +4685,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-asset-tx-payment"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core 7.0.0",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 5.0.0",
+]
+
+[[package]]
 name = "pallet-balances"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
@@ -4727,11 +4746,12 @@ dependencies = [
 [[package]]
 name = "pallet-ismp"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/substrate-ismp?branch=main#e15c8fedc201bf55982b7d4d0265701055a6ffbe"
+source = "git+https://github.com/polytope-labs/substrate-ismp?branch=main#7fb09da6c7b818a98c25c962fee0ddde8e737306"
 dependencies = [
  "ckb-merkle-mountain-range",
  "derive_more",
  "enum-as-inner",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "ismp",
@@ -4739,6 +4759,7 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-api",
  "sp-core 7.0.0",
  "sp-io",
@@ -4773,6 +4794,7 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-core 7.0.0",
  "sp-io",
  "sp-runtime",
@@ -8841,10 +8863,12 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-asset-tx-payment",
  "pallet-ismp 0.1.0 (git+https://github.com/polytope-labs/substrate-ismp?branch=main)",
  "pallet-transaction-payment",
  "parity-scale-codec",
  "scale-info",
+ "sp-core 7.0.0",
  "sp-runtime",
  "sp-std 5.0.0",
 ]
