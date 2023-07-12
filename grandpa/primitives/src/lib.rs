@@ -101,7 +101,7 @@ pub struct ParachainHeadersWithFinalityProof<H: codec::Codec> {
     /// Contains a map of relay chain header hashes to parachain headers
     /// finalzed at the relay chain height. We check for this parachain header finalization
     /// via state proofs. Also contains extrinsic proof for timestamp.
-    pub parachain_headers: BTreeMap<Hash, ParachainHeaderProofs>,
+    pub parachain_headers: BTreeMap<Hash, Vec<ParachainHeaderProofs>>,
 }
 
 /// Host functions that allow the light client perform cryptographic operations in native.

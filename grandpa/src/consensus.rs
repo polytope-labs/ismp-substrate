@@ -37,7 +37,7 @@ use verifier::{
 };
 
 pub const POLKADOT_CONSENSUS_STATE_ID: [u8; 8] = *b"polkadot";
-pub const KUSAMA_CONSENSUS_STATE_ID: [u8; 8] = *b"__kusama";
+pub const KUSAMA_CONSENSUS_STATE_ID: [u8; 8] = *b"_kusama_";
 
 /// The `ConsensusEngineId` of ISMP digest in the parachain header.
 pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
@@ -94,18 +94,10 @@ where
                         headers_with_finality_proof,
                     )?;
 
-                for header in parachain_headers {
-                    let (mut timestamp, mut overlay_root) = (0, H256::default());
+                for (para_height, (header, timestamp)) in parachain_headers {
+                    let mut overlay_root = H256::default();
                     for digest in header.digest().logs.iter() {
                         match digest {
-                            DigestItem::PreRuntime(consensus_engine_id, value)
-                                if *consensus_engine_id == AURA_ENGINE_ID =>
-                            {
-                                let slot = Slot::decode(&mut &value[..]).map_err(|e| {
-                                    Error::ImplementationSpecific(format!("Cannot slot: {e:?}"))
-                                })?;
-                                timestamp = Duration::from_millis(*slot * SLOT_DURATION).as_secs();
-                            }
                             DigestItem::Consensus(consensus_engine_id, value)
                                 if *consensus_engine_id == ISMP_ID =>
                             {
@@ -155,7 +147,7 @@ where
             }
 
             ConsensusMessage::StandaloneChainMessage(standalone_chain_message) => {
-                let (derived_consensus_state, header) = verify_grandpa_finality_proof(
+                let (derived_consensus_state, header, _) = verify_grandpa_finality_proof(
                     consensus_state.clone(),
                     standalone_chain_message.finality_proof,
                 )?;
