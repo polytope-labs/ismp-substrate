@@ -66,8 +66,8 @@ fn push_leaves(range: Range<u64>) -> Vec<NodeIndex> {
     let mut positions = vec![];
     for nonce in range {
         let post = ismp_rs::router::Post {
-            source_chain: StateMachine::Kusama(2000),
-            dest_chain: StateMachine::Kusama(2001),
+            source: StateMachine::Kusama(2000),
+            dest: StateMachine::Kusama(2001),
             nonce,
             from: vec![0u8; 32],
             to: vec![1u8; 32],
@@ -311,7 +311,7 @@ fn should_handle_get_request_responses_correctly() {
             .into_iter()
             .map(|i| {
                 let msg = DispatchGet {
-                    dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
+                    dest: StateMachine::Ethereum(Ethereum::ExecutionLayer),
                     from: vec![0u8; 32],
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],
                     height: 3,
@@ -321,8 +321,8 @@ fn should_handle_get_request_responses_correctly() {
                 let dispatcher = Dispatcher::<Test>::default();
                 dispatcher.dispatch_request(DispatchRequest::Get(msg)).unwrap();
                 let get = ismp_rs::router::Get {
-                    source_chain: host.host_state_machine(),
-                    dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
+                    source: host.host_state_machine(),
+                    dest: StateMachine::Ethereum(Ethereum::ExecutionLayer),
                     nonce: i,
                     from: vec![0u8; 32],
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],

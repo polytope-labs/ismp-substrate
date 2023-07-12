@@ -137,11 +137,7 @@ pub mod benchmarks {
         let commitment = hash_request::<Host<T>>(&request);
         RequestCommitments::<T>::insert(
             commitment.0.to_vec(),
-            LeafIndexQuery {
-                source_chain: post.source,
-                dest_chain: post.dest,
-                nonce: post.nonce,
-            },
+            LeafIndexQuery { source_chain: post.source, dest_chain: post.dest, nonce: post.nonce },
         );
 
         let response = Response::Post(PostResponse { post, response: vec![] });
@@ -177,11 +173,7 @@ pub mod benchmarks {
         let commitment = hash_request::<Host<T>>(&request);
         RequestCommitments::<T>::insert(
             commitment.0.to_vec(),
-            LeafIndexQuery {
-                source_chain: post.source,
-                dest_chain: post.dest,
-                nonce: post.nonce,
-            },
+            LeafIndexQuery { source_chain: post.source, dest_chain: post.dest, nonce: post.nonce },
         );
 
         let msg = TimeoutMessage::Post {
