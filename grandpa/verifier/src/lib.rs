@@ -32,8 +32,8 @@ use primitives::{
     error,
     error::Error,
     justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
-    parachain_header_storage_key, ConsensusState, FinalityProof, HostFunctions,
-    ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
+    parachain_header_storage_key, ConsensusState, FinalityProof, ParachainHeaderProofs,
+    ParachainHeadersWithFinalityProof,
 };
 use sp_core::H256;
 use sp_runtime::traits::Header;
@@ -43,13 +43,12 @@ use sp_trie::{LayoutV0, StorageProof};
 /// headers.
 ///
 /// TODO: return verified header and the associated time stamp
-pub fn verify_grandpa_finality_proof<H, Host>(
+pub fn verify_grandpa_finality_proof<H>(
     mut consensus_state: ConsensusState,
     finality_proof: FinalityProof<H>,
-) -> Result<(ConsensusState, sp_runtime::generic::Header<H, H>, AncestryChain<H>), error::Error>
+) -> Result<(ConsensusState, H, AncestryChain<H>), error::Error>
 where
-    H: Header<Hash = H256, Number = u32>,
-    Host: HostFunctions,
+    H: Header<Hash = H256, Number = u32> + Hasher,
     H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
 {
     // First validate unknown headers.
@@ -94,8 +93,7 @@ where
     headers.sort();
 
     // 2. verify justification.
-    justification
-        .verify::<Host>(consensus_state.current_set_id, &consensus_state.current_authorities)?;
+    justification.verify(consensus_state.current_set_id, &consensus_state.current_authorities)?;
 
     // Sets new consensus state, optionally rotating authorities
     consensus_state.latest_hash = target.hash();
@@ -111,17 +109,13 @@ where
 ///
 /// Next, we prove the finality of parachain headers, by verifying patricia-merkle trie state proofs
 /// of these headers, stored at the recently finalized relay chain heights.
-/// TODO: return verified headers(compared with the consensus state para ids) and the associated
-/// time stamp TODO: remove all host functions
-pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
+pub fn verify_parachain_headers_with_grandpa_finality_proof<H>(
     mut consensus_state: ConsensusState,
     proof: ParachainHeadersWithFinalityProof<H>,
-) -> Result<(ConsensusState, BTreeMap<u32, (sp_runtime::generic::Header<H, H>, u64)>), error::Error>
+) -> Result<(ConsensusState, BTreeMap<u32, (H, u64)>), error::Error>
 where
-    H: Header<Hash = H256, Number = u32>,
+    H: Header<Hash = H256, Number = u32> + Hasher,
     H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
-    Host: HostFunctions,
-    Host::BlakeTwo256: Hasher<Out = H256>,
 {
     let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers } = proof;
 
@@ -146,7 +140,7 @@ where
             let proof = StorageProof::new(state_proof);
             let key = parachain_header_storage_key(para_id);
             // verify patricia-merkle state proofs
-            let header = state_machine::read_proof_check::<Host::BlakeTwo256, _>(
+            let header = state_machine::read_proof_check::<_, _>(
                 relay_chain_header.state_root(),
                 proof,
                 &[key.as_ref()],
@@ -161,7 +155,7 @@ where
             // https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
             let key = codec::Compact(0u32).encode();
             // verify extrinsic proof for timestamp extrinsic
-            sp_trie::verify_trie_proof::<LayoutV0<Host::BlakeTwo256>, _, _, _>(
+            sp_trie::verify_trie_proof::<LayoutV0<_>, _, _, _>(
                 parachain_header.extrinsics_root(),
                 &extrinsic_proof,
                 &vec![(key, Some(&extrinsic[..]))],
