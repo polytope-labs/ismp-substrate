@@ -12,6 +12,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific lang
 
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+extern crate core;
+
 pub mod consensus;
 pub mod consensus_message;
 
@@ -115,7 +119,7 @@ pub mod pallet {
         }
 
         /// Remove some parachains from the list of parachains in the relay chain consensus state
-        #[pallet::call_index(0)]
+        #[pallet::call_index(1)]
         #[pallet::weight(0)]
         pub fn remove_parachains(
             origin: OriginFor<T>,

@@ -28,8 +28,7 @@ use primitive_types::H256;
 use primitives::{
     ConsensusState, FinalityProof, ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
-use sp_consensus_aura::AURA_ENGINE_ID;
-use sp_core::H256;
+use sp_consensus_aura::{Slot, AURA_ENGINE_ID};
 use sp_runtime::DigestItem;
 use std::{collections::BTreeMap, time::Duration};
 use verifier::{
@@ -39,12 +38,14 @@ use verifier::{
 pub const POLKADOT_CONSENSUS_STATE_ID: [u8; 8] = *b"polkadot";
 pub const KUSAMA_CONSENSUS_STATE_ID: [u8; 8] = *b"_kusama_";
 
+const SLOT_DURATION: u64 = 12_000;
+
 /// The `ConsensusEngineId` of ISMP digest in the parachain header.
 pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
 
 pub struct GrandpaConsensusClient<T>(PhantomData<(T)>);
 
-impl<T> Default for ParachainConsensusClient<T> {
+impl<T> Default for GrandpaConsensusClient<T> {
     fn default() -> Self {
         Self(PhantomData)
     }
