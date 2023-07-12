@@ -122,7 +122,7 @@ pub fn extract_total_gas(
     evm_limit_total: u64,
     ink_used_total: u64,
     ink_limit_total: u64,
-) -> (GasType, GasType) {
+) -> ((u64, u64), (u64, u64)) {
     let gas = res
         .iter()
         .filter_map(|res| match res {
@@ -163,13 +163,7 @@ pub fn extract_total_gas(
     }
 
     (
-        GasType::Evm {
-            gas_used: evm_gas_used + evm_used_total,
-            gas_limit: evm_gas_limit + evm_limit_total,
-        },
-        GasType::Ink {
-            gas_used: ink_gas_used + ink_used_total,
-            gas_limit: ink_gas_limit + ink_limit_total,
-        },
+        (evm_gas_used + evm_used_total, evm_gas_limit + evm_limit_total),
+        (ink_gas_used + ink_used_total, ink_gas_limit + ink_limit_total),
     )
 }

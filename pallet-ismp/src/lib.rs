@@ -61,7 +61,7 @@ use sp_core::{offchain::StorageKind, H256};
 use crate::{
     errors::{HandlingError, ModuleCallbackResult},
     mmr::mmr::Mmr,
-    primitives::{extract_total_gas, GasType},
+    primitives::extract_total_gas,
     weight_info::get_weight,
 };
 use ismp_primitives::{
@@ -516,96 +516,36 @@ where
                     }
                 }
                 Ok(MessageResult::Response(res)) => {
-                    let (type_1, type_2) = extract_total_gas(
-                        &res,
-                        evm_gas_used,
-                        evm_gas_limit,
-                        ink_gas_used,
-                        ink_gas_limit,
-                    );
-                    match type_1 {
-                        GasType::Evm { gas_used, gas_limit } => {
-                            evm_gas_used = gas_used;
-                            evm_gas_limit = gas_limit;
-                        }
-                        GasType::Ink { gas_used, gas_limit } => {
-                            ink_gas_used = gas_used;
-                            ink_gas_limit = gas_limit
-                        }
-                    }
-
-                    match type_2 {
-                        GasType::Evm { gas_used, gas_limit } => {
-                            evm_gas_used = gas_used;
-                            evm_gas_limit = gas_limit;
-                        }
-                        GasType::Ink { gas_used, gas_limit } => {
-                            ink_gas_used = gas_used;
-                            ink_gas_limit = gas_limit
-                        }
-                    }
+                    ((evm_gas_used, evm_gas_limit), (ink_gas_used, ink_gas_limit)) =
+                        extract_total_gas(
+                            &res,
+                            evm_gas_used,
+                            evm_gas_limit,
+                            ink_gas_used,
+                            ink_gas_limit,
+                        );
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Response(res));
                 }
                 Ok(MessageResult::Request(res)) => {
-                    let (type_1, type_2) = extract_total_gas(
-                        &res,
-                        evm_gas_used,
-                        evm_gas_limit,
-                        ink_gas_used,
-                        ink_gas_limit,
-                    );
-                    match type_1 {
-                        GasType::Evm { gas_used, gas_limit } => {
-                            evm_gas_used = gas_used;
-                            evm_gas_limit = gas_limit;
-                        }
-                        GasType::Ink { gas_used, gas_limit } => {
-                            ink_gas_used = gas_used;
-                            ink_gas_limit = gas_limit
-                        }
-                    }
-
-                    match type_2 {
-                        GasType::Evm { gas_used, gas_limit } => {
-                            evm_gas_used = gas_used;
-                            evm_gas_limit = gas_limit;
-                        }
-                        GasType::Ink { gas_used, gas_limit } => {
-                            ink_gas_used = gas_used;
-                            ink_gas_limit = gas_limit
-                        }
-                    }
+                    ((evm_gas_used, evm_gas_limit), (ink_gas_used, ink_gas_limit)) =
+                        extract_total_gas(
+                            &res,
+                            evm_gas_used,
+                            evm_gas_limit,
+                            ink_gas_used,
+                            ink_gas_limit,
+                        );
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Request(res));
                 }
                 Ok(MessageResult::Timeout(res)) => {
-                    let (type_1, type_2) = extract_total_gas(
-                        &res,
-                        evm_gas_used,
-                        evm_gas_limit,
-                        ink_gas_used,
-                        ink_gas_limit,
-                    );
-                    match type_1 {
-                        GasType::Evm { gas_used, gas_limit } => {
-                            evm_gas_used = gas_used;
-                            evm_gas_limit = gas_limit;
-                        }
-                        GasType::Ink { gas_used, gas_limit } => {
-                            ink_gas_used = gas_used;
-                            ink_gas_limit = gas_limit
-                        }
-                    }
-
-                    match type_2 {
-                        GasType::Evm { gas_used, gas_limit } => {
-                            evm_gas_used = gas_used;
-                            evm_gas_limit = gas_limit;
-                        }
-                        GasType::Ink { gas_used, gas_limit } => {
-                            ink_gas_used = gas_used;
-                            ink_gas_limit = gas_limit
-                        }
-                    }
+                    ((evm_gas_used, evm_gas_limit), (ink_gas_used, ink_gas_limit)) =
+                        extract_total_gas(
+                            &res,
+                            evm_gas_used,
+                            evm_gas_limit,
+                            ink_gas_used,
+                            ink_gas_limit,
+                        );
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Timeout(res));
                 }
                 Err(err) => {
