@@ -241,4 +241,12 @@ where
         UnbondingPeriod::<T>::insert(consensus_state_id, period);
         Ok(())
     }
+
+    fn store_challenge_period(
+        &self,
+        _consensus_state_id: ConsensusStateId,
+        _period: u64,
+    ) -> Result<(), Error> {
+        todo!()
+    }
 }

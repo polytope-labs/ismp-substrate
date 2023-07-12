@@ -26,14 +26,9 @@ use pallet_ismp::host::Host;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use codec::alloc::collections::BTreeSet;
-    use cumulus_primitives_core::{relay_chain, ParaId};
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use ismp::{
-        host::{IsmpHost, StateMachine},
-        messaging::{ConsensusMessage, Message},
-    };
+    use ismp::host::IsmpHost;
     use primitive_types::H256;
     use primitives::ConsensusState;
 
@@ -42,24 +37,12 @@ pub mod pallet {
 
     /// The config trait
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_ismp::Config {
         /// The overarching event type
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// Origin allowed to add or remove parachains in Consensus State
         type AdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
-
-    /// Mapping of standalone chain consensus state id to 1 state machine.
-    #[pallet::storage]
-    #[pallet::getter(fn relay_chain_state)]
-    pub type StandaloneChainConsensusState<T: Config> =
-        StorageMap<_, Blake2_128Concat, Vec<u8>, StateMachine>;
-
-    /// Mapping of relay chain consensus state id to set of para ids.
-    #[pallet::storage]
-    #[pallet::getter(fn relay_chain_state)]
-    pub type RelayChainConsensusState<T: Config> =
-        StorageMap<_, Blake2_128Concat, Vec<u8>, BTreeSet<ParaId>>;
 
     /// Events emitted by this pallet
     #[pallet::event]
@@ -77,6 +60,8 @@ pub mod pallet {
         ErrorDecodingConsensusState,
         /// Incorrect consensus state id length
         IncorrectConsensusStateIdLength,
+        /// Error storing consensus state
+        ErrorStoringConsensusState,
     }
 
     #[pallet::call]
@@ -86,7 +71,7 @@ pub mod pallet {
     {
         /// Add some new parachains to the list of parachains in the relay chain consensus state
         #[pallet::call_index(0)]
-        #[pallet::weight(0)]
+        #[pallet::weight((0, DispatchClass::Mandatory))]
         pub fn add_parachains(
             origin: OriginFor<T>,
             consensus_state_id_vec: Vec<u8>,
@@ -98,29 +83,31 @@ pub mod pallet {
             let consensus_state_id = consensus_state_id_vec
                 .as_slice()
                 .try_into()
-                .map_err(|_| Error::IncorrectConsensusStateIdLength)?;
+                .map_err(|_| Error::<T>::IncorrectConsensusStateIdLength)?;
 
             let encoded_consensus_state = ismp_host
                 .consensus_state(consensus_state_id)
-                .map_err(|_| Error::ErrorFetchingConsensusState)?;
+                .map_err(|_| Error::<T>::ErrorFetchingConsensusState)?;
             let mut consensus_state: ConsensusState =
                 codec::Decode::decode(&mut &encoded_consensus_state[..])
-                    .map_err(|_| Error::ErrorDecodingConsensusState)?;
+                    .map_err(|_| Error::<T>::ErrorDecodingConsensusState)?;
 
             let mut stored_para_ids = consensus_state.para_ids;
             para_ids.iter().for_each(|para_id| {
-                stored_para_ids.entry(para_id).or_insert(true);
+                stored_para_ids.entry(*para_id).or_insert(true);
             });
             consensus_state.para_ids = stored_para_ids;
 
             let encoded_consensus_state = consensus_state.encode();
-            ismp_host.store_consensus_state(consensus_state_id, encoded_consensus_state)?;
+            ismp_host
+                .store_consensus_state(consensus_state_id, encoded_consensus_state)
+                .map_err(|_| Error::<T>::ErrorStoringConsensusState)?;
             Ok(())
         }
 
         /// Remove some parachains from the list of parachains in the relay chain consensus state
         #[pallet::call_index(1)]
-        #[pallet::weight(0)]
+        #[pallet::weight((0, DispatchClass::Mandatory))]
         pub fn remove_parachains(
             origin: OriginFor<T>,
             consensus_state_id_vec: Vec<u8>,
@@ -132,21 +119,23 @@ pub mod pallet {
             let consensus_state_id = consensus_state_id_vec
                 .as_slice()
                 .try_into()
-                .map_err(|_| Error::IncorrectConsensusStateIdLength)?;
+                .map_err(|_| Error::<T>::IncorrectConsensusStateIdLength)?;
 
             let encoded_consensus_state = ismp_host
                 .consensus_state(consensus_state_id)
-                .map_err(|_| Error::ErrorFetchingConsensusState)?;
+                .map_err(|_| Error::<T>::ErrorFetchingConsensusState)?;
             let mut consensus_state: ConsensusState =
                 codec::Decode::decode(&mut &encoded_consensus_state[..])
-                    .map_err(|_| Error::ErrorDecodingConsensusState)?;
+                    .map_err(|_| Error::<T>::ErrorDecodingConsensusState)?;
 
             let mut stored_para_ids = consensus_state.para_ids;
             stored_para_ids.retain(|&key, _| !para_ids.contains(&key));
             consensus_state.para_ids = stored_para_ids;
 
             let encoded_consensus_state = consensus_state.encode();
-            ismp_host.store_consensus_state(consensus_state_id, encoded_consensus_state)?;
+            ismp_host
+                .store_consensus_state(consensus_state_id, encoded_consensus_state)
+                .map_err(|_| Error::<T>::ErrorStoringConsensusState)?;
             Ok(())
         }
     }

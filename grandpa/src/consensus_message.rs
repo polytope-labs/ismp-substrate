@@ -11,9 +11,8 @@
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific lang
-
 use alloc::{collections::BTreeMap, vec::Vec};
-use codec::{alloc::collections::BTreeMap, Decode, Encode};
+use codec::{Decode, Encode};
 use ismp::consensus::StateMachineId;
 use primitives::{FinalityProof, ParachainHeaderProofs};
 use sp_core::H256;
