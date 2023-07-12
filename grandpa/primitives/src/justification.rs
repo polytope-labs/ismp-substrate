@@ -19,6 +19,7 @@ use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;
 use frame_support::log;
+use sp_core::ed25519;
 use sp_finality_grandpa::{
     AuthorityId, AuthorityList, AuthoritySignature, ConsensusLog, Equivocation, RoundNumber,
     ScheduledChange, SetId, GRANDPA_ENGINE_ID,
@@ -250,7 +251,15 @@ where
     log::trace!(target: "pallet_grandpa", "Justification Message {:?}", (round, set_id));
     let buf = (message, round, set_id).encode();
 
-    if !Host::ed25519_verify(signature.as_ref(), &buf, id.as_ref()) {
+    let signature_bytes: &[u8] = signature.as_ref();
+    let sp_finality_signature: ed25519::Signature =
+        signature_bytes.try_into().map_err(|_| anyhow!("Could not fetch signature"))?;
+
+    let id_bytes: &[u8] = id.as_ref();
+    let pub_key: ed25519::Public =
+        id_bytes.try_into().map_err(|_| anyhow!("Could not fetch public key"))?;
+
+    if !Host::ed25519_verify(&sp_finality_signature, &buf, &pub_key) {
         Err(anyhow!("invalid signature for precommit in grandpa justification"))?
     }
 

@@ -56,5 +56,5 @@ pub struct RelayChainMessage {
     /// finality proof
     pub finality_proof: FinalityProof<SubstrateHeader>,
     /// parachain headers
-    pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>,
+    pub parachain_headers: BTreeMap<H256, Vec<ParachainHeaderProofs>>,
 }
