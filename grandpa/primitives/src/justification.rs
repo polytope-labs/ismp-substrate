@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{error, Commit, HostFunctions};
+use crate::{error, Commit};
 use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
@@ -52,27 +52,21 @@ where
     H::Number: finality_grandpa::BlockNumberOps,
 {
     /// Validate the commit and the votes' ancestry proofs.
-    pub fn verify<Host>(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), error::Error>
-    where
-        Host: HostFunctions,
-    {
+    pub fn verify(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), error::Error> {
         // It's safe to assume that the authority list will not contain duplicates,
         // since this list is extracted from a verified relaychain header.
         let voters =
             VoterSet::new(authorities.iter().cloned()).ok_or(anyhow!("Invalid AuthoritiesSet"))?;
 
-        self.verify_with_voter_set::<Host>(set_id, &voters)
+        self.verify_with_voter_set(set_id, &voters)
     }
 
     /// Validate the commit and the votes' ancestry proofs.
-    pub fn verify_with_voter_set<Host>(
+    pub fn verify_with_voter_set(
         &self,
         set_id: u64,
         voters: &VoterSet<AuthorityId>,
-    ) -> Result<(), error::Error>
-    where
-        Host: HostFunctions,
-    {
+    ) -> Result<(), error::Error> {
         use finality_grandpa::Chain;
 
         let ancestry_chain = AncestryChain::<H>::new(&self.votes_ancestries);
@@ -115,7 +109,7 @@ where
         for signed in self.commit.precommits.iter() {
             let message = finality_grandpa::Message::Precommit(signed.precommit.clone());
 
-            check_message_signature::<Host, _, _>(
+            check_message_signature::<_, _>(
                 &message,
                 &signed.id,
                 &signed.signature,
@@ -236,7 +230,7 @@ pub fn find_forced_change<H: HeaderT>(
 
 /// Check a message signature by encoding the message and verifying the provided signature using the
 /// expected authority id.
-pub fn check_message_signature<Host, H, N>(
+pub fn check_message_signature<H, N>(
     message: &finality_grandpa::Message<H, N>,
     id: &AuthorityId,
     signature: &AuthoritySignature,
@@ -244,7 +238,6 @@ pub fn check_message_signature<Host, H, N>(
     set_id: SetId,
 ) -> Result<(), anyhow::Error>
 where
-    Host: HostFunctions,
     H: Encode,
     N: Encode,
 {
@@ -259,7 +252,7 @@ where
     let pub_key: ed25519::Public =
         id_bytes.try_into().map_err(|_| anyhow!("Could not fetch public key"))?;
 
-    if !Host::ed25519_verify(&sp_finality_signature, &buf, &pub_key) {
+    if sp_io::Crypto::ed25519_verify(&sp_finality_signature, &buf, &pub_key) {
         Err(anyhow!("invalid signature for precommit in grandpa justification"))?
     }
 
@@ -268,12 +261,11 @@ where
 
 /// Verifies the equivocation proof by making sure that both votes target
 /// different blocks and that its signatures are valid.
-pub fn check_equivocation_proof<Host, H, N>(
+pub fn check_equivocation_proof<H, N>(
     set_id: u64,
     equivocation: Equivocation<H, N>,
 ) -> Result<(), anyhow::Error>
 where
-    Host: HostFunctions,
     H: Clone + Encode + PartialEq,
     N: Clone + Encode + PartialEq,
 {
@@ -289,7 +281,7 @@ where
             }
 
             // check signatures on both votes are valid
-            check_message_signature::<Host, _, _>(
+            check_message_signature::<_, _>(
                 &$message($equivocation.first.0),
                 &$equivocation.identity,
                 &$equivocation.first.1,
@@ -297,7 +289,7 @@ where
                 set_id,
             )?;
 
-            check_message_signature::<Host, _, _>(
+            check_message_signature::<_, _>(
                 &$message($equivocation.second.0),
                 &$equivocation.identity,
                 &$equivocation.second.1,

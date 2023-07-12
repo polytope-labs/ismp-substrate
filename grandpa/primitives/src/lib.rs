@@ -33,7 +33,6 @@ use sp_storage::StorageKey;
 
 /// GRANPA errors
 pub mod error;
-pub mod host_functions;
 /// GRANDPA justification utilities
 pub mod justification;
 
@@ -102,19 +101,6 @@ pub struct ParachainHeadersWithFinalityProof<H: codec::Codec> {
     /// finalzed at the relay chain height. We check for this parachain header finalization
     /// via state proofs. Also contains extrinsic proof for timestamp.
     pub parachain_headers: BTreeMap<Hash, Vec<ParachainHeaderProofs>>,
-}
-
-/// Host functions that allow the light client perform cryptographic operations in native.
-pub trait HostFunctions: host_functions::HostFunctions + 'static {
-    /// RelayChain header type.
-    type Header: Header;
-
-    /// Verify an ed25519 signature
-    fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool;
-    /// Stores the given list of RelayChain header hashes in the light client's storage.
-    fn insert_relay_header_hashes(headers: &[<Self::Header as Header>::Hash]);
-    /// Checks if a RelayChain header hash exists in the light client's storage.
-    fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool;
 }
 
 /// This returns the storage key for a parachain header on the relay chain.
