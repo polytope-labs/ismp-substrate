@@ -39,8 +39,6 @@ use sp_trie::{LayoutV0, StorageProof};
 
 /// This function verifies the GRANDPA finality proof for both standalone chain and parachain
 /// headers.
-///
-/// TODO: return verified header and the associated time stamp
 pub fn verify_grandpa_finality_proof<H>(
     mut consensus_state: ConsensusState,
     finality_proof: FinalityProof<H>,
@@ -107,6 +105,8 @@ where
 ///
 /// Next, we prove the finality of parachain headers, by verifying patricia-merkle trie state proofs
 /// of these headers, stored at the recently finalized relay chain heights.
+/// Returns the new Consensus state alongside a map of para id to a vector that contains a tuple of
+/// finalized parachain header and timestamp
 pub fn verify_parachain_headers_with_grandpa_finality_proof<H>(
     consensus_state: ConsensusState,
     proof: ParachainHeadersWithFinalityProof<H>,
