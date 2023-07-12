@@ -99,8 +99,8 @@ pub mod benchmarks {
         let host = Host::<T>::default();
         let height = setup_mock_client::<_, T>(&host);
         let post = Post {
-            source_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
-            dest_chain: <T as Config>::StateMachine::get(),
+            source: StateMachine::Ethereum(Ethereum::ExecutionLayer),
+            dest: <T as Config>::StateMachine::get(),
             nonce: 0,
             from: MODULE_ID.encode(),
             to: MODULE_ID.encode(),
@@ -124,8 +124,8 @@ pub mod benchmarks {
         let host = Host::<T>::default();
         let height = setup_mock_client::<_, T>(&host);
         let post = Post {
-            source_chain: <T as Config>::StateMachine::get(),
-            dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
+            source: <T as Config>::StateMachine::get(),
+            dest: StateMachine::Ethereum(Ethereum::ExecutionLayer),
             nonce: 0,
             from: MODULE_ID.encode(),
             to: MODULE_ID.encode(),
@@ -138,8 +138,8 @@ pub mod benchmarks {
         RequestCommitments::<T>::insert(
             commitment.0.to_vec(),
             LeafIndexQuery {
-                source_chain: post.source_chain,
-                dest_chain: post.dest_chain,
+                source_chain: post.source,
+                dest_chain: post.dest,
                 nonce: post.nonce,
             },
         );
@@ -164,8 +164,8 @@ pub mod benchmarks {
         let host = Host::<T>::default();
         let height = setup_mock_client::<_, T>(&host);
         let post = Post {
-            source_chain: <T as Config>::StateMachine::get(),
-            dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
+            source: <T as Config>::StateMachine::get(),
+            dest: StateMachine::Ethereum(Ethereum::ExecutionLayer),
             nonce: 0,
             from: MODULE_ID.encode(),
             to: MODULE_ID.encode(),
@@ -178,8 +178,8 @@ pub mod benchmarks {
         RequestCommitments::<T>::insert(
             commitment.0.to_vec(),
             LeafIndexQuery {
-                source_chain: post.source_chain,
-                dest_chain: post.dest_chain,
+                source_chain: post.source,
+                dest_chain: post.dest,
                 nonce: post.nonce,
             },
         );
@@ -200,8 +200,8 @@ pub mod benchmarks {
     fn on_finalize(x: Linear<1, 100>) {
         for nonce in 0..x {
             let post = ismp_rs::router::Post {
-                source_chain: StateMachine::Kusama(2000),
-                dest_chain: StateMachine::Kusama(2001),
+                source: StateMachine::Kusama(2000),
+                dest: StateMachine::Kusama(2001),
                 nonce: nonce.into(),
                 from: vec![0u8; 32],
                 to: vec![1u8; 32],

@@ -267,7 +267,7 @@ fn should_handle_get_request_timeouts_correctly() {
             .into_iter()
             .map(|i| {
                 let msg = DispatchGet {
-                    dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
+                    dest: StateMachine::Ethereum(Ethereum::ExecutionLayer),
                     from: vec![0u8; 32],
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],
                     height: 2,
@@ -277,8 +277,8 @@ fn should_handle_get_request_timeouts_correctly() {
                 let dispatcher = Dispatcher::<Test>::default();
                 dispatcher.dispatch_request(DispatchRequest::Get(msg)).unwrap();
                 let get = ismp_rs::router::Get {
-                    source_chain: host.host_state_machine(),
-                    dest_chain: StateMachine::Ethereum(Ethereum::ExecutionLayer),
+                    source: host.host_state_machine(),
+                    dest: StateMachine::Ethereum(Ethereum::ExecutionLayer),
                     nonce: i,
                     from: vec![0u8; 32],
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],
