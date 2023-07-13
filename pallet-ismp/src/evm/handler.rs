@@ -27,6 +27,12 @@ pub const EVM_HOST_ADDRESS: H160 = H160::zero();
 /// EVM contract handler
 pub struct EvmContractHandler<T: Config + pallet_evm::Config>(PhantomData<T>);
 
+impl<T: Config + pallet_evm::Config> Default for EvmContractHandler<T> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
 impl<T: Config + pallet_evm::Config> IsmpModule for EvmContractHandler<T> {
     fn on_accept(&self, request: Post) -> Result<Gas, Error> {
         let target_contract = parse_contract_id(&request.to)?;

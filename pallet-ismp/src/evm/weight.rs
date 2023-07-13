@@ -13,6 +13,12 @@ use sp_runtime::traits::Bounded;
 /// An implementation of IsmpModuleWeight for evm contract callbacks
 pub struct EvmWeightCalculator<T: Config + pallet_evm::Config>(PhantomData<T>);
 
+impl<T: Config + pallet_evm::Config> Default for EvmWeightCalculator<T> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
 impl<T: Config + pallet_evm::Config> IsmpModuleWeight for EvmWeightCalculator<T> {
     fn on_accept(&self, request: &Post) -> Weight {
         if let Ok(contract_data) = SolContractData::decode(&request.data, true) {
