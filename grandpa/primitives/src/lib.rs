@@ -23,17 +23,15 @@ extern crate alloc;
 
 use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
-use core::fmt::Debug;
-use ismp::host::StateMachine;
+use core::{fmt::Debug, time::Duration};
+use frame_support::sp_runtime::Digest;
+use ismp::{error::Error, host::StateMachine};
+use sp_consensus_aura::{Slot, AURA_ENGINE_ID};
 use sp_core::{sp_std, H256};
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
 use sp_runtime::{traits::Header, DigestItem};
 use sp_std::prelude::*;
 use sp_storage::StorageKey;
-use sp_consensus_aura::{Slot, AURA_ENGINE_ID};
-use core::time::Duration;
-use ismp::error::Error;
-use frame_support::sp_runtime::Digest;
 
 /// The `ConsensusEngineId` of ISMP digest in the parachain header.
 pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
@@ -128,23 +126,23 @@ pub fn fetch_overlay_root_and_timestamp(digest: &Digest) -> Result<(u64, H256), 
     for digest in digest.logs.iter() {
         match digest {
             DigestItem::PreRuntime(consensus_engine_id, value)
-            if *consensus_engine_id == AURA_ENGINE_ID =>
-                {
-                    let slot = Slot::decode(&mut &value[..])
-                        .map_err(|e| Error::ImplementationSpecific(format!("Cannot slot: {e:?}")))?;
-                    timestamp = Duration::from_millis(*slot * SLOT_DURATION).as_secs();
-                }
+                if *consensus_engine_id == AURA_ENGINE_ID =>
+            {
+                let slot = Slot::decode(&mut &value[..])
+                    .map_err(|e| Error::ImplementationSpecific(format!("Cannot slot: {e:?}")))?;
+                timestamp = Duration::from_millis(*slot * SLOT_DURATION).as_secs();
+            }
             DigestItem::Consensus(consensus_engine_id, value)
-            if *consensus_engine_id == ISMP_ID =>
-                {
-                    if value.len() != 32 {
-                        Err(Error::ImplementationSpecific(
-                            "Header contains an invalid ismp root".into(),
-                        ))?
-                    }
-
-                    overlay_root = H256::from_slice(&value);
+                if *consensus_engine_id == ISMP_ID =>
+            {
+                if value.len() != 32 {
+                    Err(Error::ImplementationSpecific(
+                        "Header contains an invalid ismp root".into(),
+                    ))?
                 }
+
+                overlay_root = H256::from_slice(&value);
+            }
             // don't really care about the rest
             _ => {}
         };
@@ -159,16 +157,16 @@ pub fn fetch_overlay_root(digest: &Digest) -> Result<H256, Error> {
     for digest in digest.logs.iter() {
         match digest {
             DigestItem::Consensus(consensus_engine_id, value)
-            if *consensus_engine_id == ISMP_ID =>
-                {
-                    if value.len() != 32 {
-                        Err(Error::ImplementationSpecific(format!(
-                            "Header contains an invalid ismp root"
-                        )))?
-                    }
-
-                    overlay_root = H256::from_slice(&value);
+                if *consensus_engine_id == ISMP_ID =>
+            {
+                if value.len() != 32 {
+                    Err(Error::ImplementationSpecific(format!(
+                        "Header contains an invalid ismp root"
+                    )))?
                 }
+
+                overlay_root = H256::from_slice(&value);
+            }
             // don't really care about the rest
             _ => {}
         };
