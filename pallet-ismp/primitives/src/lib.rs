@@ -19,6 +19,10 @@
 #![deny(missing_docs)]
 
 //! Primitives for the MMR implementation
+
+extern crate alloc;
+
+use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
 use core::{fmt::Debug, time::Duration};
 use frame_support::sp_runtime::Digest;
