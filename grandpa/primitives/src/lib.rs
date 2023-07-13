@@ -23,13 +23,11 @@ extern crate alloc;
 
 use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
-use core::{fmt::Debug, time::Duration};
-use frame_support::sp_runtime::Digest;
-use ismp::{error::Error, host::StateMachine};
-use sp_consensus_aura::{Slot, AURA_ENGINE_ID};
+use core::fmt::Debug;
+use ismp::host::StateMachine;
 use sp_core::{sp_std, H256};
 use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
-use sp_runtime::{traits::Header, DigestItem};
+use sp_runtime::traits::Header;
 use sp_std::prelude::*;
 use sp_storage::StorageKey;
 
@@ -106,36 +104,6 @@ pub struct ParachainHeadersWithFinalityProof<H: codec::Codec> {
     pub parachain_headers: BTreeMap<Hash, ParachainHeaderProofs>,
 }
 
-/// Hashing algorithm for the state proof
-#[derive(Debug, Encode, Decode, Clone)]
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-pub enum HashAlgorithm {
-    /// For chains that use keccak as their hashing algo
-    Keccak,
-    /// For chains that use blake2 as their hashing algo
-    Blake2,
-}
-
-/// Holds the relevant data needed for state proof verification
-#[derive(Debug, Encode, Decode, Clone)]
-pub struct SubstrateStateProof {
-    /// Algorithm to use for state proof verification
-    pub hasher: HashAlgorithm,
-    /// Storage proof for the parachain headers
-    pub storage_proof: Vec<Vec<u8>>,
-}
-
-/// Holds the relevant data needed for request/response proof verification
-#[derive(Debug, Encode, Decode, Clone)]
-pub struct MembershipProof {
-    /// Size of the mmr at the time this proof was generated
-    pub mmr_size: u64,
-    /// Leaf indices for the proof
-    pub leaf_indices: Vec<u64>,
-    /// Mmr proof
-    pub proof: Vec<H256>,
-}
-
 /// This returns the storage key for a parachain header on the relay chain.
 pub fn parachain_header_storage_key(para_id: u32) -> StorageKey {
     let mut storage_key = frame_support::storage::storage_prefix(b"Paras", b"Heads").to_vec();
@@ -143,39 +111,4 @@ pub fn parachain_header_storage_key(para_id: u32) -> StorageKey {
     storage_key.extend_from_slice(sp_io::hashing::twox_64(&encoded_para_id).as_slice());
     storage_key.extend_from_slice(&encoded_para_id);
     StorageKey(storage_key)
-}
-
-/// Fetches the overlay(ismp) root and timestamp from the header digest
-pub fn fetch_overlay_root_and_timestamp(
-    digest: &Digest,
-    slot_duration: u64,
-) -> Result<(u64, H256), Error> {
-    let (mut timestamp, mut overlay_root) = (0, H256::default());
-
-    for digest in digest.logs.iter() {
-        match digest {
-            DigestItem::PreRuntime(consensus_engine_id, value)
-                if *consensus_engine_id == AURA_ENGINE_ID =>
-            {
-                let slot = Slot::decode(&mut &value[..])
-                    .map_err(|e| Error::ImplementationSpecific(format!("Cannot slot: {e:?}")))?;
-                timestamp = Duration::from_millis(*slot * slot_duration).as_secs();
-            }
-            DigestItem::Consensus(consensus_engine_id, value)
-                if *consensus_engine_id == ISMP_ID =>
-            {
-                if value.len() != 32 {
-                    Err(Error::ImplementationSpecific(
-                        "Header contains an invalid ismp root".into(),
-                    ))?
-                }
-
-                overlay_root = H256::from_slice(&value);
-            }
-            // don't really care about the rest
-            _ => {}
-        };
-    }
-
-    Ok((timestamp, overlay_root))
 }

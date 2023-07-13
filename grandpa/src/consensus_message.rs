@@ -13,7 +13,6 @@
 // See the License for the specific lang
 use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
-use ismp::consensus::StateMachineId;
 use primitives::{FinalityProof, ParachainHeaderProofs};
 use sp_core::H256;
 use sp_runtime::traits::BlakeTwo256;
@@ -34,8 +33,6 @@ pub enum ConsensusMessage {
 pub struct StandaloneChainMessage {
     /// finality proof
     pub finality_proof: FinalityProof<SubstrateHeader>,
-    /// state machine id
-    pub state_machine_id: StateMachineId,
 }
 
 #[derive(Clone, Debug, Encode, Decode)]

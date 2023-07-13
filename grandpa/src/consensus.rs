@@ -22,11 +22,11 @@ use ismp::{
     host::{IsmpHost, StateMachine},
     messaging::StateCommitmentHeight,
 };
+use ismp_primitives::fetch_overlay_root_and_timestamp;
 use primitive_types::H256;
-use primitives::{
-    fetch_overlay_root_and_timestamp, ConsensusState, ParachainHeadersWithFinalityProof,
-};
+use primitives::{ConsensusState, ParachainHeadersWithFinalityProof};
 use sp_runtime::traits::Header;
+use state_machine_primitives::SubstrateStateMachine;
 use verifier::{
     verify_grandpa_finality_proof, verify_parachain_headers_with_grandpa_finality_proof,
 };
@@ -183,6 +183,6 @@ where
     }
 
     fn state_machine(&self, _id: StateMachine) -> Result<Box<dyn StateMachineClient>, Error> {
-        todo!()
+        Ok(Box::new(SubstrateStateMachine::<T>::default()))
     }
 }
