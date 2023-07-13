@@ -2576,6 +2576,7 @@ dependencies = [
  "ismp",
  "log",
  "parity-scale-codec",
+ "serde",
  "sp-consensus-aura",
  "sp-core 7.0.0",
  "sp-finality-grandpa",
@@ -4760,12 +4761,14 @@ dependencies = [
 name = "pallet-grandpa-client"
 version = "0.1.0"
 dependencies = [
+ "ckb-merkle-mountain-range",
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
  "grandpa-primitives",
  "grandpa-verifier",
  "ismp",
+ "ismp-primitives",
  "pallet-ismp",
  "parity-scale-codec",
  "primitive-types",

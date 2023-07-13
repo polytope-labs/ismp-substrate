@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 # crates.io
+serde = { version = "1.0.136", features = ["derive"], optional = true }
 anyhow = { version = "1.0.64", default-features = false }
 hash-db = { version = "0.16.0", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = ["display"] }
@@ -42,4 +43,5 @@ std = [
     "sp-std/std",
     "sp-trie/std",
     "ismp/std",
+    "serde",
 ]
