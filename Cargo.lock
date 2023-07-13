@@ -2576,6 +2576,7 @@ dependencies = [
  "ismp",
  "log",
  "parity-scale-codec",
+ "sp-consensus-aura",
  "sp-core 7.0.0",
  "sp-finality-grandpa",
  "sp-io 7.0.0",
