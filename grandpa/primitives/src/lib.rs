@@ -36,8 +36,6 @@ use sp_storage::StorageKey;
 /// The `ConsensusEngineId` of ISMP digest in the parachain header.
 pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
 
-const SLOT_DURATION: u64 = 12_000;
-
 /// GRANPA errors
 pub mod error;
 /// GRANDPA justification utilities
@@ -83,19 +81,17 @@ pub struct ConsensusState {
     pub para_ids: BTreeMap<u32, bool>,
     /// latest finalized hash on relay chain or standalone chain.
     pub latest_hash: Hash,
+    /// slot duration for the chain
+    pub slot_duration: u64,
 }
 
 /// Holds relavant parachain proofs for both header and timestamp extrinsic.
 #[derive(Clone, Debug, Encode, Decode)]
 pub struct ParachainHeaderProofs {
-    /// State proofs that prove a parachain header exists at a given relay chain height
+    /// State proofs that prove a parachain headers exists at a given relay chain height
     pub state_proof: Vec<Vec<u8>>,
-    /// Timestamp extrinsic
-    pub extrinsic: Vec<u8>,
-    /// Timestamp extrinsic proof for previously proven parachain header.
-    pub extrinsic_proof: Vec<Vec<u8>>,
-    /// The parachain id
-    pub para_id: u32,
+    /// The parachain ids
+    pub para_ids: Vec<u32>,
 }
 
 /// Parachain headers with a Grandpa finality proof.
@@ -107,7 +103,7 @@ pub struct ParachainHeadersWithFinalityProof<H: codec::Codec> {
     /// Contains a map of relay chain header hashes to parachain headers
     /// finalzed at the relay chain height. We check for this parachain header finalization
     /// via state proofs. Also contains extrinsic proof for timestamp.
-    pub parachain_headers: BTreeMap<Hash, Vec<ParachainHeaderProofs>>,
+    pub parachain_headers: BTreeMap<Hash, ParachainHeaderProofs>,
 }
 
 /// Hashing algorithm for the state proof
@@ -150,7 +146,10 @@ pub fn parachain_header_storage_key(para_id: u32) -> StorageKey {
 }
 
 /// Fetches the overlay(ismp) root and timestamp from the header digest
-pub fn fetch_overlay_root_and_timestamp(digest: &Digest) -> Result<(u64, H256), Error> {
+pub fn fetch_overlay_root_and_timestamp(
+    digest: &Digest,
+    slot_duration: u64,
+) -> Result<(u64, H256), Error> {
     let (mut timestamp, mut overlay_root) = (0, H256::default());
 
     for digest in digest.logs.iter() {
@@ -160,7 +159,7 @@ pub fn fetch_overlay_root_and_timestamp(digest: &Digest) -> Result<(u64, H256), 
             {
                 let slot = Slot::decode(&mut &value[..])
                     .map_err(|e| Error::ImplementationSpecific(format!("Cannot slot: {e:?}")))?;
-                timestamp = Duration::from_millis(*slot * SLOT_DURATION).as_secs();
+                timestamp = Duration::from_millis(*slot * slot_duration).as_secs();
             }
             DigestItem::Consensus(consensus_engine_id, value)
                 if *consensus_engine_id == ISMP_ID =>
@@ -179,28 +178,4 @@ pub fn fetch_overlay_root_and_timestamp(digest: &Digest) -> Result<(u64, H256), 
     }
 
     Ok((timestamp, overlay_root))
-}
-
-/// Fetches the overlay(ismp) root from the header digest item
-pub fn fetch_overlay_root(digest: &Digest) -> Result<H256, Error> {
-    let mut overlay_root = H256::default();
-    for digest in digest.logs.iter() {
-        match digest {
-            DigestItem::Consensus(consensus_engine_id, value)
-                if *consensus_engine_id == ISMP_ID =>
-            {
-                if value.len() != 32 {
-                    Err(Error::ImplementationSpecific(format!(
-                        "Header contains an invalid ismp root"
-                    )))?
-                }
-
-                overlay_root = H256::from_slice(&value);
-            }
-            // don't really care about the rest
-            _ => {}
-        };
-    }
-
-    Ok(overlay_root)
 }
