@@ -110,6 +110,36 @@ pub struct ParachainHeadersWithFinalityProof<H: codec::Codec> {
     pub parachain_headers: BTreeMap<Hash, Vec<ParachainHeaderProofs>>,
 }
 
+/// Hashing algorithm for the state proof
+#[derive(Debug, Encode, Decode, Clone)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+pub enum HashAlgorithm {
+    /// For chains that use keccak as their hashing algo
+    Keccak,
+    /// For chains that use blake2 as their hashing algo
+    Blake2,
+}
+
+/// Holds the relevant data needed for state proof verification
+#[derive(Debug, Encode, Decode, Clone)]
+pub struct SubstrateStateProof {
+    /// Algorithm to use for state proof verification
+    pub hasher: HashAlgorithm,
+    /// Storage proof for the parachain headers
+    pub storage_proof: Vec<Vec<u8>>,
+}
+
+/// Holds the relevant data needed for request/response proof verification
+#[derive(Debug, Encode, Decode, Clone)]
+pub struct MembershipProof {
+    /// Size of the mmr at the time this proof was generated
+    pub mmr_size: u64,
+    /// Leaf indices for the proof
+    pub leaf_indices: Vec<u64>,
+    /// Mmr proof
+    pub proof: Vec<H256>,
+}
+
 /// This returns the storage key for a parachain header on the relay chain.
 pub fn parachain_header_storage_key(para_id: u32) -> StorageKey {
     let mut storage_key = frame_support::storage::storage_prefix(b"Paras", b"Heads").to_vec();
