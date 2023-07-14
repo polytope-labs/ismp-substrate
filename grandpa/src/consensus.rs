@@ -26,7 +26,7 @@ use ismp_primitives::fetch_overlay_root_and_timestamp;
 use primitive_types::H256;
 use primitives::{ConsensusState, ParachainHeadersWithFinalityProof};
 use sp_runtime::traits::Header;
-use state_machine_primitives::SubstrateStateMachine;
+use substrate_state_machine::SubstrateStateMachine;
 use verifier::{
     verify_grandpa_finality_proof, verify_parachain_headers_with_grandpa_finality_proof,
 };

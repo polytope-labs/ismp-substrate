@@ -39,7 +39,7 @@ use sp_runtime::{
     DigestItem,
 };
 use sp_trie::{HashDBT, LayoutV0, StorageProof, Trie, TrieDBBuilder, EMPTY_PREFIX};
-use state_machine_primitives::SubstrateStateMachine;
+use substrate_state_machine::SubstrateStateMachine;
 
 use crate::RelayChainOracle;
 

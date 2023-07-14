@@ -31,7 +31,7 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "release-v0.9.420", default-features = false }
 
 ismp-primitives = { path = "../pallet-ismp/primitives", default-features = false }
-state-machine-primitives = { path = "../pallet-ismp/primitives/state-machine", default-features = false }
+substrate-state-machine = { path = "../pallet-ismp/primitives/state-machine", default-features = false }
 
 [features]
 default = ["std"]
@@ -53,5 +53,5 @@ std = [
     "verifier/std",
     "merkle-mountain-range/std",
     "ismp-primitives/std",
-    "state-machine-primitives/std"
+    "substrate-state-machine/std"
 ]

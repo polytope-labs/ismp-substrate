@@ -3249,7 +3249,7 @@ dependencies = [
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
  "sp-trie 7.0.0",
- "state-machine-primitives",
+ "substrate-state-machine",
 ]
 
 [[package]]
@@ -4952,7 +4952,7 @@ dependencies = [
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
  "sp-trie 7.0.0",
- "state-machine-primitives",
+ "substrate-state-machine",
 ]
 
 [[package]]
@@ -9851,25 +9851,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
-name = "state-machine-primitives"
-version = "0.1.0"
-dependencies = [
- "ckb-merkle-mountain-range",
- "frame-support",
- "frame-system",
- "ismp",
- "ismp-primitives",
- "pallet-ismp",
- "parity-scale-codec",
- "primitive-types",
- "scale-info",
- "serde",
- "sp-core 7.0.0",
- "sp-runtime 7.0.0",
- "sp-trie 7.0.0",
-]
-
-[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9986,6 +9967,25 @@ dependencies = [
  "prometheus",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "substrate-state-machine"
+version = "0.1.0"
+dependencies = [
+ "ckb-merkle-mountain-range",
+ "frame-support",
+ "frame-system",
+ "ismp",
+ "ismp-primitives",
+ "pallet-ismp",
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+ "serde",
+ "sp-core 7.0.0",
+ "sp-runtime 7.0.0",
+ "sp-trie 7.0.0",
 ]
 
 [[package]]
