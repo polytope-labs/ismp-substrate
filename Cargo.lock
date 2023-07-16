@@ -4937,6 +4937,7 @@ version = "0.1.0"
 dependencies = [
  "ckb-merkle-mountain-range",
  "cumulus-primitives-core",
+ "finality-grandpa",
  "frame-support",
  "frame-system",
  "grandpa-primitives",

@@ -16,6 +16,7 @@ use crate::consensus_message::ConsensusMessage;
 use alloc::collections::BTreeMap;
 use codec::Encode;
 use core::marker::PhantomData;
+use finality_grandpa::Chain;
 use ismp::{
     consensus::{ConsensusClient, ConsensusStateId, StateCommitment, StateMachineClient},
     error::Error,
@@ -24,7 +25,9 @@ use ismp::{
 };
 use ismp_primitives::fetch_overlay_root_and_timestamp;
 use primitive_types::H256;
-use primitives::{ConsensusState, ParachainHeadersWithFinalityProof};
+use primitives::{
+    justification::AncestryChain, ConsensusState, FinalityProof, ParachainHeadersWithFinalityProof,
+};
 use sp_runtime::traits::Header;
 use substrate_state_machine::SubstrateStateMachine;
 use verifier::{
@@ -37,16 +40,17 @@ pub const KUSAMA_CONSENSUS_STATE_ID: [u8; 8] = *b"_kusama_";
 /// The `ConsensusEngineId` of ISMP digest in the parachain header.
 pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
 
-pub struct GrandpaConsensusClient<T>(PhantomData<T>);
+pub struct GrandpaConsensusClient<T, H>(PhantomData<(T, H)>);
 
-impl<T> Default for GrandpaConsensusClient<T> {
+impl<T, H> Default for GrandpaConsensusClient<T, H> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<T> ConsensusClient for GrandpaConsensusClient<T>
+impl<T, H> ConsensusClient for GrandpaConsensusClient<T, H>
 where
+    H: Header<Hash = H256, Number = u32>,
     T: pallet_ismp::Config + super::Config,
     T::BlockNumber: Into<u32>,
     T::Hash: From<H256>,
@@ -175,11 +179,82 @@ where
     fn verify_fraud_proof(
         &self,
         _host: &dyn IsmpHost,
-        _trusted_consensus_state: Vec<u8>,
-        _proof_1: Vec<u8>,
-        _proof_2: Vec<u8>,
+        trusted_consensus_state: Vec<u8>,
+        proof_1: Vec<u8>,
+        proof_2: Vec<u8>,
     ) -> Result<(), Error> {
-        todo!()
+        // decode the consensus state
+        let _consensus_state: ConsensusState =
+            codec::Decode::decode(&mut &trusted_consensus_state[..]).map_err(|e| {
+                Error::ImplementationSpecific(format!(
+                    "Cannot decode consensus state from trusted consensus state bytes: {e:?}",
+                ))
+            })?;
+
+        let first_proof: FinalityProof<H> =
+            codec::Decode::decode(&mut &proof_1[..]).map_err(|e| {
+                Error::ImplementationSpecific(format!(
+                    "Cannot decode first finality proof from proof_1 bytes: {e:?}",
+                ))
+            })?;
+
+        let second_proof: FinalityProof<H> =
+            codec::Decode::decode(&mut &proof_2[..]).map_err(|e| {
+                Error::ImplementationSpecific(format!(
+                    "Cannot decode second finality proof from proof_2 bytes: {e:?}",
+                ))
+            })?;
+
+        if first_proof.block == second_proof.block {
+            return Err(Error::ImplementationSpecific(format!(
+                "Fraud proofs are for the same block",
+            )))
+        }
+
+        let first_headers = AncestryChain::<H>::new(&first_proof.unknown_headers);
+        let first_target =
+            first_proof.unknown_headers.iter().max_by_key(|h| *h.number()).ok_or_else(|| {
+                Error::ImplementationSpecific(format!("Unknown headers can't be empty!"))
+            })?;
+
+        let second_headers = AncestryChain::<H>::new(&second_proof.unknown_headers);
+        let second_target =
+            second_proof.unknown_headers.iter().max_by_key(|h| *h.number()).ok_or_else(|| {
+                Error::ImplementationSpecific(format!("Unknown headers can't be empty!"))
+            })?;
+
+        if first_target.hash() != first_proof.block || second_target.hash() != second_proof.block {
+            return Err(Error::ImplementationSpecific(format!(
+                "Fraud proofs are not for the same chain"
+            )))
+        }
+
+        let first_base =
+            first_proof.unknown_headers.iter().min_by_key(|h| *h.number()).ok_or_else(|| {
+                Error::ImplementationSpecific(format!("Unknown headers can't be empty!"))
+            })?;
+        first_headers
+            .ancestry(first_base.hash(), first_target.hash())
+            .map_err(|_| Error::ImplementationSpecific(format!("Invalid ancestry!")))?;
+
+        let second_base =
+            second_proof.unknown_headers.iter().min_by_key(|h| *h.number()).ok_or_else(|| {
+                Error::ImplementationSpecific(format!("Unknown headers can't be empty!"))
+            })?;
+        second_headers
+            .ancestry(second_base.hash(), second_target.hash())
+            .map_err(|_| Error::ImplementationSpecific(format!("Invalid ancestry!")))?;
+
+        let first_parent = first_base.parent_hash();
+        let second_parent = second_base.parent_hash();
+
+        if first_parent != second_parent {
+            return Err(Error::ImplementationSpecific(format!(
+                "Fraud proofs are not for the same ancestor"
+            )))
+        }
+
+        Ok(())
     }
 
     fn state_machine(&self, _id: StateMachine) -> Result<Box<dyn StateMachineClient>, Error> {
