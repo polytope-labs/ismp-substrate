@@ -77,7 +77,7 @@ where
     ChargeAssetIdOf<T>: Send + Sync,
     Credit<T::AccountId, T::Fungibles>: IsType<ChargeAssetLiquidityOf<T>>,
 {
-    const IDENTIFIER: &'static str = "ChargeAssetTxPayment";
+    const IDENTIFIER: &'static str = "IsmpAssetTxPayment";
     type AccountId = T::AccountId;
     type Call = T::RuntimeCall;
     type AdditionalSigned = ();
