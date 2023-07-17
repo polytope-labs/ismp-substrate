@@ -14,7 +14,7 @@
 
 use crate::consensus_message::ConsensusMessage;
 use alloc::collections::BTreeMap;
-use codec::Encode;
+use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use finality_grandpa::Chain;
 use ismp::{
@@ -26,7 +26,8 @@ use ismp::{
 use ismp_primitives::fetch_overlay_root_and_timestamp;
 use primitive_types::H256;
 use primitives::{
-    justification::AncestryChain, ConsensusState, FinalityProof, ParachainHeadersWithFinalityProof,
+    justification::{AncestryChain, GrandpaJustification},
+    ConsensusState, FinalityProof, ParachainHeadersWithFinalityProof,
 };
 use sp_runtime::traits::Header;
 use substrate_state_machine::SubstrateStateMachine;
@@ -184,7 +185,7 @@ where
         proof_2: Vec<u8>,
     ) -> Result<(), Error> {
         // decode the consensus state
-        let _consensus_state: ConsensusState =
+        let consensus_state: ConsensusState =
             codec::Decode::decode(&mut &trusted_consensus_state[..]).map_err(|e| {
                 Error::ImplementationSpecific(format!(
                     "Cannot decode consensus state from trusted consensus state bytes: {e:?}",
@@ -252,6 +253,37 @@ where
             return Err(Error::ImplementationSpecific(format!(
                 "Fraud proofs are not for the same ancestor"
             )))
+        }
+
+        //TODO: how to verify that first parent contains relay header hash
+
+        let first_justification =
+            GrandpaJustification::<H>::decode(&mut &first_proof.justification[..]).map_err(
+                |_| Error::ImplementationSpecific(format!("Could not decode first justification")),
+            )?;
+
+        let second_justification =
+            GrandpaJustification::<H>::decode(&mut &second_proof.justification[..]).map_err(
+                |_| Error::ImplementationSpecific(format!("Could not decode second justification")),
+            )?;
+
+        if first_proof.block != first_justification.commit.target_hash ||
+            second_proof.block != second_justification.commit.target_hash
+        {
+            Err(Error::ImplementationSpecific(
+                format!("First or second finality proof block hash does not match justification target hash")
+            ))?
+        }
+
+        let first_valid = first_justification
+            .verify(consensus_state.current_set_id, &consensus_state.current_authorities)
+            .is_ok();
+        let second_valid = second_justification
+            .verify(consensus_state.current_set_id, &consensus_state.current_authorities)
+            .is_ok();
+
+        if !first_valid || !second_valid {
+            Err(Error::ImplementationSpecific(format!("Invalid justification")))?
         }
 
         Ok(())
