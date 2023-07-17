@@ -3196,6 +3196,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ismp-transaction-payment"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-asset-tx-payment",
+ "pallet-ismp 0.1.0 (git+https://github.com/polytope-labs/substrate-ismp?branch=main)",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 7.0.0",
+ "sp-runtime",
+ "sp-std 5.0.0",
+]
+
+[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8855,22 +8871,6 @@ dependencies = [
  "tracing-core",
  "tracing-log",
  "tracing-serde",
-]
-
-[[package]]
-name = "transaction-payment"
-version = "0.1.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "pallet-asset-tx-payment",
- "pallet-ismp 0.1.0 (git+https://github.com/polytope-labs/substrate-ismp?branch=main)",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "scale-info",
- "sp-core 7.0.0",
- "sp-runtime",
- "sp-std 5.0.0",
 ]
 
 [[package]]
