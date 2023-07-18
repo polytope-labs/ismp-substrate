@@ -203,25 +203,7 @@ where
                 .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
             match call.is_sub_type().cloned() {
                 Some(pallet_ismp::Call::handle { messages }) => {
-                    if let Ok(_) = pallet_ismp::Pallet::<T>::handle_messages(messages) {
-                        let fee = pallet_transaction_payment::Pallet::<T>::compute_fee(
-                            len as u32, info, self.tip,
-                        );
-                        if let Ok((_fee, _initial_payment)) = <T::OnChargeAssetTransaction as OnChargeAssetTransaction<T>>::withdraw_fee(
-                            who,
-                            call,
-                            info,
-                            asset_id,
-                            fee.into(),
-                            self.tip.into()
-                        ) {
-                            Ok((self.tip, who.clone(), InitialPayment::Nothing, self.asset_id, None))
-                        } else {
-                            Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
-                        }
-                    } else {
-                        return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
-                    }
+                    Ok((self.tip, who.clone(), InitialPayment::Nothing, self.asset_id, None))
                 }
                 _ => Err(TransactionValidityError::Invalid(InvalidTransaction::Payment)),
             }
