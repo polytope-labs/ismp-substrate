@@ -3,7 +3,8 @@
 use pallet_ismp::{dispatcher::Dispatcher, weight_info::WeightInfo, GasLimits, Pallet};
 
 use crate::abi::{
-    DispatchGet as SolDispatchGet, DispatchPost as SolDispatchPost, PostResponse as SolPostResponse,
+    ContractData, DispatchGet as SolDispatchGet, DispatchPost as SolDispatchPost,
+    PostResponse as SolPostResponse,
 };
 use alloc::str::FromStr;
 use alloy_sol_types::SolType;
@@ -49,7 +50,7 @@ where
             from: context.caller.0.to_vec(),
             to: post_dispatch.to,
             timeout_timestamp: u256_to_u64(post_dispatch.timeoutTimestamp),
-            data: post_dispatch.data,
+            data: ContractData::encode(&post_dispatch.data),
         };
         handle.record_cost(cost)?;
         match dispatcher.dispatch_request(DispatchRequest::Post(post_dispatch)) {
@@ -141,7 +142,7 @@ where
                 from: post_response.request.from,
                 to: post_response.request.to,
                 timeout_timestamp: u256_to_u64(post_response.request.timeoutTimestamp),
-                data: post_response.request.data,
+                data: ContractData::encode(&post_response.request.data),
             },
             response: post_response.response,
         };

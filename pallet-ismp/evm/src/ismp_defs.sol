@@ -15,7 +15,7 @@ struct PostRequest {
     // timestamp by which this request times out.
     uint256 timeoutTimestamp;
     // request body
-    bytes data;
+    ContractData data;
 }
 
 struct GetRequest {
@@ -61,7 +61,7 @@ struct DispatchPost {
     // the destination module
     bytes to;
     // the request body
-    bytes data;
+    ContractData data;
     // Timeout
     uint256 timeoutTimestamp;
 }

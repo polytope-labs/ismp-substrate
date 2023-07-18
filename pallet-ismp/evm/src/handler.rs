@@ -44,7 +44,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
             timeoutTimestamp: u64_to_u256(request.timeout_timestamp)?,
             from: request.from,
             to: request.to,
-            data: request.data,
+            data: contract_data,
         };
         let call_data = OnAcceptCall { request: post }.encode();
         execute_call::<T>(target_contract, call_data, gas_limit)
@@ -73,7 +73,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
                         timeoutTimestamp: u64_to_u256(response.post.timeout_timestamp)?,
                         from: response.post.from,
                         to: response.post.to,
-                        data: response.post.data,
+                        data: contract_data,
                     },
                     response: response.response,
                 };
@@ -126,7 +126,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
                     timeoutTimestamp: u64_to_u256(post.timeout_timestamp)?,
                     from: post.from,
                     to: post.to,
-                    data: post.data,
+                    data: contract_data,
                 };
                 (OnPostTimeoutCall { request }.encode(), gas_limit)
             }
