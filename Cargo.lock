@@ -3061,7 +3061,7 @@ dependencies = [
  "frame-system",
  "ismp",
  "pallet-balances",
- "pallet-ismp 0.1.0",
+ "pallet-ismp",
  "parity-scale-codec",
  "scale-info",
  "sp-core 7.0.0",
@@ -3080,8 +3080,8 @@ dependencies = [
  "hash-db",
  "hex-literal 0.4.1",
  "ismp",
- "ismp-primitives 0.1.0",
- "pallet-ismp 0.1.0",
+ "ismp-primitives",
+ "pallet-ismp",
  "parity-scale-codec",
  "primitive-types",
  "scale-info",
@@ -3133,31 +3133,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "ismp-primitives"
-version = "0.1.0"
-source = "git+https://github.com/polytope-labs/substrate-ismp?branch=main#7fb09da6c7b818a98c25c962fee0ddde8e737306"
-dependencies = [
- "ckb-merkle-mountain-range",
- "frame-system",
- "ismp",
- "parity-scale-codec",
- "primitive-types",
- "scale-info",
- "serde",
- "sp-runtime",
-]
-
-[[package]]
 name = "ismp-rpc"
 version = "0.1.0"
 dependencies = [
  "frame-system",
  "hex-literal 0.3.4",
  "ismp",
- "ismp-primitives 0.1.0",
+ "ismp-primitives",
  "ismp-runtime-api",
  "jsonrpsee",
- "pallet-ismp 0.1.0",
+ "pallet-ismp",
  "parity-scale-codec",
  "sc-client-api",
  "serde",
@@ -3173,8 +3158,8 @@ name = "ismp-runtime-api"
 version = "0.1.0"
 dependencies = [
  "ismp",
- "ismp-primitives 0.1.0",
- "pallet-ismp 0.1.0",
+ "ismp-primitives",
+ "pallet-ismp",
  "parity-scale-codec",
  "serde",
  "sp-api",
@@ -3200,7 +3185,7 @@ dependencies = [
  "frame-system",
  "log",
  "pallet-asset-tx-payment",
- "pallet-ismp 0.1.0 (git+https://github.com/polytope-labs/substrate-ismp?branch=main)",
+ "pallet-ismp",
  "pallet-transaction-payment",
  "parity-scale-codec",
  "scale-info",
@@ -4743,34 +4728,10 @@ dependencies = [
  "frame-support",
  "frame-system",
  "ismp",
- "ismp-primitives 0.1.0",
+ "ismp-primitives",
  "ismp-testsuite",
  "log",
  "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-api",
- "sp-core 7.0.0",
- "sp-io",
- "sp-runtime",
- "sp-std 5.0.0",
-]
-
-[[package]]
-name = "pallet-ismp"
-version = "0.1.0"
-source = "git+https://github.com/polytope-labs/substrate-ismp?branch=main#7fb09da6c7b818a98c25c962fee0ddde8e737306"
-dependencies = [
- "ckb-merkle-mountain-range",
- "derive_more",
- "enum-as-inner",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "ismp",
- "ismp-primitives 0.1.0 (git+https://github.com/polytope-labs/substrate-ismp?branch=main)",
- "log",
  "parity-scale-codec",
  "scale-info",
  "serde",
