@@ -18,7 +18,9 @@ use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use finality_grandpa::Chain;
 use ismp::{
-    consensus::{ConsensusClient, ConsensusStateId, StateCommitment, StateMachineClient},
+    consensus::{
+        ConsensusClient, ConsensusStateId, StateCommitment, StateMachineClient, VerifiedCommitments,
+    },
     error::Error,
     host::{IsmpHost, StateMachine},
     messaging::StateCommitmentHeight,
@@ -62,7 +64,7 @@ where
         _consensus_state_id: ConsensusStateId,
         trusted_consensus_state: Vec<u8>,
         proof: Vec<u8>,
-    ) -> Result<(Vec<u8>, BTreeMap<StateMachine, StateCommitmentHeight>), Error> {
+    ) -> Result<(Vec<u8>, VerifiedCommitments), Error> {
         // decode the proof into consensus message
         let consensus_message: ConsensusMessage =
             codec::Decode::decode(&mut &proof[..]).map_err(|e| {
@@ -99,6 +101,16 @@ where
                     })?;
 
                 for (para_id, header_vec) in parachain_headers {
+                    let mut state_commitments_vec = Vec::new();
+
+                    let state_id: StateMachine = match consensus_state.state_machine {
+                        StateMachine::Polkadot(_) => StateMachine::Polkadot(para_id),
+                        StateMachine::Kusama(_) => StateMachine::Kusama(para_id),
+                        _ => Err(Error::ImplementationSpecific(
+                            "Host state machine should be a parachain".into(),
+                        ))?,
+                    };
+
                     for header in header_vec {
                         let (timestamp, overlay_root) = fetch_overlay_root_and_timestamp(
                             header.digest(),
@@ -113,14 +125,6 @@ where
 
                         let height: u32 = (*header.number()).into();
 
-                        let state_id: StateMachine = match consensus_state.state_machine {
-                            StateMachine::Polkadot(_) => StateMachine::Polkadot(para_id),
-                            StateMachine::Kusama(_) => StateMachine::Kusama(para_id),
-                            _ => Err(Error::ImplementationSpecific(
-                                "Host state machine should be a parachain".into(),
-                            ))?,
-                        };
-
                         let intermediate = StateCommitmentHeight {
                             commitment: StateCommitment {
                                 timestamp,
@@ -130,8 +134,10 @@ where
                             height: height.into(),
                         };
 
-                        intermediates.insert(state_id, intermediate);
+                        state_commitments_vec.push(intermediate);
                     }
+
+                    intermediates.insert(state_id, state_commitments_vec);
                 }
 
                 Ok((consensus_state.encode(), intermediates))
@@ -147,7 +153,6 @@ where
                         "Error verifying parachain headers".parse().unwrap(),
                     )
                 })?;
-
                 let (timestamp, overlay_root) = fetch_overlay_root_and_timestamp(
                     header.digest(),
                     consensus_state.slot_duration,
@@ -170,7 +175,10 @@ where
                     height: height.into(),
                 };
 
-                intermediates.insert(state_id, intermediate);
+                let mut state_commitments_vec = Vec::new();
+                state_commitments_vec.push(intermediate);
+
+                intermediates.insert(state_id, state_commitments_vec);
 
                 Ok((consensus_state.encode(), intermediates))
             }
@@ -255,8 +263,6 @@ where
             )))
         }
 
-        //TODO: how to verify that first parent contains relay header hash
-
         let first_justification =
             GrandpaJustification::<H>::decode(&mut &first_proof.justification[..]).map_err(
                 |_| Error::ImplementationSpecific(format!("Could not decode first justification")),
@@ -273,6 +279,14 @@ where
             Err(Error::ImplementationSpecific(
                 format!("First or second finality proof block hash does not match justification target hash")
             ))?
+        }
+
+        if first_justification.commit.target_hash != consensus_state.latest_hash ||
+            second_justification.commit.target_hash != consensus_state.latest_hash
+        {
+            Err(Error::ImplementationSpecific(format!(
+                "First or second justification does not match consensus latest hash"
+            )))?
         }
 
         let first_valid = first_justification
