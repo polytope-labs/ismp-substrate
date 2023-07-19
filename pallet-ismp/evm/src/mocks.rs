@@ -161,7 +161,7 @@ pub struct FixedGasPrice;
 impl FeeCalculator for FixedGasPrice {
     fn min_gas_price() -> (U256, Weight) {
         // Return some meaningful gas price and weight
-        (1_000_000_000u128.into(), Weight::from_parts(7u64, 0))
+        (100u128.into(), Weight::from_parts(7u64, 0))
     }
 }
 
@@ -180,7 +180,7 @@ const MAX_POV_SIZE: u64 = 5 * 1024 * 1024;
 parameter_types! {
     pub BlockGasLimit: U256 = U256::from(BLOCK_GAS_LIMIT);
     pub const GasLimitPovSizeRatio: u64 = BLOCK_GAS_LIMIT.saturating_div(MAX_POV_SIZE);
-    pub WeightPerGas: Weight = Weight::from_parts(20_000, 0);
+    pub WeightPerGas: Weight = Weight::from_parts(2000, 0);
     pub MockPrecompiles: MockPrecompileSet = MockPrecompileSet;
 }
 
@@ -218,7 +218,6 @@ impl PrecompileSet for MockPrecompileSet {
     /// If the provided address is not a precompile, returns None.
     fn execute(&self, handle: &mut impl PrecompileHandle) -> Option<PrecompileResult> {
         let address = handle.code_address();
-
         if address == H160::from_low_u64_be(1) {
             return Some(IsmpPostDispatcher::<Test>::execute(handle))
         } else if address == H160::from_low_u64_be(2) {
@@ -235,7 +234,9 @@ impl PrecompileSet for MockPrecompileSet {
     /// `execute` already performs a check internally.
     fn is_precompile(&self, address: H160, _gas: u64) -> IsPrecompileResult {
         IsPrecompileResult::Answer {
-            is_precompile: address == H160::from_low_u64_be(1),
+            is_precompile: address == H160::from_low_u64_be(1) ||
+                address == H160::from_low_u64_be(2) ||
+                address == H160::from_low_u64_be(3),
             extra_cost: 0,
         }
     }

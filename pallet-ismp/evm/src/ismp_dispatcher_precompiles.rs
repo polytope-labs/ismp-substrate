@@ -52,6 +52,7 @@ where
             timeout_timestamp: u256_to_u64(post_dispatch.timeoutTimestamp),
             data: ContractData::encode(&post_dispatch.data),
         };
+
         handle.record_cost(cost)?;
         match dispatcher.dispatch_request(DispatchRequest::Post(post_dispatch)) {
             Ok(_) => Ok(PrecompileOutput { exit_status: ExitSucceed::Stopped, output: vec![] }),

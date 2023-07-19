@@ -26,4 +26,6 @@ pub mod handler;
 pub mod ismp_dispatcher_precompiles;
 #[cfg(test)]
 mod mocks;
+#[cfg(test)]
+mod tests;
 pub mod weight;

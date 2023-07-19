@@ -34,8 +34,9 @@ contract IsmpDemo is IIsmpModule {
         _;
     }
 
-    constructor(address _ismpHost) {
-        ismpHost = _ismpHost;
+    constructor() {
+        ismpHost = address(0);
+        totalSupply = 1000000000;
     }
 
     function OnAccept(PostRequest memory request) public onlyIsmpHost {

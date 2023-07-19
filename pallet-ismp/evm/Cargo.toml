@@ -8,7 +8,6 @@ authors = ["Polytope Labs <hello@polytope.technology>"]
 # substrate
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
@@ -34,8 +33,11 @@ pallet-ismp = { path = "../", default-features = false }
 [dev-dependencies]
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 ismp-testsuite = { git = "https://github.com/polytope-labs/ismp-rs", branch = "main" }
 pallet-ismp = { path = "../", features = ["testing"] }
+hex = "0.4.3"
+hex-literal = "0.4.1"
 
 [features]
 default = ["std"]

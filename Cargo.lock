@@ -3416,6 +3416,8 @@ dependencies = [
  "fp-evm",
  "frame-support",
  "frame-system",
+ "hex",
+ "hex-literal 0.4.1",
  "ismp",
  "ismp-primitives",
  "ismp-testsuite",

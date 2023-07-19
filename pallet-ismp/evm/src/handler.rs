@@ -161,7 +161,7 @@ pub fn parse_contract_id(bytes: &[u8]) -> Result<H160, Error> {
 }
 
 /// Convert u64 to U256
-fn u64_to_u256(value: u64) -> Result<U256, Error> {
+pub fn u64_to_u256(value: u64) -> Result<U256, Error> {
     U256::try_from(value)
         .map_err(|_| Error::ImplementationSpecific("Failed to convert u64 to u256".to_string()))
 }
