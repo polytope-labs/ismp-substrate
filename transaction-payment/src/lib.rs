@@ -198,11 +198,8 @@ where
         {
             Ok((tip, who.clone(), initial_payment, asset_id, None))
         } else {
-            let asset_id = self
-                .asset_id
-                .ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-            match call.is_sub_type().cloned() {
-                Some(pallet_ismp::Call::handle { messages }) => {
+            match call.is_sub_type() {
+                Some(pallet_ismp::Call::handle { .. }) => {
                     Ok((self.tip, who.clone(), InitialPayment::Nothing, self.asset_id, None))
                 }
                 _ => Err(TransactionValidityError::Invalid(InvalidTransaction::Payment)),
