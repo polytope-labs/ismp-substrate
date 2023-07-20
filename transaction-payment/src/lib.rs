@@ -248,7 +248,7 @@ where
                     );
                 }
                 InitialPayment::Nothing => {
-                    if ismp_call.is_some() {
+                    if let Some(ismp_call) = ismp_call {
                         let actual_fee =
                             pallet_transaction_payment::Pallet::<T>::compute_actual_fee(
                                 len as u32, info, post_info, tip,
@@ -259,7 +259,7 @@ where
                                     T,
                                 >>::withdraw_fee(
                                     &who,
-                                    &ismp_call.unwrap(),
+                                    &ismp_call,
                                     info,
                                     asset_id,
                                     actual_fee.into(),
