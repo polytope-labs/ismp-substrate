@@ -199,9 +199,13 @@ where
             Ok((tip, who.clone(), initial_payment, asset_id, None))
         } else {
             match call.is_sub_type() {
-                Some(pallet_ismp::Call::handle { .. }) => {
-                    Ok((self.tip, who.clone(), InitialPayment::Nothing, self.asset_id, None))
-                }
+                Some(pallet_ismp::Call::handle { .. }) => Ok((
+                    self.tip,
+                    who.clone(),
+                    InitialPayment::Nothing,
+                    self.asset_id,
+                    Some(call.clone()),
+                )),
                 _ => Err(TransactionValidityError::Invalid(InvalidTransaction::Payment)),
             }
         }
