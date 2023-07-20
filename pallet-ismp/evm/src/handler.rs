@@ -172,7 +172,7 @@ fn execute_call<T: pallet_ismp::Config + pallet_evm::Config>(
     call_data: Vec<u8>,
     gas_limit: u64,
 ) -> Result<(), Error> {
-    match <<T as pallet_evm::Config>::Runner as pallet_evm::Runner<T>>::call(
+    let weight_used = match <<T as pallet_evm::Config>::Runner as pallet_evm::Runner<T>>::call(
         EVM_HOST_ADDRESS,
         target,
         call_data,
@@ -188,26 +188,13 @@ fn execute_call<T: pallet_ismp::Config + pallet_evm::Config>(
         None,
         <T as pallet_evm::Config>::config(),
     ) {
-        Ok(info) => {
-            let mut total_weight_used = WeightConsumed::<T>::get();
-            let weight_limit = T::GasWeightMapping::gas_to_weight(gas_limit, true);
-            let weight_used =
-                T::GasWeightMapping::gas_to_weight(info.used_gas.standard.low_u64(), true);
-            total_weight_used.weight_used = total_weight_used.weight_used + weight_used;
-            total_weight_used.weight_limit = total_weight_used.weight_limit + weight_limit;
-            WeightConsumed::<T>::put(total_weight_used);
-            Ok(())
-        }
-        Err(error) => {
-            let mut total_weight_used = WeightConsumed::<T>::get();
-            let weight_limit = T::GasWeightMapping::gas_to_weight(gas_limit, true);
-            total_weight_used.weight_used = total_weight_used.weight_used + error.weight;
-            total_weight_used.weight_limit = total_weight_used.weight_limit + weight_limit;
-            WeightConsumed::<T>::put(total_weight_used);
-            // We still return ok so we can compensate for used gas only
-            Err(Error::ImplementationSpecific(
-                "Contract encountered error while executing".to_string(),
-            ))
-        }
-    }
+        Ok(info) => T::GasWeightMapping::gas_to_weight(info.used_gas.standard.low_u64(), true),
+        Err(error) => error.weight,
+    };
+    let mut total_weight_used = WeightConsumed::<T>::get();
+    let weight_limit = T::GasWeightMapping::gas_to_weight(gas_limit, true);
+    total_weight_used.weight_used = total_weight_used.weight_used + weight_used;
+    total_weight_used.weight_limit = total_weight_used.weight_limit + weight_limit;
+    WeightConsumed::<T>::put(total_weight_used);
+    Ok(())
 }

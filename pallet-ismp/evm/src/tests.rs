@@ -1,21 +1,22 @@
-use core::str::FromStr;
-use std::collections::BTreeMap;
 use crate::{handler::u64_to_u256, mocks::*};
 use alloy_primitives::Address;
 use alloy_sol_macro::sol;
-use alloy_sol_types::{SolCall, SolType};
+use alloy_sol_types::SolCall;
 use fp_evm::{CreateInfo, FeeCalculator, GenesisAccount};
-use frame_support::{traits::Get, weights::Weight};
-use frame_support::traits::GenesisBuild;
+use frame_support::{
+    traits::{GenesisBuild, Get},
+    weights::Weight,
+};
 use frame_system::EventRecord;
 use hex_literal::hex;
 use ismp_rs::host::StateMachine;
 use pallet_evm::{runner::Runner, FixedGasWeightMapping, GasWeightMapping};
-use pallet_ismp::Event;
+use pallet_ismp::{Event, GasLimits};
 use sp_core::{
     offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
     H160, U256,
 };
+use std::collections::BTreeMap;
 
 sol! {
     function transfer(
@@ -38,20 +39,16 @@ sol! {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap();
+    let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
     let mut accounts = BTreeMap::new();
     accounts.insert(
-        H160::from_low_u64_be(10),
+        H160::from(USER.0 .0),
         GenesisAccount {
             nonce: U256::from(1),
-            balance: U256::from(1000000000000u64),
+            balance: U256::max_value(),
             storage: Default::default(),
-            code: vec![
-                0x00, // STOP
-            ],
+            code: vec![],
         },
     );
     accounts.insert(
@@ -64,7 +61,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         },
     );
 
-    GenesisBuild::<Test>::assimilate_storage(&pallet_evm::GenesisConfig { accounts }, &mut t).unwrap();
+    GenesisBuild::<Test>::assimilate_storage(&pallet_evm::GenesisConfig { accounts }, &mut t)
+        .unwrap();
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| System::set_block_number(1));
     register_offchain_ext(&mut ext);
@@ -153,7 +151,7 @@ fn post_dispatch() {
         .encode();
 
         <Test as pallet_evm::Config>::Runner::call(
-            H160::zero(),
+            H160::from(USER.0 .0),
             contract_address,
             call_data,
             U256::zero(),
@@ -174,6 +172,55 @@ fn post_dispatch() {
         assert_last_event::<Test>(
             Event::Request {
                 dest_chain: StateMachine::Polkadot(1000),
+                source_chain: <Test as pallet_ismp::Config>::StateMachine::get(),
+                request_nonce: 0,
+            }
+            .into(),
+        );
+    });
+}
+
+#[test]
+fn get_dispatch() {
+    new_test_ext().execute_with(|| {
+        let gas_limit: u64 = 1_000_000;
+        let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
+        let result = deploy_contract(gas_limit, Some(weight_limit));
+
+        let contract_address = result.value;
+
+        let call_data = dispatchGetCall {
+            dest: StateMachine::Polkadot(2000).to_string().as_bytes().to_vec(),
+            keys: vec![vec![1u8; 32]],
+            height: u64_to_u256(10).unwrap(),
+            timeout: u64_to_u256(0).unwrap(),
+            gasLimit: gas_limit,
+        }
+        .encode();
+
+        <Test as pallet_evm::Config>::Runner::call(
+            H160::zero(),
+            contract_address,
+            call_data,
+            U256::zero(),
+            gas_limit,
+            Some(FixedGasPrice::min_gas_price().0),
+            Some(FixedGasPrice::min_gas_price().0),
+            None,
+            Vec::new(),
+            true, // transactional
+            true, // must be validated
+            Some(weight_limit),
+            None,
+            &<Test as pallet_evm::Config>::config().clone(),
+        )
+        .expect("call succeeds");
+
+        GasLimits::<Test>::get(0).expect("Gas limit should be set after get dispatch");
+        // Check
+        assert_last_event::<Test>(
+            Event::Request {
+                dest_chain: StateMachine::Polkadot(2000),
                 source_chain: <Test as pallet_ismp::Config>::StateMachine::get(),
                 request_nonce: 0,
             }

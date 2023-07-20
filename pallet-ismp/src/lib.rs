@@ -535,7 +535,7 @@ where
         Ok(PostDispatchInfo {
             actual_weight: {
                 let acc_weight = WeightConsumed::<T>::get();
-                Some((total_weight - acc_weight.weight_limit) + acc_weight.weight_limit)
+                Some((total_weight - acc_weight.weight_limit) + acc_weight.weight_used)
             },
             pays_fee: Pays::Yes,
         })

@@ -161,7 +161,7 @@ pub struct FixedGasPrice;
 impl FeeCalculator for FixedGasPrice {
     fn min_gas_price() -> (U256, Weight) {
         // Return some meaningful gas price and weight
-        (100u128.into(), Weight::from_parts(7u64, 0))
+        (1_000_000u128.into(), Weight::from_parts(7u64, 0))
     }
 }
 
@@ -180,10 +180,9 @@ const MAX_POV_SIZE: u64 = 5 * 1024 * 1024;
 parameter_types! {
     pub BlockGasLimit: U256 = U256::from(BLOCK_GAS_LIMIT);
     pub const GasLimitPovSizeRatio: u64 = BLOCK_GAS_LIMIT.saturating_div(MAX_POV_SIZE);
-    pub WeightPerGas: Weight = Weight::from_parts(2000, 0);
+    pub WeightPerGas: Weight = Weight::from_parts(20_000, 0);
     pub MockPrecompiles: MockPrecompileSet = MockPrecompileSet;
 }
-
 impl pallet_evm::Config for Test {
     type FeeCalculator = FixedGasPrice;
     type GasWeightMapping = pallet_evm::FixedGasWeightMapping<Self>;
@@ -209,7 +208,6 @@ impl pallet_evm::Config for Test {
     type Timestamp = Timestamp;
     type WeightInfo = ();
 }
-
 /// Example PrecompileSet with only Identity precompile.
 pub struct MockPrecompileSet;
 
