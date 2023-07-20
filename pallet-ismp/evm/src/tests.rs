@@ -1,9 +1,12 @@
+use core::str::FromStr;
+use std::collections::BTreeMap;
 use crate::{handler::u64_to_u256, mocks::*};
 use alloy_primitives::Address;
 use alloy_sol_macro::sol;
 use alloy_sol_types::{SolCall, SolType};
-use fp_evm::{CreateInfo, FeeCalculator};
+use fp_evm::{CreateInfo, FeeCalculator, GenesisAccount};
 use frame_support::{traits::Get, weights::Weight};
+use frame_support::traits::GenesisBuild;
 use frame_system::EventRecord;
 use hex_literal::hex;
 use ismp_rs::host::StateMachine;
@@ -33,12 +36,35 @@ sol! {
 
     function mintTo(address who, uint256 amount) public;
 }
-pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-    let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-    pallet_balances::GenesisConfig::<Test> { balances: vec![(H160::zero(), 1_000_000_000_000), (H160::from_low_u64_be(10), 1_000_000_000_000)] }
-        .assimilate_storage(&mut t)
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
         .unwrap();
 
+    let mut accounts = BTreeMap::new();
+    accounts.insert(
+        H160::from_low_u64_be(10),
+        GenesisAccount {
+            nonce: U256::from(1),
+            balance: U256::from(1000000000000u64),
+            storage: Default::default(),
+            code: vec![
+                0x00, // STOP
+            ],
+        },
+    );
+    accounts.insert(
+        H160::default(), // root
+        GenesisAccount {
+            nonce: U256::from(1),
+            balance: U256::max_value(),
+            storage: Default::default(),
+            code: vec![],
+        },
+    );
+
+    GenesisBuild::<Test>::assimilate_storage(&pallet_evm::GenesisConfig { accounts }, &mut t).unwrap();
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| System::set_block_number(1));
     register_offchain_ext(&mut ext);
@@ -88,7 +114,7 @@ fn deploy_contract(gas_limit: u64, weight_limit: Option<Weight>) -> CreateInfo {
     let contract_address = info.value;
 
     <Test as pallet_evm::Config>::Runner::call(
-        H160::from_low_u64_be(10),
+        H160::zero(),
         contract_address,
         call_data,
         U256::zero(),
@@ -126,10 +152,13 @@ fn post_dispatch() {
         }
         .encode();
 
+        let mut encoded_call = vec![0u8; 4];
+        encoded_call[0..4].copy_from_slice(&sp_io::hashing::keccak_256(b"infinite()")[0..4]);
+
         <Test as pallet_evm::Config>::Runner::call(
             H160::zero(),
             contract_address,
-            call_data,
+            encoded_call,
             U256::zero(),
             gas_limit,
             Some(FixedGasPrice::min_gas_price().0),
