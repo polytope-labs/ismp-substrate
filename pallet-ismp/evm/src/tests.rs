@@ -152,13 +152,10 @@ fn post_dispatch() {
         }
         .encode();
 
-        let mut encoded_call = vec![0u8; 4];
-        encoded_call[0..4].copy_from_slice(&sp_io::hashing::keccak_256(b"infinite()")[0..4]);
-
         <Test as pallet_evm::Config>::Runner::call(
             H160::zero(),
             contract_address,
-            encoded_call,
+            call_data,
             U256::zero(),
             gas_limit,
             Some(FixedGasPrice::min_gas_price().0),
