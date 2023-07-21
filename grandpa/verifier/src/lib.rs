@@ -19,7 +19,11 @@
 #![allow(clippy::all)]
 #![deny(missing_docs)]
 
+#[cfg(test)]
+mod default;
 mod state_machine;
+#[cfg(test)]
+mod tests;
 
 extern crate alloc;
 
