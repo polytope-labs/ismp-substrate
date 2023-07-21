@@ -6,6 +6,7 @@ pragma solidity ^0.8.2;
 import "./ismp_defs.sol";
 
 error NotIsmpHost();
+error ExecutionFailed();
 
 struct Payload {
     address to;
@@ -19,8 +20,6 @@ contract IsmpDemo is IIsmpModule {
 
     // Mapping of user address to balance
     mapping(address => uint256) public balances;
-    // Mapping of destination chains to the module ids
-    mapping(bytes => bytes) public moduleIds;
     event ResponseReceived();
     event BalanceMinted();
     event BalanceBurnt();
@@ -48,10 +47,13 @@ contract IsmpDemo is IIsmpModule {
         _mint(payload.to, payload.amount);
         // For this test we expect the ismp post dispatch precompile to be at the  address 0x03
         // In production you would use the precompile address provided by the chain to make the dispatch
-        (bool ok, bytes memory out) = address(3).staticcall(
-            abi.encode(response)
-        );
-        emit BalanceMinted();
+        bytes memory input = encodeResponse(response);
+        (bool ok, bytes memory out) = address(3).staticcall(input);
+        if (ok) {
+            emit BalanceMinted();
+        } else {
+            revert ExecutionFailed();
+        }
     }
 
     function OnPostResponse(PostResponse memory response) public onlyIsmpHost {
@@ -85,7 +87,7 @@ contract IsmpDemo is IIsmpModule {
         bytes memory dest,
         uint256 amount,
         uint256 timeout,
-        uint64 gasLimit
+        uint256 gasLimit
     ) public {
         _burn(msg.sender, amount);
         Payload memory payload = Payload({
@@ -94,19 +96,24 @@ contract IsmpDemo is IIsmpModule {
             amount: amount
         });
         ContractData memory contract_data = ContractData({
-            data: abi.encode(payload),
+            data: abi.encode(payload.from, payload.to, payload.amount),
             gasLimit: gasLimit
         });
         DispatchPost memory dispatchPost = DispatchPost({
             data: contract_data,
             dest: dest,
             timeoutTimestamp: timeout,
-            to: moduleIds[dest]
+            to: abi.encodePacked(address(12))
         });
         // For this test we expect the ismp post dispatch precompile to be at the  address 0x01
         // In production you would use the precompile address provided by the chain to make the dispatch
-        address(1).staticcall(abi.encode(dispatchPost));
-        emit BalanceBurnt();
+        bytes memory input = encodePostDispatch(dispatchPost);
+        (bool ok, bytes memory out) = address(1).staticcall(input);
+        if (ok) {
+            emit BalanceBurnt();
+        } else {
+            revert ExecutionFailed();
+        }
     }
 
     function dispatchGet(
@@ -114,7 +121,7 @@ contract IsmpDemo is IIsmpModule {
         bytes[] memory keys,
         uint256 height,
         uint256 timeout,
-        uint64 gasLimit
+        uint256 gasLimit
     ) public {
         DispatchGet memory get = DispatchGet({
             keys: keys,
@@ -125,8 +132,13 @@ contract IsmpDemo is IIsmpModule {
         });
         // For this test we expect the ismp get dispatch precompile to be at the  address 0x02
         // In production you would use the precompile address provided by the chain to make the dispatch
-        address(2).staticcall(abi.encode(get));
-        emit GetDispatched();
+        bytes memory input = encodeGetDispatch(get);
+        (bool ok, bytes memory out) = address(2).staticcall(input);
+        if (ok) {
+            emit GetDispatched();
+        } else {
+            revert ExecutionFailed();
+        }
     }
 
     function mintTo(address who, uint256 amount) public onlyIsmpHost {

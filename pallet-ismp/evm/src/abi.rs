@@ -79,7 +79,7 @@ sol! {
             // Timeout
             uint256 timeoutTimestamp;
             // Gas limit that should be used to execute the response or timeout for this request
-            uint64 gasLimit;
+            uint256 gasLimit;
         }
 
         // An object that represents the standard data format for contract post request bodies
@@ -89,7 +89,7 @@ sol! {
             // Actual contract data to that would be abi decoded by contract internally
             bytes data;
             // Gas limit to be used to execute the contract call back on destination chain
-            uint64 gasLimit;
+            uint256 gasLimit;
         }
 
 

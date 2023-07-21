@@ -161,7 +161,7 @@ pub struct FixedGasPrice;
 impl FeeCalculator for FixedGasPrice {
     fn min_gas_price() -> (U256, Weight) {
         // Return some meaningful gas price and weight
-        (1_000_000u128.into(), Weight::from_parts(7u64, 0))
+        (10u128.into(), Weight::from_parts(7u64, 0))
     }
 }
 
@@ -174,7 +174,7 @@ impl FindAuthor<H160> for FindAuthorTruncated {
         Some(H160::from_str("1234500000000000000000000000000000000000").unwrap())
     }
 }
-const BLOCK_GAS_LIMIT: u64 = 150_000_000;
+const BLOCK_GAS_LIMIT: u64 = 1_500_000_000;
 const MAX_POV_SIZE: u64 = 5 * 1024 * 1024;
 
 parameter_types! {

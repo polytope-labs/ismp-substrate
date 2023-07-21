@@ -3406,6 +3406,7 @@ version = "0.1.0"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
+ "env_logger",
  "fp-evm",
  "frame-support",
  "frame-system",
@@ -3414,6 +3415,7 @@ dependencies = [
  "ismp",
  "ismp-primitives",
  "ismp-testsuite",
+ "log",
  "pallet-balances",
  "pallet-evm",
  "pallet-ismp",

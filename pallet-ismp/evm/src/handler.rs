@@ -1,8 +1,12 @@
 //! Module Handler for EVM contracts
-use crate::abi::{
-    ContractData as SolContractData, GetRequest as SolGetRequest, GetResponse as SolGetResponse,
-    OnAcceptCall, OnGetResponseCall, OnGetTimeoutCall, OnPostResponseCall, OnPostTimeoutCall,
-    PostRequest, PostResponse as SolPostResponse, StorageValue as SolStorageValue,
+use crate::{
+    abi::{
+        ContractData as SolContractData, GetRequest as SolGetRequest,
+        GetResponse as SolGetResponse, OnAcceptCall, OnGetResponseCall, OnGetTimeoutCall,
+        OnPostResponseCall, OnPostTimeoutCall, PostRequest, PostResponse as SolPostResponse,
+        StorageValue as SolStorageValue,
+    },
+    ismp_dispatcher_precompiles::u256_to_u64,
 };
 use alloy_primitives::U256;
 use alloy_sol_types::{SolCall, SolType};
@@ -37,7 +41,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
                 "Failed to decode request data to the standard format".to_string(),
             )
         })?;
-        let gas_limit = contract_data.gasLimit;
+        let gas_limit = u256_to_u64(contract_data.gasLimit);
         let post = PostRequest {
             source: request.source.to_string().as_bytes().to_vec(),
             dest: request.dest.to_string().as_bytes().to_vec(),
@@ -65,7 +69,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
                             "Failed to decode request data to the standard format".to_string(),
                         )
                     })?;
-                let gas_limit = contract_data.gasLimit;
+                let gas_limit = u256_to_u64(contract_data.gasLimit);
                 let post_response = SolPostResponse {
                     request: PostRequest {
                         source: response.post.source.to_string().as_bytes().to_vec(),
@@ -119,7 +123,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
                         "Failed to decode request data to the standard format".to_string(),
                     )
                 })?;
-                let gas_limit = contract_data.gasLimit;
+                let gas_limit = u256_to_u64(contract_data.gasLimit);
                 let request = PostRequest {
                     source: post.source.to_string().as_bytes().to_vec(),
                     dest: post.dest.to_string().as_bytes().to_vec(),

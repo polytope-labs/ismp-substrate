@@ -23,7 +23,7 @@ sol! {
         bytes memory dest,
         uint256 amount,
         uint256 timeout,
-        uint64 gasLimit
+        uint256 gasLimit
     ) public;
 
     function dispatchGet(
@@ -31,10 +31,15 @@ sol! {
         bytes[] memory keys,
         uint256 height,
         uint256 timeout,
-        uint64 gasLimit
+        uint256 gasLimit
     ) public;
 
     function mintTo(address who, uint256 amount) public;
+    struct Payload {
+        address to;
+        address from;
+        uint256 amount;
+    }
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -79,13 +84,17 @@ pub const EXAMPLE_CONTRACT: &str = include_str!("../solidity/IsmpDemo.bin");
 const USER: Address = Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
 
 /// Verify the the last event emitted
-fn assert_last_event<T: pallet_ismp::Config>(
+fn assert_event_was_emitted<T: pallet_ismp::Config>(
     generic_event: <T as pallet_ismp::Config>::RuntimeEvent,
 ) {
     let events = frame_system::Pallet::<T>::events();
     let system_event: <T as frame_system::Config>::RuntimeEvent = generic_event.into();
-    let EventRecord { event, .. } = &events[events.len() - 1];
-    assert_eq!(event, &system_event);
+    for EventRecord { event, .. } in events {
+        if event == system_event {
+            return
+        }
+    }
+    panic!("Event was not emitted")
 }
 
 fn deploy_contract(gas_limit: u64, weight_limit: Option<Weight>) -> CreateInfo {
@@ -127,14 +136,13 @@ fn deploy_contract(gas_limit: u64, weight_limit: Option<Weight>) -> CreateInfo {
         &<Test as pallet_evm::Config>::config().clone(),
     )
     .expect("call succeeds");
-
     info
 }
 
 #[test]
 fn post_dispatch() {
     new_test_ext().execute_with(|| {
-        let gas_limit: u64 = 1_000_000;
+        let gas_limit: u64 = 1_500_000_000;
         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
         let result = deploy_contract(gas_limit, Some(weight_limit));
 
@@ -144,8 +152,8 @@ fn post_dispatch() {
             to: USER,
             dest: StateMachine::Polkadot(1000).to_string().as_bytes().to_vec(),
             amount: u64_to_u256(10_000).unwrap(),
-            timeout: u64_to_u256(0).unwrap(),
-            gasLimit: gas_limit,
+            timeout: u64_to_u256(223311228889).unwrap(),
+            gasLimit: u64_to_u256(gas_limit).unwrap(),
         }
         .encode();
 
@@ -166,9 +174,8 @@ fn post_dispatch() {
             &<Test as pallet_evm::Config>::config().clone(),
         )
         .expect("call succeeds");
-
         // Check
-        assert_last_event::<Test>(
+        assert_event_was_emitted::<Test>(
             Event::Request {
                 dest_chain: StateMachine::Polkadot(1000),
                 source_chain: <Test as pallet_ismp::Config>::StateMachine::get(),
@@ -181,8 +188,9 @@ fn post_dispatch() {
 
 #[test]
 fn get_dispatch() {
+    env_logger::init();
     new_test_ext().execute_with(|| {
-        let gas_limit: u64 = 1_000_000;
+        let gas_limit: u64 = 1_500_000_000;
         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
         let result = deploy_contract(gas_limit, Some(weight_limit));
 
@@ -190,10 +198,10 @@ fn get_dispatch() {
 
         let call_data = dispatchGetCall {
             dest: StateMachine::Polkadot(2000).to_string().as_bytes().to_vec(),
-            keys: vec![vec![1u8; 32]],
+            keys: vec![vec![1u8; 64]],
             height: u64_to_u256(10).unwrap(),
-            timeout: u64_to_u256(0).unwrap(),
-            gasLimit: gas_limit,
+            timeout: u64_to_u256(2000).unwrap(),
+            gasLimit: u64_to_u256(gas_limit).unwrap(),
         }
         .encode();
 
@@ -217,7 +225,7 @@ fn get_dispatch() {
 
         GasLimits::<Test>::get(0).expect("Gas limit should be set after get dispatch");
         // Check
-        assert_last_event::<Test>(
+        assert_event_was_emitted::<Test>(
             Event::Request {
                 dest_chain: StateMachine::Polkadot(2000),
                 source_chain: <Test as pallet_ismp::Config>::StateMachine::get(),

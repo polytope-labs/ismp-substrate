@@ -46,6 +46,7 @@ where
             SolDispatchPost::decode(input, true).map_err(|e| PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
             })?;
+
         let post_dispatch = DispatchPost {
             dest: parse_state_machine(post_dispatch.dest)?,
             from: context.caller.0.to_vec(),
@@ -56,7 +57,7 @@ where
 
         handle.record_cost(cost)?;
         match dispatcher.dispatch_request(DispatchRequest::Post(post_dispatch)) {
-            Ok(_) => Ok(PrecompileOutput { exit_status: ExitSucceed::Stopped, output: vec![] }),
+            Ok(_) => Ok(PrecompileOutput { exit_status: ExitSucceed::Returned, output: vec![] }),
             Err(e) => Err(PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("dispatch execution failed: {:?}", e).into()),
             }),
@@ -88,11 +89,13 @@ where
 
         let dispatcher = Dispatcher::<T>::default();
 
-        let get_dispatch =
-            SolDispatchGet::decode(input, true).map_err(|e| PrecompileFailure::Error {
+        let get_dispatch = SolDispatchGet::decode(input, true).map_err(|e| {
+            println!("\nError decoding DispatchGet Decode failure {:?}\n", e);
+            PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
-            })?;
-        let gas_limit = get_dispatch.gasLimit;
+            }
+        })?;
+        let gas_limit = u256_to_u64(get_dispatch.gasLimit);
         let get_dispatch = DispatchGet {
             dest: parse_state_machine(get_dispatch.dest)?,
             from: context.caller.0.to_vec(),
@@ -100,12 +103,13 @@ where
             height: u256_to_u64(get_dispatch.height),
             timeout_timestamp: u256_to_u64(get_dispatch.timeoutTimestamp),
         };
+
         handle.record_cost(cost)?;
         match dispatcher.dispatch_request(DispatchRequest::Get(get_dispatch)) {
             Ok(_) => {
                 let nonce = Pallet::<T>::previous_nonce();
                 GasLimits::<T>::insert(nonce, gas_limit);
-                Ok(PrecompileOutput { exit_status: ExitSucceed::Stopped, output: vec![] })
+                Ok(PrecompileOutput { exit_status: ExitSucceed::Returned, output: vec![] })
             }
             Err(e) => Err(PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("dispatch execution failed: {:?}", e).into()),
@@ -151,7 +155,7 @@ where
         handle.record_cost(cost)?;
 
         match dispatcher.dispatch_response(post_response) {
-            Ok(_) => Ok(PrecompileOutput { exit_status: ExitSucceed::Stopped, output: vec![] }),
+            Ok(_) => Ok(PrecompileOutput { exit_status: ExitSucceed::Returned, output: vec![] }),
             Err(e) => Err(PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("dispatch execution failed: {:?}", e).into()),
             }),
@@ -160,7 +164,7 @@ where
 }
 
 /// Convert u256 to u64 without overflow check
-fn u256_to_u64(value: alloy_primitives::U256) -> u64 {
+pub fn u256_to_u64(value: alloy_primitives::U256) -> u64 {
     U256::from_big_endian(value.to_be_bytes::<32>().as_slice()).low_u64()
 }
 

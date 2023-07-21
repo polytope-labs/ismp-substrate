@@ -1,5 +1,5 @@
 //! Weight info utilities for evm contracts
-use crate::abi::ContractData as SolContractData;
+use crate::{abi::ContractData as SolContractData, ismp_dispatcher_precompiles::u256_to_u64};
 use alloy_sol_types::SolType;
 use core::marker::PhantomData;
 use frame_support::{dispatch::Weight, traits::Get};
@@ -19,7 +19,7 @@ impl<T: Config + pallet_evm::Config> Default for EvmWeightCalculator<T> {
 impl<T: Config + pallet_evm::Config> IsmpModuleWeight for EvmWeightCalculator<T> {
     fn on_accept(&self, request: &Post) -> Weight {
         if let Ok(contract_data) = SolContractData::decode(&request.data, true) {
-            let gas_limit = contract_data.gasLimit;
+            let gas_limit = u256_to_u64(contract_data.gasLimit);
             <T as pallet_evm::Config>::GasWeightMapping::gas_to_weight(gas_limit, true)
         } else {
             <T as pallet_evm::Config>::GasWeightMapping::gas_to_weight(
@@ -33,7 +33,7 @@ impl<T: Config + pallet_evm::Config> IsmpModuleWeight for EvmWeightCalculator<T>
         match request {
             Request::Post(post) => {
                 if let Ok(contract_data) = SolContractData::decode(&post.data, true) {
-                    let gas_limit = contract_data.gasLimit;
+                    let gas_limit = u256_to_u64(contract_data.gasLimit);
                     <T as pallet_evm::Config>::GasWeightMapping::gas_to_weight(gas_limit, true)
                 } else {
                     <T as pallet_evm::Config>::GasWeightMapping::gas_to_weight(
@@ -57,7 +57,7 @@ impl<T: Config + pallet_evm::Config> IsmpModuleWeight for EvmWeightCalculator<T>
         match response {
             Response::Post(response) => {
                 if let Ok(contract_data) = SolContractData::decode(&response.post.data, true) {
-                    let gas_limit = contract_data.gasLimit;
+                    let gas_limit = u256_to_u64(contract_data.gasLimit);
                     <T as pallet_evm::Config>::GasWeightMapping::gas_to_weight(gas_limit, true)
                 } else {
                     <T as pallet_evm::Config>::GasWeightMapping::gas_to_weight(

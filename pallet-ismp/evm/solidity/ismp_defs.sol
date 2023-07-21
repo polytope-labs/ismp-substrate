@@ -77,7 +77,7 @@ struct DispatchGet {
     // Timeout
     uint256 timeoutTimestamp;
     // Gas limit that should be used to execute the response or timeout for this request
-    uint64 gasLimit;
+    uint256 gasLimit;
 }
 
 // An object that represents the standard data format for contract post request bodies
@@ -87,7 +87,7 @@ struct ContractData {
     // Actual contract data to that would be abi decoded by contract internally
     bytes data;
     // Gas limit to be used to execute the contract call back on destination chain
-    uint64 gasLimit;
+    uint256 gasLimit;
 }
 
 interface IIsmpModule {
@@ -100,4 +100,39 @@ interface IIsmpModule {
     function OnPostTimeout(PostRequest memory request) external;
 
     function OnGetTimeout(GetRequest memory request) external;
+}
+
+function encodePostDispatch(
+    DispatchPost memory dispatch
+) pure returns (bytes memory) {
+    return
+        abi.encode(
+            dispatch.dest,
+            dispatch.to,
+            dispatch.data,
+            dispatch.timeoutTimestamp
+        );
+}
+
+function encodeGetDispatch(
+    DispatchGet memory dispatch
+) pure returns (bytes memory) {
+    return
+        abi.encode(
+            dispatch.dest,
+            dispatch.height,
+            dispatch.keys,
+            dispatch.timeoutTimestamp,
+            dispatch.gasLimit
+        );
+}
+
+function encodeResponse(
+    PostResponse memory postResponse
+) pure returns (bytes memory) {
+    return
+        abi.encode(
+            postResponse.request,
+            postResponse.response
+        );
 }
