@@ -1,6 +1,7 @@
 # pallet-ismp ![Unit Tests](https://github.com/polytope-labs/substrate-ismp/actions/workflows/ci.yml/badge.svg) [![Telegram: YourGroup](https://img.shields.io/badge/-Telegram-blue?style=flat-square&logo=Telegram&logoColor=white&link=https://t.me/YourGroup)](https://t.me/ismp_guide) [![Discord: YourServer](https://img.shields.io/badge/-Discord-7289DA?style=flat-square&logo=Discord&logoColor=white&link=https://discord.gg/YourServer)](https://discord.gg/vKAa3XcCBX)
 
 Implementation of the Interoperable State Machine Protocol for substrate runtimes. This project is [funded by the web3 foundation](https://github.com/w3f/Grants-Program/blob/master/applications/ismp.md).
+
 <img src="https://drive.google.com/uc?export=view&id=1aW_M8dULbPLNo4jTP2PsdNgW2UPST1jB"  height="250">
 
 ## Overview
