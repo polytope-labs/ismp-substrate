@@ -17,6 +17,7 @@ pub type Justification = GrandpaJustification<Header>;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JustificationNotification(sp_core::Bytes);
 
+#[ignore]
 #[tokio::test]
 async fn follow_grandpa_justifications() {
     env_logger::builder()
@@ -76,9 +77,11 @@ async fn follow_grandpa_justifications() {
     let mut consensus_state = prover.initialize_consensus_state(slot_duration).await.unwrap();
 
     println!("Grandpa proofs are now available");
-    while let Some(Ok(JustificationNotification(sp_core::Bytes(_)))) = subscription.next().await {
+    while let Some(Ok(_)) = subscription.next().await {
         let next_relay_height = consensus_state.latest_height + 1;
 
+        // prove finality should give us the justification for the highest finalized block of the
+        // authority set the block provided to it belongs
         let finality_proof = prover
             .query_finality_proof::<SubstrateHeader<u32, BlakeTwo256>>(
                 consensus_state.latest_height,

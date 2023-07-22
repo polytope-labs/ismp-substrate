@@ -156,38 +156,13 @@ where
 
         Ok(ConsensusState {
             current_authorities,
-            current_set_id,
+            current_set_id: current_set_id + 1,
             latest_height,
             latest_hash: latest_hash.into(),
             para_ids: self.para_ids.iter().map(|id| (*id, true)).collect(),
             state_machine: self.state_machine,
             slot_duration,
         })
-    }
-
-    /// Returns the latest finalized parachain header at the given finalized relay chain height.
-    pub async fn query_latest_finalized_parachain_header(
-        &self,
-        para_id: u32,
-        latest_finalized_height: u32,
-    ) -> Result<T::Header, anyhow::Error> {
-        let latest_finalized_hash =
-            self.client.rpc().block_hash(Some(latest_finalized_height.into())).await?.ok_or_else(
-                || anyhow!("Block hash not found for number: {latest_finalized_height}"),
-            )?;
-        let key = parachain_header_storage_key(para_id);
-        let raw = self
-            .client
-            .storage()
-            .at(latest_finalized_hash)
-            .fetch_raw(key.as_ref())
-            .await?
-            .ok_or_else(|| anyhow!("parachain header not found for para id: {}", para_id))?;
-        let head_data: HeadData = codec::Decode::decode(&mut &*raw)?;
-        let header = T::Header::decode(&mut &head_data.0[..])
-            .map_err(|_| anyhow!("Failed to decode header"))?;
-
-        Ok(header)
     }
 
     /// Returns the grandpa finality proof
