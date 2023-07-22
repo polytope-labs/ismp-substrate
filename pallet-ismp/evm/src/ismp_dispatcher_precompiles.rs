@@ -89,12 +89,10 @@ where
 
         let dispatcher = Dispatcher::<T>::default();
 
-        let get_dispatch = SolDispatchGet::decode(input, true).map_err(|e| {
-            println!("\nError decoding DispatchGet Decode failure {:?}\n", e);
-            PrecompileFailure::Error {
+        let get_dispatch =
+            SolDispatchGet::decode(input, true).map_err(|e| PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
-            }
-        })?;
+            })?;
         let gas_limit = u256_to_u64(get_dispatch.gasLimit);
         let get_dispatch = DispatchGet {
             dest: parse_state_machine(get_dispatch.dest)?,

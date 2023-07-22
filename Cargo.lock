@@ -191,13 +191,14 @@ dependencies = [
 [[package]]
 name = "alloy-primitives"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f09d3cd21353cf2f41f401e35093390f2a238ce0a72af0f6fc6be5157f525c7"
+source = "git+https://github.com/alloy-rs/core.git?branch=main#3d89ec51a9400ae1f323dc508f609699284afe11"
 dependencies = [
  "alloy-rlp",
  "bytes",
+ "cfg-if",
  "const-hex",
  "derive_more",
+ "hex-literal 0.4.1",
  "itoa",
  "proptest",
  "ruint2",
@@ -207,20 +208,22 @@ dependencies = [
 
 [[package]]
 name = "alloy-rlp"
-version = "0.2.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6aa8b63682a5fa571b7c0281839e267b6a1f7569ba07b9b57b093050b7c2efda"
+checksum = "1f54319708cdf93563fe45b1afd475901cecbd0edb992305dc91eadc52d7717e"
 dependencies = [
  "arrayvec 0.7.4",
  "bytes",
+ "smol_str",
 ]
 
 [[package]]
 name = "alloy-sol-macro"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5bd2b0c6299738585f1bfa9720bb8df0e57750be8cf83269093d425bc919039b"
+source = "git+https://github.com/alloy-rs/core.git?branch=main#3d89ec51a9400ae1f323dc508f609699284afe11"
 dependencies = [
+ "dunce",
+ "heck",
  "proc-macro2",
  "quote",
  "syn 2.0.25",
@@ -231,8 +234,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-types"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa13e1e05d0f45f042f9f872a1ff71717d446e563fa9c5a29ab59c4a0afb4e7f"
+source = "git+https://github.com/alloy-rs/core.git?branch=main#3d89ec51a9400ae1f323dc508f609699284afe11"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-macro",
@@ -1877,6 +1879,12 @@ name = "dtoa"
 version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "519b83cd10f5f6e969625a409f735182bea5558cd8b64c655806ceaae36f1999"
+
+[[package]]
+name = "dunce"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56ce8c6da7551ec6c462cbaf3bfbc75131ebbfa1c944aeaa9dab51ca1c5f0c3b"
 
 [[package]]
 name = "dyn-clonable"
@@ -8577,6 +8585,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62bb4feee49fdd9f707ef802e22365a35de4b7b299de4763d44bfea899442ff9"
 
 [[package]]
+name = "smol_str"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74212e6bbe9a4352329b2f68ba3130c15a3f26fe88ff22dbdc6cdd58fa85e99c"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "snap"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10572,8 +10589,7 @@ dependencies = [
 [[package]]
 name = "syn-solidity"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c93e348d6f105577df7bb5e8ad835d8f0f8ecbd709da24e711bb107a048d8000"
+source = "git+https://github.com/alloy-rs/core.git?branch=main#3d89ec51a9400ae1f323dc508f609699284afe11"
 dependencies = [
  "proc-macro2",
  "quote",
