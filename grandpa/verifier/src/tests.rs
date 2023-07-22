@@ -4,12 +4,8 @@ use futures::StreamExt;
 use grandpa_prover::GrandpaProver;
 use ismp::host::StateMachine;
 use polkadot_core_primitives::Header;
-use primitives::{
-    justification::GrandpaJustification, FinalityProof, ParachainHeadersWithFinalityProof,
-};
+use primitives::{justification::GrandpaJustification, ParachainHeadersWithFinalityProof};
 use serde::{Deserialize, Serialize};
-use sp_core::H256;
-use std::sync::Arc;
 use subxt::{
     config::substrate::{BlakeTwo256, SubstrateHeader},
     rpc_params,
@@ -22,7 +18,6 @@ pub type Justification = GrandpaJustification<Header>;
 pub struct JustificationNotification(sp_core::Bytes);
 
 #[tokio::test]
-#[ignore]
 async fn follow_grandpa_justifications() {
     env_logger::builder()
         .filter_module("grandpa", log::LevelFilter::Trace)
@@ -30,22 +25,21 @@ async fn follow_grandpa_justifications() {
         .init();
 
     let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-    let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 
     let relay_ws_url = format!("ws://{relay}:9944");
-    let _para_ws_url = format!("ws://{para}:9188");
 
-    let para_ids = Vec::new();
-    let babe_epoch_start = Vec::new();
-
-    let consensus_state_id = [0u8; 4];
+    let para_ids = vec![2000, 2001];
+    let babe_epoch_start_key =
+        hex::decode("1cb6f36e027abb2091cfb5110ab5087fe90e2fbf2d792cb324bffa9427fe1f0e").unwrap();
+    let current_set_id_key =
+        hex::decode("5f9cc45b7a00c5899361e1c6099678dc8a2d09463effcc78a22d75b9cb87dffc").unwrap();
 
     let prover = GrandpaProver::<DefaultConfig>::new(
         &relay_ws_url,
         para_ids,
-        StateMachine::Grandpa(consensus_state_id),
-        babe_epoch_start,
-        Vec::new(),
+        StateMachine::Polkadot(0),
+        babe_epoch_start_key,
+        current_set_id_key,
     )
     .await
     .unwrap();
@@ -74,46 +68,26 @@ async fn follow_grandpa_justifications() {
         )
         .await
         .unwrap()
-        .take((2 * session_length).try_into().unwrap());
+        .take(100);
 
-    let slot_duration = 0;
+    // slot duration in milliseconds for parachains
+    let slot_duration = 12_000;
 
     let mut consensus_state = prover.initialize_consensus_state(slot_duration).await.unwrap();
+
     println!("Grandpa proofs are now available");
     while let Some(Ok(JustificationNotification(sp_core::Bytes(_)))) = subscription.next().await {
         let next_relay_height = consensus_state.latest_height + 1;
 
-        let encoded = finality_grandpa_rpc::GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-            // we cast between the same type but different crate versions.
-            &*unsafe {
-                unsafe_arc_cast::<_, jsonrpsee_ws_client::WsClient>(prover.ws_client.clone())
-            },
-            next_relay_height,
-        )
+        let finality_proof = prover
+            .query_finality_proof::<SubstrateHeader<u32, BlakeTwo256>>(
+                consensus_state.latest_height,
+                next_relay_height,
+            )
             .await
-            .unwrap()
-            .unwrap()
-            .0;
-
-        let finality_proof =
-            FinalityProof::<SubstrateHeader<u32, BlakeTwo256>>::decode(&mut &encoded[..]).unwrap();
+            .unwrap();
 
         let justification = Justification::decode(&mut &finality_proof.justification[..]).unwrap();
-
-        let para_id = 0;
-
-        let finalized_para_header = prover
-            .query_latest_finalized_parachain_header(para_id, justification.commit.target_number)
-            .await
-            .expect("Failed to fetch finalized parachain headers");
-
-        // notice the inclusive range
-        let header_numbers = ((consensus_state.latest_height + 1)..=finalized_para_header.number)
-            .collect::<Vec<_>>();
-
-        if header_numbers.len() == 0 {
-            continue
-        }
 
         println!("current_set_id: {}", consensus_state.current_set_id);
         println!("latest_relay_height: {}", consensus_state.latest_height);
@@ -121,9 +95,6 @@ async fn follow_grandpa_justifications() {
             "For relay chain header: Hash({:?}), Number({})",
             justification.commit.target_hash, justification.commit.target_number
         );
-
-        dbg!(&consensus_state.latest_height);
-        dbg!(&header_numbers);
 
         let proof = prover
             .query_finalized_parachain_headers_with_proof::<SubstrateHeader<u32, BlakeTwo256>>(
@@ -151,10 +122,4 @@ async fn follow_grandpa_justifications() {
         consensus_state = new_consensus_state;
         println!("========= Successfully verified grandpa justification =========");
     }
-}
-
-/// Perform a highly unsafe type-casting between two types hidden behind an Arc.
-pub unsafe fn unsafe_arc_cast<T, U>(arc: Arc<T>) -> Arc<U> {
-    let ptr = Arc::into_raw(arc).cast::<U>();
-    Arc::from_raw(ptr)
 }
