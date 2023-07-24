@@ -44,5 +44,7 @@ std = [
     "sp-io/std",
     "primitive-types/std",
     "pallet-ismp/std",
-    "sp-core/std"
+    "sp-core/std",
+    "primitives/std",
+    "verifier/std",
 ]
