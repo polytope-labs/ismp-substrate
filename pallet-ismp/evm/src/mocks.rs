@@ -33,7 +33,7 @@ use pallet_evm::{EnsureAddressNever, EnsureAddressRoot, IdentityAddressMapping};
 
 use crate::{
     handler::EvmContractHandler,
-    ismp_dispatcher_precompiles::{IsmpGetDispatcher, IsmpPostDispatcher, IsmpResponseDispatcher},
+    precompiles::{IsmpGetDispatcher, IsmpPostDispatcher, IsmpResponseDispatcher},
 };
 use pallet_ismp::{
     ismp_mocks::MockConsensusClient,

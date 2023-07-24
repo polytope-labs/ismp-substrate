@@ -22,7 +22,7 @@ extern crate alloc;
 
 pub mod abi;
 pub mod handler;
-pub mod ismp_dispatcher_precompiles;
+pub mod precompiles;
 #[cfg(test)]
 mod mocks;
 #[cfg(test)]

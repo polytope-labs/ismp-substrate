@@ -1,5 +1,5 @@
 //! Weight info utilities for evm contracts
-use crate::{abi::ContractData as SolContractData, ismp_dispatcher_precompiles::u256_to_u64};
+use crate::{abi::ContractData as SolContractData, precompiles::u256_to_u64};
 use alloy_sol_types::SolType;
 use core::marker::PhantomData;
 use frame_support::{dispatch::Weight, traits::Get};

@@ -6,7 +6,7 @@ use crate::{
         OnPostResponseCall, OnPostTimeoutCall, PostRequest, PostResponse as SolPostResponse,
         StorageValue as SolStorageValue,
     },
-    ismp_dispatcher_precompiles::u256_to_u64,
+    precompiles::u256_to_u64,
 };
 use alloy_primitives::U256;
 use alloy_sol_types::{SolCall, SolType};
