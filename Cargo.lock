@@ -226,7 +226,7 @@ dependencies = [
  "heck",
  "proc-macro2",
  "quote",
- "syn 2.0.25",
+ "syn 2.0.27",
  "syn-solidity",
  "tiny-keccak",
 ]
@@ -10593,7 +10593,7 @@ source = "git+https://github.com/alloy-rs/core.git?rev=3d89ec51a9400ae1f323dc508
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.25",
+ "syn 2.0.27",
 ]
 
 [[package]]
