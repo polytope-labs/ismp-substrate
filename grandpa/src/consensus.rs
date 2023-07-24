@@ -13,7 +13,7 @@
 // See the License for the specific lang
 
 use crate::consensus_message::ConsensusMessage;
-use alloc::collections::BTreeMap;
+use alloc::{boxed::Box, collections::BTreeMap, format, vec::Vec};
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use finality_grandpa::Chain;
