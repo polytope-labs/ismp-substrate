@@ -17,9 +17,8 @@ jsonrpsee = { version = "0.16.2", features = ["async-client", "jsonrpsee-ws-clie
 jsonrpsee-ws-client = "0.16.2"
 finality-grandpa = "0.16.0"
 
-sc-finality-grandpa-rpc = "0.25.0"
-sp-finality-grandpa = "16.0.0"
-
+sc-consensus-grandpa-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }

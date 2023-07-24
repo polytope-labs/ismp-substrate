@@ -1,4 +1,4 @@
-use crate::{default::DefaultConfig, verify_parachain_headers_with_grandpa_finality_proof};
+use crate::verify_parachain_headers_with_grandpa_finality_proof;
 use codec::{Decode, Encode};
 use futures::StreamExt;
 use grandpa_prover::GrandpaProver;
@@ -6,10 +6,28 @@ use ismp::host::StateMachine;
 use polkadot_core_primitives::Header;
 use primitives::{justification::GrandpaJustification, ParachainHeadersWithFinalityProof};
 use serde::{Deserialize, Serialize};
+use sp_core::{crypto::AccountId32, H256};
 use subxt::{
-    config::substrate::{BlakeTwo256, SubstrateHeader},
+    config::{
+        polkadot::PolkadotExtrinsicParams as ParachainExtrinsicParams,
+        substrate::{BlakeTwo256, SubstrateHeader},
+    },
     rpc_params,
 };
+
+pub struct DefaultConfig;
+
+impl subxt::config::Config for DefaultConfig {
+    type Index = u32;
+    type Hash = H256;
+    type AccountId = AccountId32;
+    type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
+    type Signature = sp_runtime::MultiSignature;
+    type Hasher = subxt::config::substrate::BlakeTwo256;
+    type Header =
+        subxt::config::substrate::SubstrateHeader<u32, subxt::config::substrate::BlakeTwo256>;
+    type ExtrinsicParams = ParachainExtrinsicParams<Self>;
+}
 
 pub type Justification = GrandpaJustification<Header>;
 

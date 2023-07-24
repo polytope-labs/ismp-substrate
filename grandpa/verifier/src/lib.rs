@@ -19,8 +19,6 @@
 #![allow(clippy::all)]
 #![deny(missing_docs)]
 
-#[cfg(test)]
-mod default;
 mod state_machine;
 #[cfg(test)]
 mod tests;
@@ -32,12 +30,12 @@ use anyhow::anyhow;
 use codec::Decode;
 use finality_grandpa::Chain;
 use primitives::{
-    error,
     justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
     parachain_header_storage_key, ConsensusState, FinalityProof, ParachainHeadersWithFinalityProof,
 };
 use sp_core::H256;
 use sp_runtime::traits::{BlakeTwo256, Header};
+use sp_std::prelude::*;
 use sp_trie::StorageProof;
 
 /// This function verifies the GRANDPA finality proof for both standalone chain and parachain
@@ -45,7 +43,7 @@ use sp_trie::StorageProof;
 pub fn verify_grandpa_finality_proof<H>(
     mut consensus_state: ConsensusState,
     finality_proof: FinalityProof<H>,
-) -> Result<(ConsensusState, H, Vec<H256>, AncestryChain<H>), error::Error>
+) -> Result<(ConsensusState, H, Vec<H256>, AncestryChain<H>), anyhow::Error>
 where
     H: Header<Hash = H256, Number = u32>,
     H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
@@ -64,7 +62,8 @@ where
         Err(anyhow!("Latest finalized block should be highest block in unknown_headers"))?;
     }
 
-    let justification = GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])?;
+    let justification = GrandpaJustification::<H>::decode(&mut &finality_proof.justification[..])
+        .map_err(|e| anyhow!("Failed to decode justificatio {:?}", e))?;
 
     if justification.commit.target_hash != finality_proof.block {
         Err(anyhow!("Justification target hash and finality proof block hash mismatch"))?;
@@ -113,7 +112,7 @@ where
 pub fn verify_parachain_headers_with_grandpa_finality_proof<H>(
     consensus_state: ConsensusState,
     proof: ParachainHeadersWithFinalityProof<H>,
-) -> Result<(ConsensusState, BTreeMap<u32, Vec<H>>), error::Error>
+) -> Result<(ConsensusState, BTreeMap<u32, Vec<H>>), anyhow::Error>
 where
     H: Header<Hash = H256, Number = u32>,
     H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
@@ -141,7 +140,7 @@ where
 
             let key = parachain_header_storage_key(para_id);
 
-            keys.insert(key, para_id);
+            keys.insert(key.0, para_id);
         }
 
         let proof = StorageProof::new(state_proof);
@@ -150,15 +149,16 @@ where
         let mut result = state_machine::read_proof_check::<BlakeTwo256, _>(
             relay_chain_header.state_root(),
             proof,
-            keys.keys().map(|key| key.as_ref()),
+            keys.keys().map(|key| key.as_slice()),
         )
         .map_err(|err| anyhow!("error verifying parachain header state proof: {err:?}"))?;
         for (key, para_id) in keys {
             let header = result
-                .remove(key.as_ref())
+                .remove(&key)
                 .flatten()
                 .ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
-            let parachain_header = H::decode(&mut &header[..])?;
+            let parachain_header =
+                H::decode(&mut &header[..]).map_err(|e| anyhow!("error decoding header: {e:?}"))?;
             verified_parachain_headers.entry(para_id).or_default().push(parachain_header);
         }
     }

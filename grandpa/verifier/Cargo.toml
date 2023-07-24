@@ -13,9 +13,9 @@ finality-grandpa = { version = "0.16.0", features = ["derive-codec"], default-fe
 hash-db = { version = "0.16.0", default-features = false }
 serde = { version = "1.0.144", default-features = false, features = ["derive"] }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
-sp-finality-grandpa = {version = "16.0.0",  default-features = false }
 
 
+sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
@@ -23,8 +23,7 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
-
-sp-storage = { version = "13.0.0", default-features = false }
+sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42", default-features = false }
 
 primitives = { package = "ismp-grandpa-primitives", path = "../primitives", default-features = false }
 
@@ -54,7 +53,7 @@ std = [
     "sp-runtime/std",
     "sp-std/std",
     "sp-trie/std",
-    "sp-finality-grandpa/std",
+    "sp-consensus-grandpa/std",
     "sp-state-machine/std",
     "sp-io/std",
     "primitives/std",

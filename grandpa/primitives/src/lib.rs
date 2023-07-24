@@ -25,14 +25,12 @@ use alloc::collections::BTreeMap;
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use ismp::host::StateMachine;
+use sp_consensus_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
 use sp_core::{sp_std, H256};
-use sp_finality_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
 use sp_runtime::traits::Header;
 use sp_std::prelude::*;
 use sp_storage::StorageKey;
 
-/// GRANPA errors
-pub mod error;
 /// GRANDPA justification utilities
 pub mod justification;
 

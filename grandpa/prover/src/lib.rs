@@ -25,10 +25,10 @@ use primitives::{
     parachain_header_storage_key, ConsensusState, FinalityProof, ParachainHeaderProofs,
     ParachainHeadersWithFinalityProof,
 };
-use sc_finality_grandpa_rpc::GrandpaApiClient;
+use sc_consensus_grandpa_rpc::GrandpaApiClient;
 use serde::{Deserialize, Serialize};
+use sp_consensus_grandpa::{AuthorityId, AuthoritySignature};
 use sp_core::H256;
-use sp_finality_grandpa::{AuthorityId, AuthoritySignature};
 use sp_runtime::traits::{One, Zero};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -104,7 +104,7 @@ where
         &self,
         slot_duration: u64,
     ) -> Result<ConsensusState, anyhow::Error> {
-        use sp_finality_grandpa::AuthorityList;
+        use sp_consensus_grandpa::AuthorityList;
         let latest_hash = self.client.rpc().finalized_head().await?;
         let header = self
             .client

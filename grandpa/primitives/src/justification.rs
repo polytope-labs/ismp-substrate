@@ -13,17 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{error, Commit};
+use crate::Commit;
 use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::anyhow;
 use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;
 use frame_support::log;
-use sp_core::ed25519;
-use sp_finality_grandpa::{
+use sp_consensus_grandpa::{
     AuthorityId, AuthorityList, AuthoritySignature, ConsensusLog, Equivocation, RoundNumber,
     ScheduledChange, SetId, GRANDPA_ENGINE_ID,
 };
+use sp_core::ed25519;
 use sp_runtime::{generic::OpaqueDigestItemId, traits::Header as HeaderT};
 use sp_std::prelude::*;
 
@@ -52,7 +52,7 @@ where
     H::Number: finality_grandpa::BlockNumberOps,
 {
     /// Validate the commit and the votes' ancestry proofs.
-    pub fn verify(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), error::Error> {
+    pub fn verify(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), anyhow::Error> {
         // It's safe to assume that the authority list will not contain duplicates,
         // since this list is extracted from a verified relaychain header.
         let voters =
@@ -66,7 +66,7 @@ where
         &self,
         set_id: u64,
         voters: &VoterSet<AuthorityId>,
-    ) -> Result<(), error::Error> {
+    ) -> Result<(), anyhow::Error> {
         use finality_grandpa::Chain;
 
         let ancestry_chain = AncestryChain::<H>::new(&self.votes_ancestries);
