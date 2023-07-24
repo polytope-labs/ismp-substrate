@@ -1,5 +1,5 @@
 [package]
-name = "grandpa-prover"
+name = "ismp-grandpa-prover"
 version = "0.1.0"
 edition = "2021"
 authors = ["Polytope Labs <hello@polytope.technology>"]
@@ -26,5 +26,5 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
 
 
-primitives = { package = "grandpa-primitives", path = "../primitives" }
+primitives = { package = "ismp-grandpa-primitives", path = "../primitives" }
 ismp = { git = "https://github.com/polytope-labs/ismp-rs", branch = "main" }

@@ -1,5 +1,5 @@
 [package]
-name = "grandpa-verifier"
+name = "ismp-grandpa-verifier"
 version = "0.1.0"
 edition = "2021"
 
@@ -26,7 +26,7 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 
 sp-storage = { version = "13.0.0", default-features = false }
 
-primitives = { package = "grandpa-primitives", path = "../primitives", default-features = false }
+primitives = { package = "ismp-grandpa-primitives", path = "../primitives", default-features = false }
 
 [dev-dependencies]
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.42" }
@@ -37,7 +37,7 @@ env_logger = "0.9.0"
 log = "0.4.17"
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
 hex-literal = "0.3.4"
-grandpa-prover = { path = "../prover" }
+grandpa-prover = { package = "ismp-grandpa-prover", path = "../prover" }
 ismp = { git = "https://github.com/polytope-labs/ismp-rs", branch = "main"}
 sc-finality-grandpa-rpc = "0.25.0"
 

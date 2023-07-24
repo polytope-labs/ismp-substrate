@@ -2647,84 +2647,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "grandpa-primitives"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "derive_more",
- "finality-grandpa",
- "frame-support",
- "hash-db 0.16.0",
- "ismp",
- "log",
- "parity-scale-codec",
- "sp-core 7.0.0",
- "sp-finality-grandpa",
- "sp-io 7.0.0",
- "sp-runtime 7.0.0",
- "sp-std 5.0.0",
- "sp-storage 13.0.0",
- "sp-trie 7.0.0",
-]
-
-[[package]]
-name = "grandpa-prover"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "derive_more",
- "downcast-rs",
- "finality-grandpa",
- "grandpa-primitives",
- "hex",
- "ismp",
- "jsonrpsee",
- "jsonrpsee-ws-client",
- "parity-scale-codec",
- "sc-finality-grandpa-rpc",
- "serde",
- "sp-core 7.0.0",
- "sp-finality-grandpa",
- "sp-runtime 7.0.0",
- "sp-state-machine 0.13.0",
- "sp-trie 7.0.0",
- "subxt",
-]
-
-[[package]]
-name = "grandpa-verifier"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "derive_more",
- "env_logger 0.9.3",
- "finality-grandpa",
- "frame-support",
- "futures",
- "grandpa-primitives",
- "grandpa-prover",
- "hash-db 0.16.0",
- "hex",
- "hex-literal 0.3.4",
- "ismp",
- "log",
- "parity-scale-codec",
- "polkadot-core-primitives",
- "sc-finality-grandpa-rpc",
- "serde",
- "sp-core 7.0.0",
- "sp-finality-grandpa",
- "sp-io 7.0.0",
- "sp-runtime 7.0.0",
- "sp-state-machine 0.13.0",
- "sp-std 5.0.0",
- "sp-storage 13.0.0",
- "sp-trie 7.0.0",
- "subxt",
- "tokio",
-]
-
-[[package]]
 name = "group"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3248,6 +3170,84 @@ dependencies = [
  "scale-info",
  "sp-core 7.0.0",
  "sp-runtime 7.0.0",
+]
+
+[[package]]
+name = "ismp-grandpa-primitives"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "derive_more",
+ "finality-grandpa",
+ "frame-support",
+ "hash-db 0.16.0",
+ "ismp",
+ "log",
+ "parity-scale-codec",
+ "sp-core 7.0.0",
+ "sp-finality-grandpa",
+ "sp-io 7.0.0",
+ "sp-runtime 7.0.0",
+ "sp-std 5.0.0",
+ "sp-storage 13.0.0",
+ "sp-trie 7.0.0",
+]
+
+[[package]]
+name = "ismp-grandpa-prover"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "derive_more",
+ "downcast-rs",
+ "finality-grandpa",
+ "hex",
+ "ismp",
+ "ismp-grandpa-primitives",
+ "jsonrpsee",
+ "jsonrpsee-ws-client",
+ "parity-scale-codec",
+ "sc-finality-grandpa-rpc",
+ "serde",
+ "sp-core 7.0.0",
+ "sp-finality-grandpa",
+ "sp-runtime 7.0.0",
+ "sp-state-machine 0.13.0",
+ "sp-trie 7.0.0",
+ "subxt",
+]
+
+[[package]]
+name = "ismp-grandpa-verifier"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "derive_more",
+ "env_logger 0.9.3",
+ "finality-grandpa",
+ "frame-support",
+ "futures",
+ "hash-db 0.16.0",
+ "hex",
+ "hex-literal 0.3.4",
+ "ismp",
+ "ismp-grandpa-primitives",
+ "ismp-grandpa-prover",
+ "log",
+ "parity-scale-codec",
+ "polkadot-core-primitives",
+ "sc-finality-grandpa-rpc",
+ "serde",
+ "sp-core 7.0.0",
+ "sp-finality-grandpa",
+ "sp-io 7.0.0",
+ "sp-runtime 7.0.0",
+ "sp-state-machine 0.13.0",
+ "sp-std 5.0.0",
+ "sp-storage 13.0.0",
+ "sp-trie 7.0.0",
+ "subxt",
+ "tokio",
 ]
 
 [[package]]
@@ -4964,9 +4964,9 @@ dependencies = [
  "finality-grandpa",
  "frame-support",
  "frame-system",
- "grandpa-primitives",
- "grandpa-verifier",
  "ismp",
+ "ismp-grandpa-primitives",
+ "ismp-grandpa-verifier",
  "ismp-primitives",
  "pallet-ismp",
  "parity-scale-codec",
