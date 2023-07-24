@@ -278,7 +278,7 @@ where
             ))?
         }
 
-        if first_justification.commit.target_hash != consensus_state.latest_hash ||
+        if first_justification.commit.target_hash != consensus_state.latest_hash &&
             second_justification.commit.target_hash != consensus_state.latest_hash
         {
             Err(Error::ImplementationSpecific(format!(
