@@ -6,4 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+codec = { package = "parity-scale-codec", version = "3.2.2", default-features = false, features = [
+    "derive"
+] }
+
+# polytope labs
+ismp = { git = "https://github.com/polytope-labs/ismp-rs", branch = "main", default-features = false }
+
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 primitives = { package = "grandpa-light-client-primitives", path = "./primitives", default-features = false }
