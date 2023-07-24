@@ -9,8 +9,9 @@ members = [
     "parachain/runtime-api",
     "parachain",
     "ismp-demo",
-
-    "grandpa-client/primitives"
+    "grandpa-client",
+    "grandpa-client/primitives",
+    "grandpa-client/verifier"
 ]
 
 [workspace.dependencies]
