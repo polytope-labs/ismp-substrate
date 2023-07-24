@@ -60,7 +60,7 @@ pub struct FinalityProof<H: codec::Codec> {
 }
 
 /// Previous light client state.
-#[derive(Clone)]
+#[derive(Debug, PartialEq, Encode, Decode, Clone)]
 pub struct ConsensusState {
     /// Current authority set
     pub current_authorities: AuthorityList,
@@ -73,7 +73,7 @@ pub struct ConsensusState {
     pub state_machine: StateMachine,
     /// latest finalized height on the parachains, this map will be empty for Standalone chains
     /// Map of para_ids
-    pub latest_para_heights: BtreeMap<u32, bool>,
+    pub latest_para_heights: BTreeMap<u32, bool>,
     /// latest finalized hash on relay chain or standalone chain.
     pub latest_hash: Hash,
 }

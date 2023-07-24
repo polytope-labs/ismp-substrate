@@ -3,6 +3,7 @@ pub mod consensus;
 
 use alloc::{vec, vec::Vec};
 pub use pallet::*;
+use pallet_ismp::host::Host;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -11,9 +12,10 @@ pub mod pallet {
     use cumulus_primitives_core::{ParaId, relay_chain};
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use ismp::host::StateMachine;
+    use ismp::host::{IsmpHost, StateMachine};
     use ismp::messaging::{ConsensusMessage, Message};
     use primitive_types::H256;
+    use primitives::ConsensusState;
 
     #[pallet::pallet]
     pub struct Pallet<T>(_);
@@ -49,6 +51,12 @@ pub mod pallet {
         StandaloneConsensusStateAlreadyExists,
         /// Standalone Consensus Does not Exist
         StandaloneConsensusStateDontExists,
+        /// Error fetching consensus state
+        ErrorFetchingConsensusState,
+        /// Error decoding consensus state
+        ErrorDecodingConsensusState,
+        /// Incorrect consensus state id length
+        IncorrectConsensusStateIdLength
     }
 
     #[pallet::call]
@@ -59,51 +67,24 @@ pub mod pallet {
         /// Add some new parachains to the list of parachains in the relay chain consensus state
         #[pallet::call_index(0)]
         #[pallet::weight(0)]
-        pub fn add_parachains(origin: OriginFor<T>, consensus_state_id: Vec<u8>, para_ids: Vec<u32>) -> DispatchResult {
+        pub fn add_parachains(origin: OriginFor<T>, consensus_state_id_vec: Vec<u8>, para_ids: Vec<u32>) -> DispatchResult {
             ensure_root(origin)?;
 
-            RelayChainConsensusState::<T>::mutate(&consensus_state_id, |state_set| {
-                para_ids.iter().for_each(|para_id| {
-                    if let Some(set) = state_set {
-                        set.insert(*para_id);
-                    } else {
-                        let mut new_set = BTreeSet::new();
-                        new_set.insert(*para_id);
-                        *state_set = Some(new_set);
-                    }
-                });
-            });
+            let ismp_host = Host::<T>::default();
+            let consensus_state_id = consensus_state_id_vec.as_slice().try_into().map_err(|_| Error::IncorrectConsensusStateIdLength)?;
 
-            Ok(())
-        }
+            let encoded_consensus_state = ismp_host.consensus_state(consensus_state_id).map_err(|_| Error::ErrorFetchingConsensusState)?;
+            let mut consensus_state: ConsensusState =
+                codec::Decode::decode(&mut &encoded_consensus_state[..]).map_err(|_| Error::ErrorDecodingConsensusState)?;
 
-        /// Remove some parachains from the list of parachains in the relay chain consensus state
-        #[pallet::call_index(1)]
-        #[pallet::weight(0)]
-        pub fn remove_parachains(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
-            ensure_root(origin)?;
+            let mut stored_para_ids = consensus_state.latest_para_heights;
             para_ids.iter().for_each(|para_id| {
-                RelayChainConsensusState::<T>::mutate_exists(para_id, |state_set| {
-                    if let Some(state_set) = state_set {
-                        state_set.remove(para_id);
-                        if state_set.is_empty() {
-                            *state_set = None;
-                        }
-                    }
-                });
+                stored_para_ids.entry(para_id).or_insert(true);
             });
+            consensus_state.latest_para_heights = stored_para_ids;
 
-            Ok(())
-        }
-
-        /// Add state machine to standalone consensus state storage
-        #[pallet::call_index(2)]
-        #[pallet::weight(0)]
-        pub fn set_state_machine(origin: OriginFor<T>, consensus_state_id: Vec<u8>, state_machine: StateMachine) -> DispatchResult {
-            ensure_root(origin)?;
-
-            StandaloneChainConsensusState::<T>::insert(&consensus_state_id, state_machine);
-
+            let encoded_consensus_state = consensus_state.encode();
+            ismp_host.store_consensus_state(consensus_state_id, encoded_consensus_state)?;
             Ok(())
         }
     }
