@@ -40,9 +40,6 @@ use verifier::{
 pub const POLKADOT_CONSENSUS_STATE_ID: [u8; 8] = *b"polkadot";
 pub const KUSAMA_CONSENSUS_STATE_ID: [u8; 8] = *b"_kusama_";
 
-/// The `ConsensusEngineId` of ISMP digest in the parachain header.
-pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
-
 pub struct GrandpaConsensusClient<T, H>(PhantomData<(T, H)>);
 
 impl<T, H> Default for GrandpaConsensusClient<T, H> {

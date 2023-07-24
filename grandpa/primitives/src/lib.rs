@@ -31,9 +31,6 @@ use sp_runtime::traits::Header;
 use sp_std::prelude::*;
 use sp_storage::StorageKey;
 
-/// The `ConsensusEngineId` of ISMP digest in the parachain header.
-pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
-
 /// GRANPA errors
 pub mod error;
 /// GRANDPA justification utilities

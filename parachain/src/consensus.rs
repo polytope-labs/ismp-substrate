@@ -29,6 +29,7 @@ use ismp::{
     host::{IsmpHost, StateMachine},
     messaging::StateCommitmentHeight,
 };
+use ismp_primitives::ISMP_ID;
 use parachain_system::{RelaychainDataProvider, RelaychainStateProvider};
 use primitive_types::H256;
 use sp_consensus_aura::{Slot, AURA_ENGINE_ID};
@@ -63,9 +64,6 @@ pub struct ParachainConsensusProof {
     /// Storage proof for the parachain headers
     pub storage_proof: Vec<Vec<u8>>,
 }
-
-/// The `ConsensusEngineId` of ISMP digest in the parachain header.
-pub const ISMP_ID: sp_runtime::ConsensusEngineId = *b"ISMP";
 
 /// ConsensusClientId for [`ParachainConsensusClient`]
 pub const PARACHAIN_CONSENSUS_ID: ConsensusClientId = *b"PARA";
