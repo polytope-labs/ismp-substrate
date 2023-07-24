@@ -91,9 +91,7 @@ where
                         headers_with_finality_proof,
                     )
                     .map_err(|_| {
-                        Error::ImplementationSpecific(
-                            format!("Error verifying parachain headers"),
-                        )
+                        Error::ImplementationSpecific(format!("Error verifying parachain headers"))
                     })?;
 
                 for (_para_height, header_vec) in parachain_headers {
@@ -105,9 +103,9 @@ where
                                 if *consensus_engine_id == ISMP_ID =>
                             {
                                 if value.len() != 32 {
-                                    Err(Error::ImplementationSpecific(
-                                        format!("Header contains an invalid ismp root"),
-                                    ))?
+                                    Err(Error::ImplementationSpecific(format!(
+                                        "Header contains an invalid ismp root"
+                                    )))?
                                 }
 
                                 overlay_root = H256::from_slice(&value);
