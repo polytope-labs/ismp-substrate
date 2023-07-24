@@ -2,7 +2,7 @@
 
 Implementation of the Interoperable State Machine Protocol for substrate runtimes. This project is [funded by the web3 foundation](https://github.com/w3f/Grants-Program/blob/master/applications/ismp.md).
 
-<img src="https://drive.google.com/uc?export=view&id=1aW_M8dULbPLNo4jTP2PsdNgW2UPST1jB"  height="250">
+<img src="https://drive.google.com/uc?export=view&id=1aW_M8dULbPLNo4jTP2PsdNgW2UPST1jB"  height="250" width="250">
 
 ## Overview
 
