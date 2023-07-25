@@ -27,11 +27,9 @@ mod errors;
 pub mod events;
 pub mod handlers;
 pub mod host;
-#[cfg(any(feature = "runtime-benchmarks", test))]
-mod ismp_mocks;
 mod mmr;
-#[cfg(test)]
-pub mod mock;
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod mocks;
 pub mod primitives;
 #[cfg(test)]
 pub mod tests;

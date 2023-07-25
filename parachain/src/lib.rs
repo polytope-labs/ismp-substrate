@@ -37,7 +37,6 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
     use ismp::{
-        host::IsmpHost,
         messaging::{ConsensusMessage, CreateConsensusState, Message},
     };
     use parachain_system::{RelaychainDataProvider, RelaychainStateProvider};
@@ -109,7 +108,7 @@ pub mod pallet {
         #[pallet::call_index(1)]
         #[pallet::weight(<T as frame_system::Config>::DbWeight::get().writes(para_ids.len() as u64))]
         pub fn add_parachain(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
-            ensure_root(origin)?;
+            T::AdminOrigin::ensure_origin(origin)?;
             for id in para_ids {
                 Parachains::<T>::insert(id, ());
             }
@@ -121,7 +120,7 @@ pub mod pallet {
         #[pallet::call_index(2)]
         #[pallet::weight(<T as frame_system::Config>::DbWeight::get().writes(para_ids.len() as u64))]
         pub fn remove_parachain(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
-            ensure_root(origin)?;
+            T::AdminOrigin::ensure_origin(origin)?;
             for id in para_ids {
                 Parachains::<T>::remove(id);
             }
@@ -205,14 +204,13 @@ pub mod pallet {
                 // insert empty bytes
                 consensus_state: vec![],
                 unbonding_period: u64::MAX,
+                challenge_period: 0,
                 consensus_state_id: consensus::PARACHAIN_CONSENSUS_ID,
                 consensus_client_id: consensus::PARACHAIN_CONSENSUS_ID,
                 state_machine_commitments: vec![],
             };
             handlers::create_client(&host, message)
                 .expect("Failed to initialize parachain consensus client");
-            host.store_challenge_period(consensus::PARACHAIN_CONSENSUS_ID, 0)
-                .expect("Failed to set parachain challenge period");
             // insert the parachain ids
             for id in &self.parachains {
                 Parachains::<T>::insert(id, ());
