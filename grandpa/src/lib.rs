@@ -16,7 +16,7 @@
 extern crate alloc;
 
 pub mod consensus;
-pub mod consensus_message;
+pub mod messages;
 
 use alloc::{vec, vec::Vec};
 pub use pallet::*;
