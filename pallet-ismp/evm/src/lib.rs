@@ -22,9 +22,9 @@ extern crate alloc;
 
 pub mod abi;
 pub mod handler;
-pub mod precompiles;
 #[cfg(test)]
 mod mocks;
+pub mod precompiles;
 #[cfg(test)]
 mod tests;
 pub mod weight;

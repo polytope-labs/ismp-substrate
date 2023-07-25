@@ -39,7 +39,6 @@ ismp-testsuite = { git = "https://github.com/polytope-labs/ismp-rs", branch = "m
 pallet-ismp = { path = "../", features = ["testing"] }
 hex = "0.4.3"
 hex-literal = "0.4.1"
-env_logger = "0.10.0"
 
 [features]
 default = ["std"]

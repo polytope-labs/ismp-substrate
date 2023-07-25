@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-// Sample ISMP solidity contract for unit tests
+// A Sample ISMP solidity contract for unit tests
 
 pragma solidity ^0.8.2;
 
@@ -21,6 +21,7 @@ contract IsmpDemo is IIsmpModule {
     // Mapping of user address to balance
     mapping(address => uint256) public balances;
     event ResponseReceived();
+    event TimeoutReceived();
     event BalanceMinted();
     event BalanceBurnt();
     event GetDispatched();
@@ -47,7 +48,7 @@ contract IsmpDemo is IIsmpModule {
         _mint(payload.to, payload.amount);
         // For this test we expect the ismp post dispatch precompile to be at the  address 0x03
         // In production you would use the precompile address provided by the chain to make the dispatch
-        bytes memory input = encodeResponse(response);
+        bytes memory input = encodePostResponse(response);
         (bool ok, bytes memory out) = address(3).staticcall(input);
         if (ok) {
             emit BalanceMinted();
@@ -57,16 +58,33 @@ contract IsmpDemo is IIsmpModule {
     }
 
     function OnPostResponse(PostResponse memory response) public onlyIsmpHost {
+        // In this callback just try to decode the payload of the corresponding request
         Payload memory payload = decodePayload(response.request.data.data);
         emit ResponseReceived();
     }
 
     function OnGetResponse(GetResponse memory response) public onlyIsmpHost {
+        // For the purpose of this test
+        // we just validate the responses in this callback
+        for (uint256 index = 0; index < response.values.length; index++) {
+            StorageValue memory storageValue = response.values[index];
+            if (storageValue.value.length == 0) {
+                revert ExecutionFailed();
+            }
+        }
         emit ResponseReceived();
     }
 
     function OnGetTimeout(GetRequest memory request) public onlyIsmpHost {
-        emit ResponseReceived();
+        // We validate the keys in this callback
+        for (uint256 index = 0; index < request.keys.length; index++) {
+            bytes memory key = request.keys[index];
+            // No keys should be empty
+            if (key.length == 0) {
+                revert ExecutionFailed();
+            }
+        }
+        emit TimeoutReceived();
     }
 
     function OnPostTimeout(PostRequest memory request) public onlyIsmpHost {

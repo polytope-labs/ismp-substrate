@@ -1,6 +1,10 @@
-use crate::{handler::u64_to_u256, mocks::*};
+use crate::{
+    abi::ContractData,
+    handler::{u64_to_u256, EvmContractHandler},
+    mocks::*,
+};
 use alloy_primitives::Address;
-use alloy_sol_types::{sol, SolCall};
+use alloy_sol_types::{sol, SolCall, SolType};
 use fp_evm::{CreateInfo, FeeCalculator, GenesisAccount};
 use frame_support::{
     traits::{GenesisBuild, Get},
@@ -8,7 +12,11 @@ use frame_support::{
 };
 use frame_system::EventRecord;
 use hex_literal::hex;
-use ismp_rs::host::StateMachine;
+use ismp_rs::{
+    host::StateMachine,
+    module::IsmpModule,
+    router::{Post, PostResponse, Response},
+};
 use pallet_evm::{runner::Runner, FixedGasWeightMapping, GasWeightMapping};
 use pallet_ismp::{Event, GasLimits};
 use sp_core::{
@@ -35,6 +43,7 @@ sol! {
     ) public;
 
     function mintTo(address who, uint256 amount) public;
+
     struct Payload {
         address to;
         address from;
@@ -188,7 +197,6 @@ fn post_dispatch() {
 
 #[test]
 fn get_dispatch() {
-    env_logger::init();
     new_test_ext().execute_with(|| {
         let gas_limit: u64 = 1_500_000_000;
         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
@@ -235,3 +243,120 @@ fn get_dispatch() {
         );
     });
 }
+
+#[test]
+fn on_accept_callback() {
+    new_test_ext().execute_with(|| {
+        let gas_limit: u64 = 1_500_000_000;
+        let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
+        let result = deploy_contract(gas_limit, Some(weight_limit));
+
+        let contract_address = result.value;
+
+        let handler = EvmContractHandler::<Test>::default();
+
+        let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
+
+        let contract_data = ContractData {
+            data: Payload::encode(&payload),
+            gasLimit: u64_to_u256(gas_limit).unwrap(),
+        };
+
+        let post = Post {
+            source: <Test as pallet_ismp::Config>::StateMachine::get(),
+            dest: StateMachine::Polkadot(2000),
+            nonce: 0,
+            from: contract_address.as_bytes().to_vec(),
+            to: contract_address.as_bytes().to_vec(),
+            timeout_timestamp: 1000,
+            data: ContractData::encode(&contract_data),
+        };
+
+        handler.on_accept(post).unwrap();
+
+        assert_event_was_emitted::<Test>(
+            Event::Response {
+                dest_chain: <Test as pallet_ismp::Config>::StateMachine::get(),
+                source_chain: StateMachine::Polkadot(2000),
+                request_nonce: 0,
+            }
+            .into(),
+        );
+    })
+}
+
+#[test]
+fn on_post_response() {
+    new_test_ext().execute_with(|| {
+        let gas_limit: u64 = 1_500_000_000;
+        let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
+        let result = deploy_contract(gas_limit, Some(weight_limit));
+
+        let contract_address = result.value;
+
+        let handler = EvmContractHandler::<Test>::default();
+
+        let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
+
+        let contract_data = ContractData {
+            data: Payload::encode(&payload),
+            gasLimit: u64_to_u256(gas_limit).unwrap(),
+        };
+
+        let post = Post {
+            source: <Test as pallet_ismp::Config>::StateMachine::get(),
+            dest: StateMachine::Polkadot(2000),
+            nonce: 0,
+            from: contract_address.as_bytes().to_vec(),
+            to: contract_address.as_bytes().to_vec(),
+            timeout_timestamp: 1000,
+            data: ContractData::encode(&contract_data),
+        };
+
+        let response = PostResponse { post, response: H160::from_low_u64_be(30).0.to_vec() };
+
+        handler.on_response(Response::Post(response)).unwrap();
+    })
+}
+
+// #[test]
+// fn on_get_response() {
+//     new_test_ext().execute_with(|| {
+//         let gas_limit: u64 = 1_500_000_000;
+//         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
+//         let result = deploy_contract(gas_limit, Some(weight_limit));
+//
+//         let contract_address = result.value;
+//
+//         let handler = EvmContractHandler::<Test>::default();
+//
+//     })
+// }
+//
+// #[test]
+// fn on_get_timeout() {
+//     new_test_ext().execute_with(|| {
+//         let gas_limit: u64 = 1_500_000_000;
+//         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
+//         let result = deploy_contract(gas_limit, Some(weight_limit));
+//
+//         let contract_address = result.value;
+//
+//         let handler = EvmContractHandler::<Test>::default();
+//
+//     })
+// }
+//
+// #[test]
+// fn on_post_timeout() {
+//     new_test_ext().execute_with(|| {
+//         let gas_limit: u64 = 1_500_000_000;
+//         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
+//         let result = deploy_contract(gas_limit, Some(weight_limit));
+//
+//         let contract_address = result.value;
+//
+//         let handler = EvmContractHandler::<Test>::default();
+//
+//     })
+// }

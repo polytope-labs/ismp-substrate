@@ -8,9 +8,11 @@ use crate::{
     },
     precompiles::u256_to_u64,
 };
+use alloc::{format, string::ToString};
 use alloy_primitives::U256;
 use alloy_sol_types::{SolCall, SolType};
 use core::marker::PhantomData;
+use fp_evm::{ExitReason, FeeCalculator};
 use ismp_rs::{
     error::Error,
     module::IsmpModule,
@@ -60,8 +62,8 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
 
         let (call_data, gas_limit) = match response {
             Response::Post(response) => {
-                // we set the gas limit for executing the contract to the same as used in the
-                // request we assume the request was dispatched with a gas limit
+                // we set the gas limit for executing the contract to be the same as used in the
+                // request. we assume the request was dispatched with a gas limit
                 // that accounts for execution of the response on this source chain
                 let contract_data =
                     SolContractData::decode(&response.post.data, true).map_err(|_| {
@@ -177,29 +179,49 @@ fn execute_call<T: pallet_ismp::Config + pallet_evm::Config>(
     call_data: Vec<u8>,
     gas_limit: u64,
 ) -> Result<(), Error> {
-    let weight_used = match <<T as pallet_evm::Config>::Runner as pallet_evm::Runner<T>>::call(
-        EVM_HOST_ADDRESS,
-        target,
-        call_data,
-        Default::default(),
-        gas_limit,
-        None,
-        None,
-        None,
-        Default::default(),
-        true,
-        true,
-        None,
-        None,
-        <T as pallet_evm::Config>::config(),
-    ) {
-        Ok(info) => T::GasWeightMapping::gas_to_weight(info.used_gas.standard.low_u64(), true),
-        Err(error) => error.weight,
-    };
+    let (weight_used, result) =
+        match <<T as pallet_evm::Config>::Runner as pallet_evm::Runner<T>>::call(
+            EVM_HOST_ADDRESS,
+            target,
+            call_data,
+            Default::default(),
+            gas_limit,
+            Some(<<T as pallet_evm::Config>::FeeCalculator as FeeCalculator>::min_gas_price().0),
+            Some(<<T as pallet_evm::Config>::FeeCalculator as FeeCalculator>::min_gas_price().0),
+            None,
+            Default::default(),
+            true,
+            true,
+            None,
+            None,
+            <T as pallet_evm::Config>::config(),
+        ) {
+            Ok(info) => {
+                let weight =
+                    T::GasWeightMapping::gas_to_weight(info.used_gas.standard.low_u64(), true);
+                let result = match info.exit_reason {
+                    ExitReason::Succeed(_) => Ok(()),
+                    _ => Err(Error::ImplementationSpecific(
+                        "Contract call did not successfully execute".to_string(),
+                    )),
+                };
+                (weight, result)
+            }
+            Err(error) => {
+                let dispatch_error: sp_runtime::DispatchError = error.error.into();
+                (
+                    error.weight,
+                    Err(Error::ImplementationSpecific(format!(
+                        "Contract call failed with error {:?}",
+                        dispatch_error
+                    ))),
+                )
+            }
+        };
     let mut total_weight_used = WeightConsumed::<T>::get();
     let weight_limit = T::GasWeightMapping::gas_to_weight(gas_limit, true);
     total_weight_used.weight_used = total_weight_used.weight_used + weight_used;
     total_weight_used.weight_limit = total_weight_used.weight_limit + weight_limit;
     WeightConsumed::<T>::put(total_weight_used);
-    Ok(())
+    result
 }

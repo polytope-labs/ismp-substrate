@@ -4,10 +4,10 @@ use pallet_ismp::{dispatcher::Dispatcher, weight_info::WeightInfo, GasLimits, Pa
 
 use crate::abi::{
     ContractData, DispatchGet as SolDispatchGet, DispatchPost as SolDispatchPost,
-    PostResponse as SolPostResponse,
+    PostRequest as SolPostRequest,
 };
 use alloc::{format, str::FromStr, string::String};
-use alloy_sol_types::SolType;
+use alloy_sol_types::{sol_data::Bytes, SolType};
 use core::marker::PhantomData;
 use fp_evm::{
     ExitError, ExitSucceed, Precompile, PrecompileFailure, PrecompileHandle, PrecompileOutput,
@@ -134,21 +134,26 @@ where
         let cost = <T as pallet_evm::Config>::GasWeightMapping::weight_to_gas(weight);
 
         let dispatcher = Dispatcher::<T>::default();
-        let post_response =
-            SolPostResponse::decode(input, true).map_err(|e| PrecompileFailure::Error {
+        let (request, response) =
+            <(Bytes, Bytes)>::decode(input, true).map_err(|e| PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
             })?;
+        let request = SolPostRequest::decode(request.as_ref(), true).map_err(|e| {
+            PrecompileFailure::Error {
+                exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
+            }
+        })?;
         let post_response = PostResponse {
             post: Post {
-                source: parse_state_machine(post_response.request.source)?,
-                dest: parse_state_machine(post_response.request.dest)?,
-                nonce: u256_to_u64(post_response.request.nonce),
-                from: post_response.request.from,
-                to: post_response.request.to,
-                timeout_timestamp: u256_to_u64(post_response.request.timeoutTimestamp),
-                data: ContractData::encode(&post_response.request.data),
+                source: parse_state_machine(request.source)?,
+                dest: parse_state_machine(request.dest)?,
+                nonce: u256_to_u64(request.nonce),
+                from: request.from,
+                to: request.to,
+                timeout_timestamp: u256_to_u64(request.timeoutTimestamp),
+                data: ContractData::encode(&request.data),
             },
-            response: post_response.response,
+            response,
         };
         handle.record_cost(cost)?;
 

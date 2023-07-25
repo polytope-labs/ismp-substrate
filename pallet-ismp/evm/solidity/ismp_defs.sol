@@ -127,12 +127,17 @@ function encodeGetDispatch(
         );
 }
 
-function encodeResponse(
+function encodePostResponse(
     PostResponse memory postResponse
 ) pure returns (bytes memory) {
-    return
-        abi.encode(
-            postResponse.request,
-            postResponse.response
+   bytes memory request = abi.encode(
+            postResponse.request.source,
+            postResponse.request.dest,
+            postResponse.request.nonce,
+            postResponse.request.from,
+            postResponse.request.to,
+            postResponse.request.timeoutTimestamp,
+            postResponse.request.data
         );
+    return abi.encode(request, postResponse.response);
 }
