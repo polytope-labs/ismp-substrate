@@ -39,8 +39,6 @@ pub mod pallet {
     pub trait Config: frame_system::Config + pallet_ismp::Config {
         /// The overarching event type
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        /// Origin allowed to add or remove parachains in Consensus State
-        type AdminOrigin: EnsureOrigin<Self::RuntimeOrigin>;
     }
 
     /// Events emitted by this pallet
