@@ -25,6 +25,7 @@ pub mod benchmarking;
 pub mod dispatcher;
 mod errors;
 pub mod events;
+pub mod evm;
 pub mod handlers;
 pub mod host;
 mod mmr;
