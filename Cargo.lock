@@ -2442,7 +2442,7 @@ dependencies = [
 [[package]]
 name = "fp-account"
 version = "1.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=polkadot-v0.9.42#f7470d158bc464f874c86ab64cddbd6266d3dd7b"
+source = "git+https://github.com/paritytech/frontier?branch=polkadot-v0.9.42#1a718546085be20ce381b70e1f9e4c8b4d4b1f03"
 dependencies = [
  "hex",
  "impl-serde",
@@ -2461,7 +2461,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=polkadot-v0.9.42#f7470d158bc464f874c86ab64cddbd6266d3dd7b"
+source = "git+https://github.com/paritytech/frontier?branch=polkadot-v0.9.42#1a718546085be20ce381b70e1f9e4c8b4d4b1f03"
 dependencies = [
  "evm",
  "frame-support",
@@ -3422,7 +3422,6 @@ dependencies = [
  "ismp",
  "ismp-primitives",
  "ismp-testsuite",
- "log",
  "pallet-balances",
  "pallet-evm",
  "pallet-ismp",
@@ -5219,7 +5218,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/paritytech/frontier?branch=polkadot-v0.9.42#f7470d158bc464f874c86ab64cddbd6266d3dd7b"
+source = "git+https://github.com/paritytech/frontier?branch=polkadot-v0.9.42#1a718546085be20ce381b70e1f9e4c8b4d4b1f03"
 dependencies = [
  "environmental",
  "evm",
