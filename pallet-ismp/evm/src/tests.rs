@@ -1,5 +1,5 @@
 use crate::{
-    handler::{u64_to_u256, EvmContractHandler},
+    handler::{u64_to_u256, EvmContractHandler, EVM_HOST_ADDRESS},
     mocks::*,
 };
 use alloy_primitives::Address;
@@ -64,7 +64,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         },
     );
     accounts.insert(
-        H160::default(), // root
+        H160::from(EVM_HOST_ADDRESS), // root
         GenesisAccount {
             nonce: U256::from(1),
             balance: U256::max_value(),
@@ -90,6 +90,7 @@ fn register_offchain_ext(ext: &mut sp_io::TestExternalities) {
 pub const EXAMPLE_CONTRACT: &str = include_str!("../solidity/IsmpDemo.bin");
 
 const USER: Address = Address::new(hex!("d8da6bf26964af9d7eed9e03e53415d37aa96045"));
+const HOST: H160 = H160(EVM_HOST_ADDRESS);
 
 /// Verify the the last event emitted
 fn assert_event_was_emitted<T: pallet_ismp::Config>(
@@ -107,7 +108,7 @@ fn assert_event_was_emitted<T: pallet_ismp::Config>(
 
 fn deploy_contract(gas_limit: u64, weight_limit: Option<Weight>) -> CreateInfo {
     let info = <Test as pallet_evm::Config>::Runner::create(
-        H160::zero(),
+        HOST,
         hex::decode(EXAMPLE_CONTRACT.trim_end()).unwrap(),
         U256::zero(),
         gas_limit,
@@ -128,7 +129,7 @@ fn deploy_contract(gas_limit: u64, weight_limit: Option<Weight>) -> CreateInfo {
     let contract_address = info.value;
 
     <Test as pallet_evm::Config>::Runner::call(
-        H160::zero(),
+        HOST,
         contract_address,
         call_data,
         U256::zero(),
@@ -213,7 +214,7 @@ fn get_dispatch() {
         .encode();
 
         <Test as pallet_evm::Config>::Runner::call(
-            H160::zero(),
+            H160::from(USER.0 .0),
             contract_address,
             call_data,
             U256::zero(),

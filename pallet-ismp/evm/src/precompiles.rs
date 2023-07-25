@@ -65,7 +65,7 @@ where
     }
 }
 
-/// Ismp Request Dispatcher precompile for evm contracts
+/// Ismp Get Request Dispatcher precompile for evm contracts
 pub struct IsmpGetDispatcher<T> {
     _marker: PhantomData<T>,
 }

@@ -15,7 +15,6 @@ struct Payload {
 }
 
 contract IsmpDemo is IIsmpModule {
-    address ismpHost;
     uint256 totalSupply;
 
     // Mapping of user address to balance
@@ -28,14 +27,13 @@ contract IsmpDemo is IIsmpModule {
 
     // restricts call to `IsmpHost`
     modifier onlyIsmpHost() {
-        if (msg.sender != ismpHost) {
+        if (msg.sender != HOST) {
             revert NotIsmpHost();
         }
         _;
     }
 
     constructor() {
-        ismpHost = address(0);
         totalSupply = 1000000000;
     }
 

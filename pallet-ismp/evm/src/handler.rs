@@ -9,6 +9,7 @@ use alloy_primitives::U256;
 use alloy_sol_types::SolCall;
 use core::marker::PhantomData;
 use fp_evm::{ExitReason, FeeCalculator};
+use hex_literal::hex;
 use ismp_rs::{
     error::Error,
     module::IsmpModule,
@@ -21,7 +22,7 @@ use sp_std::prelude::*;
 
 /// Handler host address
 /// Contracts should only allow ismp module callbacks to be executed by this address
-pub const EVM_HOST_ADDRESS: H160 = H160::zero();
+pub const EVM_HOST_ADDRESS: [u8; 20] = hex!("843b131bd76419934dae248f6e5a195c0a3c324d");
 /// EVM contract handler
 pub struct EvmContractHandler<T: pallet_ismp::Config + pallet_evm::Config>(PhantomData<T>);
 
@@ -162,7 +163,7 @@ fn execute_call<T: pallet_ismp::Config + pallet_evm::Config>(
 ) -> Result<(), Error> {
     let (weight_used, result) =
         match <<T as pallet_evm::Config>::Runner as pallet_evm::Runner<T>>::call(
-            EVM_HOST_ADDRESS,
+            H160::from(EVM_HOST_ADDRESS),
             target,
             call_data,
             Default::default(),

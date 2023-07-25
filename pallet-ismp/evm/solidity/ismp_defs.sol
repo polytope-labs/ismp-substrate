@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.2;
 
+address constant HOST = 0x843b131BD76419934dae248F6e5a195c0A3C324D;
 struct PostRequest {
     // the source state machine of this request as utf8 string bytes
     bytes source;
