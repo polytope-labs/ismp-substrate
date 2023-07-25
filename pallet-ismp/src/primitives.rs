@@ -16,7 +16,10 @@
 //! Pallet primitives
 use frame_support::{PalletId, RuntimeDebug};
 use ismp_primitives::mmr::{LeafIndex, NodeIndex};
-use ismp_rs::consensus::{ConsensusClient, ConsensusClientId};
+use ismp_rs::{
+    consensus::{ConsensusClient, ConsensusClientId},
+    module::DispatchResult,
+};
 use scale_info::TypeInfo;
 use sp_core::{crypto::AccountId32, ByteArray, H160};
 use sp_std::prelude::*;
@@ -91,4 +94,82 @@ impl ModuleId {
             Err("Unknown Module ID format")
         }
     }
+}
+
+/// Creates a distinction between the types of gas
+pub enum GasType {
+    /// EVM gas consumption
+    Evm {
+        /// Gas used in executing
+        gas_used: u64,
+        /// Gas limit provided
+        gas_limit: u64,
+    },
+    /// Ink gas consumption
+    Ink {
+        /// Gas used in executing
+        gas_used: u64,
+        /// Gas limit provided
+        gas_limit: u64,
+    },
+}
+
+/// A helper function that accumulates the total gas used and total gas limit from a slice of module
+/// dispatch results It return results for both evm and ink
+pub fn extract_total_gas(
+    res: &[DispatchResult],
+    evm_used_total: u64,
+    evm_limit_total: u64,
+    ink_used_total: u64,
+    ink_limit_total: u64,
+) -> (GasType, GasType) {
+    let gas = res
+        .iter()
+        .filter_map(|res| match res {
+            Ok(success) => {
+                if success.gas.gas_used.is_some() && success.gas.gas_limit.is_some() {
+                    let module_id = ModuleId::from_bytes(&success.module_id).ok()?;
+                    match module_id {
+                        ModuleId::Pallet(_) => None,
+                        ModuleId::Contract(_) => Some(GasType::Ink {
+                            gas_used: success.gas.gas_used.expect("Infallible"),
+                            gas_limit: success.gas.gas_limit.expect("Infallible"),
+                        }),
+                        ModuleId::Evm(_) => Some(GasType::Evm {
+                            gas_used: success.gas.gas_used.expect("Infallible"),
+                            gas_limit: success.gas.gas_limit.expect("Infallible"),
+                        }),
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+        .collect::<Vec<GasType>>();
+
+    let (mut evm_gas_used, mut evm_gas_limit, mut ink_gas_used, mut ink_gas_limit) = (0, 0, 0, 0);
+    for gas_type in gas {
+        match gas_type {
+            GasType::Ink { gas_used, gas_limit } => {
+                ink_gas_used += gas_used;
+                ink_gas_limit += gas_limit;
+            }
+            GasType::Evm { gas_used, gas_limit } => {
+                evm_gas_used += gas_used;
+                evm_gas_limit += gas_limit;
+            }
+        }
+    }
+
+    (
+        GasType::Evm {
+            gas_used: evm_gas_used + evm_used_total,
+            gas_limit: evm_gas_limit + evm_limit_total,
+        },
+        GasType::Ink {
+            gas_used: ink_gas_used + ink_used_total,
+            gas_limit: ink_gas_limit + ink_limit_total,
+        },
+    )
 }

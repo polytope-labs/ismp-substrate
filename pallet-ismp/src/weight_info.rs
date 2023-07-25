@@ -261,7 +261,7 @@ pub fn get_weight<T: Config>(messages: &[Message]) -> Weight {
                         .flatten()
                         .unwrap_or(Box::new(()));
                     acc + handle.on_response(&Response::Get(GetResponse {
-                        get: req.get_request().unwrap(),
+                        get: req.get_request().expect("Infallible"),
                         values: Default::default(),
                     }))
                 });

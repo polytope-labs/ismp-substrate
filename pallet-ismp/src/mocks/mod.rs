@@ -19,6 +19,7 @@ pub mod ismp;
 
 use crate as pallet_ismp;
 use crate::*;
+use frame_support::dispatch::Weight;
 
 use crate::primitives::ConsensusClientProvider;
 use frame_support::traits::{ConstU32, ConstU64, Get};
@@ -109,6 +110,18 @@ impl Config for Test {
     type ConsensusClientProvider = ConsensusProvider;
     type WeightInfo = ();
     type WeightProvider = ();
+    type GasWeightMapping = DummyGasWeightMapping;
+}
+
+pub struct DummyGasWeightMapping;
+impl GasWeightMapping for DummyGasWeightMapping {
+    fn gas_to_weight(_gas: u64, _without_base_weight: bool) -> Weight {
+        Weight::zero()
+    }
+
+    fn weight_to_gas(_weight: Weight) -> u64 {
+        0
+    }
 }
 
 #[derive(Default)]

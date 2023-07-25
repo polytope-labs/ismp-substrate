@@ -43,7 +43,12 @@ pub use mmr::utils::NodesUtils;
 use crate::host::Host;
 use codec::{Decode, Encode};
 use core::time::Duration;
-use frame_support::{dispatch::DispatchResult, log::debug, traits::Get, RuntimeDebug};
+use frame_support::{
+    dispatch::{DispatchResult, DispatchResultWithPostInfo, Pays, PostDispatchInfo},
+    log::debug,
+    traits::Get,
+    RuntimeDebug,
+};
 use ismp_rs::{
     consensus::{ConsensusClientId, StateMachineId},
     handlers::{handle_incoming_message, MessageResult},
@@ -56,13 +61,16 @@ use sp_core::{offchain::StorageKind, H256};
 use crate::{
     errors::{HandlingError, ModuleCallbackResult},
     mmr::mmr::Mmr,
+    primitives::{extract_total_gas, GasType},
+    weight_info::get_weight,
 };
 use ismp_primitives::{
     mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex},
     LeafIndexQuery,
 };
-use ismp_rs::{host::IsmpHost, messaging::Message};
+use ismp_rs::{contracts::Gas, host::IsmpHost, messaging::Message};
 pub use pallet::*;
+use pallet_evm::GasWeightMapping;
 use sp_std::prelude::*;
 
 // Definition of the pallet logic, to be aggregated at runtime definition through
@@ -95,8 +103,8 @@ pub mod pallet {
         messaging::Message,
         router::IsmpRouter,
     };
+    use pallet_evm::GasWeightMapping;
     use sp_core::H256;
-    use weight_info::get_weight;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -134,6 +142,9 @@ pub mod pallet {
 
         /// Weight provider for consensus clients and module callbacks
         type WeightProvider: WeightProvider;
+
+        /// EVM Gas to weight mapping implementation
+        type GasWeightMapping: GasWeightMapping;
     }
 
     // Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and
@@ -326,7 +337,7 @@ pub mod pallet {
         #[pallet::weight(get_weight::<T>(&messages))]
         #[pallet::call_index(0)]
         #[frame_support::transactional]
-        pub fn handle(origin: OriginFor<T>, messages: Vec<Message>) -> DispatchResult {
+        pub fn handle(origin: OriginFor<T>, messages: Vec<Message>) -> DispatchResultWithPostInfo {
             let _ = ensure_signed(origin)?;
 
             Self::handle_messages(messages)
@@ -457,11 +468,13 @@ where
     }
 
     /// Provides a way to handle messages.
-    pub fn handle_messages(messages: Vec<Message>) -> DispatchResult {
+    pub fn handle_messages(messages: Vec<Message>) -> DispatchResultWithPostInfo {
         // Define a host
         let host = Host::<T>::default();
         let mut errors: Vec<HandlingError> = vec![];
-
+        let total_weight = get_weight::<T>(&messages);
+        let (mut evm_gas_used, mut evm_gas_limit, mut ink_gas_used, mut ink_gas_limit) =
+            (0, 0, 0, 0);
         for message in messages {
             match handle_incoming_message(&host, message) {
                 Ok(MessageResult::ConsensusMessage(res)) => {
@@ -503,12 +516,96 @@ where
                     }
                 }
                 Ok(MessageResult::Response(res)) => {
+                    let (type_1, type_2) = extract_total_gas(
+                        &res,
+                        evm_gas_used,
+                        evm_gas_limit,
+                        ink_gas_used,
+                        ink_gas_limit,
+                    );
+                    match type_1 {
+                        GasType::Evm { gas_used, gas_limit } => {
+                            evm_gas_used = gas_used;
+                            evm_gas_limit = gas_limit;
+                        }
+                        GasType::Ink { gas_used, gas_limit } => {
+                            ink_gas_used = gas_used;
+                            ink_gas_limit = gas_limit
+                        }
+                    }
+
+                    match type_2 {
+                        GasType::Evm { gas_used, gas_limit } => {
+                            evm_gas_used = gas_used;
+                            evm_gas_limit = gas_limit;
+                        }
+                        GasType::Ink { gas_used, gas_limit } => {
+                            ink_gas_used = gas_used;
+                            ink_gas_limit = gas_limit
+                        }
+                    }
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Response(res));
                 }
                 Ok(MessageResult::Request(res)) => {
+                    let (type_1, type_2) = extract_total_gas(
+                        &res,
+                        evm_gas_used,
+                        evm_gas_limit,
+                        ink_gas_used,
+                        ink_gas_limit,
+                    );
+                    match type_1 {
+                        GasType::Evm { gas_used, gas_limit } => {
+                            evm_gas_used = gas_used;
+                            evm_gas_limit = gas_limit;
+                        }
+                        GasType::Ink { gas_used, gas_limit } => {
+                            ink_gas_used = gas_used;
+                            ink_gas_limit = gas_limit
+                        }
+                    }
+
+                    match type_2 {
+                        GasType::Evm { gas_used, gas_limit } => {
+                            evm_gas_used = gas_used;
+                            evm_gas_limit = gas_limit;
+                        }
+                        GasType::Ink { gas_used, gas_limit } => {
+                            ink_gas_used = gas_used;
+                            ink_gas_limit = gas_limit
+                        }
+                    }
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Request(res));
                 }
                 Ok(MessageResult::Timeout(res)) => {
+                    let (type_1, type_2) = extract_total_gas(
+                        &res,
+                        evm_gas_used,
+                        evm_gas_limit,
+                        ink_gas_used,
+                        ink_gas_limit,
+                    );
+                    match type_1 {
+                        GasType::Evm { gas_used, gas_limit } => {
+                            evm_gas_used = gas_used;
+                            evm_gas_limit = gas_limit;
+                        }
+                        GasType::Ink { gas_used, gas_limit } => {
+                            ink_gas_used = gas_used;
+                            ink_gas_limit = gas_limit
+                        }
+                    }
+
+                    match type_2 {
+                        GasType::Evm { gas_used, gas_limit } => {
+                            evm_gas_used = gas_used;
+                            evm_gas_limit = gas_limit;
+                        }
+                        GasType::Ink { gas_used, gas_limit } => {
+                            ink_gas_used = gas_used;
+                            ink_gas_limit = gas_limit
+                        }
+                    }
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Timeout(res));
                 }
                 Err(err) => {
@@ -523,7 +620,17 @@ where
             Self::deposit_event(Event::<T>::HandlingErrors { errors })
         }
 
-        Ok(())
+        Ok(PostDispatchInfo {
+            actual_weight: {
+                // Only support EVM for now
+                let non_contract_weight = total_weight -
+                    <<T as Config>::GasWeightMapping>::gas_to_weight(evm_gas_limit, true);
+                let actual_weight_used =
+                    <<T as Config>::GasWeightMapping>::gas_to_weight(evm_gas_used, true);
+                Some(non_contract_weight.saturating_add(actual_weight_used))
+            },
+            pays_fee: Pays::Yes,
+        })
     }
 
     /// Return the on-chain MMR root hash.

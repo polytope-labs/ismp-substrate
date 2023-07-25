@@ -16,7 +16,7 @@ use fp_evm::{
     ExitError, ExitSucceed, Precompile, PrecompileFailure, PrecompileHandle, PrecompileOutput,
     PrecompileResult,
 };
-use frame_support::{traits::Get, weights::Weight};
+use frame_support::traits::Get;
 use ismp_rs::{
     host::StateMachine,
     router::{DispatchGet, DispatchPost, DispatchRequest, IsmpDispatcher, Post, PostResponse},
@@ -41,7 +41,7 @@ where
 
         // The cost of a dispatch is the weight of calling the dispatcher plus an extra storage read
         // and write
-        let cost = T::GasWeightMapping::weight_to_gas(
+        let cost = <T as pallet_evm::Config>::GasWeightMapping::weight_to_gas(
             weight.saturating_add(<T as frame_system::Config>::DbWeight::get().reads_writes(1, 1)),
         );
 
@@ -90,7 +90,7 @@ where
 
         // The cost of a dispatch is the weight of calling the dispatcher plus an extra storage read
         // and write
-        let cost = T::GasWeightMapping::weight_to_gas(
+        let cost = <T as pallet_evm::Config>::GasWeightMapping::weight_to_gas(
             weight.saturating_add(<T as frame_system::Config>::DbWeight::get().reads_writes(1, 1)),
         );
 
@@ -137,7 +137,7 @@ where
 
         let weight = <T as Config>::WeightInfo::dispatch_response();
 
-        let cost = T::GasWeightMapping::weight_to_gas(weight);
+        let cost = <T as pallet_evm::Config>::GasWeightMapping::weight_to_gas(weight);
 
         let dispatcher = Dispatcher::<T>::default();
         let post_response =
