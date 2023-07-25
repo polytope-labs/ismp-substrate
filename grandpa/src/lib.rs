@@ -74,7 +74,7 @@ pub mod pallet {
             consensus_state_id_vec: Vec<u8>,
             para_ids: Vec<u32>,
         ) -> DispatchResult {
-            <T as Config>::AdminOrigin::ensure_origin(origin)?;
+            T::AdminOrigin::ensure_origin(origin)?;
 
             let ismp_host = Host::<T>::default();
             let consensus_state_id = consensus_state_id_vec
@@ -110,7 +110,7 @@ pub mod pallet {
             consensus_state_id_vec: Vec<u8>,
             para_ids: Vec<u32>,
         ) -> DispatchResult {
-            <T as Config>::AdminOrigin::ensure_origin(origin)?;
+            T::AdminOrigin::ensure_origin(origin)?;
 
             let ismp_host = Host::<T>::default();
             let consensus_state_id = consensus_state_id_vec
