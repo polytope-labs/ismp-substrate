@@ -14,7 +14,7 @@ use hex_literal::hex;
 use ismp_rs::{
     host::StateMachine,
     module::IsmpModule,
-    router::{Post, PostResponse, Response},
+    router::{Get as GetRequest, GetResponse, Post, PostResponse, Request, Response},
 };
 use pallet_evm::{runner::Runner, FixedGasWeightMapping, GasWeightMapping};
 use pallet_ismp::Event;
@@ -265,7 +265,7 @@ fn on_accept_callback() {
             gas_limit,
         };
 
-        handler.on_accept(post).unwrap();
+        handler.on_accept(post).expect("Call succeeds");
 
         assert_event_was_emitted::<Test>(
             Event::Response {
@@ -304,48 +304,101 @@ fn on_post_response() {
 
         let response = PostResponse { post, response: H160::from_low_u64_be(30).0.to_vec() };
 
-        handler.on_response(Response::Post(response)).unwrap();
+        handler.on_response(Response::Post(response)).expect("Call succeeds")
     })
 }
 
-// #[test]
-// fn on_get_response() {
-//     new_test_ext().execute_with(|| {
-//         let gas_limit: u64 = 1_500_000_000;
-//         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
-//         let result = deploy_contract(gas_limit, Some(weight_limit));
-//
-//         let contract_address = result.value;
-//
-//         let handler = EvmContractHandler::<Test>::default();
-//
-//     })
-// }
-//
-// #[test]
-// fn on_get_timeout() {
-//     new_test_ext().execute_with(|| {
-//         let gas_limit: u64 = 1_500_000_000;
-//         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
-//         let result = deploy_contract(gas_limit, Some(weight_limit));
-//
-//         let contract_address = result.value;
-//
-//         let handler = EvmContractHandler::<Test>::default();
-//
-//     })
-// }
-//
-// #[test]
-// fn on_post_timeout() {
-//     new_test_ext().execute_with(|| {
-//         let gas_limit: u64 = 1_500_000_000;
-//         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
-//         let result = deploy_contract(gas_limit, Some(weight_limit));
-//
-//         let contract_address = result.value;
-//
-//         let handler = EvmContractHandler::<Test>::default();
-//
-//     })
-// }
+#[test]
+fn on_get_response() {
+    new_test_ext().execute_with(|| {
+        let gas_limit: u64 = 1_500_000_000;
+        let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
+        let result = deploy_contract(gas_limit, Some(weight_limit));
+
+        let contract_address = result.value;
+
+        let handler = EvmContractHandler::<Test>::default();
+
+        let get = GetRequest {
+            source: <Test as pallet_ismp::Config>::StateMachine::get(),
+            dest: StateMachine::Polkadot(2000),
+            nonce: 0,
+            from: contract_address.as_bytes().to_vec(),
+            keys: vec![
+                H160::from_low_u64_be(10).as_bytes().to_vec(),
+                H160::from_low_u64_be(20).as_bytes().to_vec(),
+            ],
+            height: 10,
+            timeout_timestamp: 1000,
+            gas_limit,
+        };
+
+        let mut values = BTreeMap::new();
+        values.insert(
+            H160::from_low_u64_be(10).as_bytes().to_vec(),
+            Some(H160::from_low_u64_be(10).as_bytes().to_vec()),
+        );
+        values.insert(
+            H160::from_low_u64_be(20).as_bytes().to_vec(),
+            Some(H160::from_low_u64_be(20).as_bytes().to_vec()),
+        );
+        let response = GetResponse { get, values };
+
+        handler.on_response(Response::Get(response)).expect("Call succeeds")
+    })
+}
+
+#[test]
+fn on_get_timeout() {
+    new_test_ext().execute_with(|| {
+        let gas_limit: u64 = 1_500_000_000;
+        let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
+        let result = deploy_contract(gas_limit, Some(weight_limit));
+
+        let contract_address = result.value;
+
+        let handler = EvmContractHandler::<Test>::default();
+
+        let get = GetRequest {
+            source: <Test as pallet_ismp::Config>::StateMachine::get(),
+            dest: StateMachine::Polkadot(2000),
+            nonce: 0,
+            from: contract_address.as_bytes().to_vec(),
+            keys: vec![
+                H160::from_low_u64_be(10).as_bytes().to_vec(),
+                H160::from_low_u64_be(20).as_bytes().to_vec(),
+            ],
+            height: 10,
+            timeout_timestamp: 1000,
+            gas_limit,
+        };
+
+        handler.on_timeout(Request::Get(get)).expect("Call succeeds")
+    })
+}
+
+#[test]
+fn on_post_timeout() {
+    new_test_ext().execute_with(|| {
+        let gas_limit: u64 = 1_500_000_000;
+        let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
+        let result = deploy_contract(gas_limit, Some(weight_limit));
+
+        let contract_address = result.value;
+
+        let handler = EvmContractHandler::<Test>::default();
+        let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
+        let post = Post {
+            source: <Test as pallet_ismp::Config>::StateMachine::get(),
+            dest: StateMachine::Polkadot(2000),
+            nonce: 0,
+            from: contract_address.as_bytes().to_vec(),
+            to: contract_address.as_bytes().to_vec(),
+            timeout_timestamp: 1000,
+            data: Payload::encode(&payload),
+            gas_limit,
+        };
+
+        handler.on_timeout(Request::Post(post)).expect("Call succeeds")
+    })
+}
