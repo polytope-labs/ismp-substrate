@@ -40,7 +40,7 @@ contract IsmpDemo is IIsmpModule {
     }
 
     function OnAccept(PostRequest memory request) public onlyIsmpHost {
-        Payload memory payload = decodePayload(request.data.data);
+        Payload memory payload = decodePayload(request.data);
         PostResponse memory response = PostResponse({
             request: request,
             response: abi.encodePacked(msg.sender)
@@ -59,7 +59,7 @@ contract IsmpDemo is IIsmpModule {
 
     function OnPostResponse(PostResponse memory response) public onlyIsmpHost {
         // In this callback just try to decode the payload of the corresponding request
-        Payload memory payload = decodePayload(response.request.data.data);
+        Payload memory payload = decodePayload(response.request.data);
         emit ResponseReceived();
     }
 
@@ -88,7 +88,7 @@ contract IsmpDemo is IIsmpModule {
     }
 
     function OnPostTimeout(PostRequest memory request) public onlyIsmpHost {
-        Payload memory payload = decodePayload(request.data.data);
+        Payload memory payload = decodePayload(request.data);
         _mint(payload.from, payload.amount);
         emit BalanceMinted();
     }
@@ -113,15 +113,12 @@ contract IsmpDemo is IIsmpModule {
             to: to,
             amount: amount
         });
-        ContractData memory contract_data = ContractData({
-            data: abi.encode(payload.from, payload.to, payload.amount),
-            gasLimit: gasLimit
-        });
         DispatchPost memory dispatchPost = DispatchPost({
-            data: contract_data,
+            data: abi.encode(payload.from, payload.to, payload.amount),
             dest: dest,
             timeoutTimestamp: timeout,
-            to: abi.encodePacked(address(12))
+            to: abi.encodePacked(address(12)),
+            gasLimit: gasLimit
         });
         // For this test we expect the ismp post dispatch precompile to be at the  address 0x01
         // In production you would use the precompile address provided by the chain to make the dispatch

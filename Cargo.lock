@@ -226,7 +226,7 @@ dependencies = [
  "heck",
  "proc-macro2",
  "quote",
- "syn 2.0.27",
+ "syn 2.0.25",
  "syn-solidity",
  "tiny-keccak",
 ]
@@ -3383,7 +3383,7 @@ dependencies = [
 [[package]]
 name = "ismp"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/ismp-rs?branch=main#93271cb170d01ce743d9dcb6c2f0bc8bee16901a"
+source = "git+https://github.com/polytope-labs/ismp-rs?branch=main#f8ae365a865414e082f94b6618f351a4402db27f"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -3615,7 +3615,7 @@ dependencies = [
 [[package]]
 name = "ismp-testsuite"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/ismp-rs?branch=main#93271cb170d01ce743d9dcb6c2f0bc8bee16901a"
+source = "git+https://github.com/polytope-labs/ismp-rs?branch=main#f8ae365a865414e082f94b6618f351a4402db27f"
 dependencies = [
  "ismp",
  "parity-scale-codec",
@@ -10592,7 +10592,7 @@ source = "git+https://github.com/alloy-rs/core.git?rev=3d89ec51a9400ae1f323dc508
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.27",
+ "syn 2.0.25",
 ]
 
 [[package]]

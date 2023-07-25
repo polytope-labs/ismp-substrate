@@ -1,16 +1,12 @@
 //! Module Handler for EVM contracts
-use crate::{
-    abi::{
-        ContractData as SolContractData, GetRequest as SolGetRequest,
-        GetResponse as SolGetResponse, OnAcceptCall, OnGetResponseCall, OnGetTimeoutCall,
-        OnPostResponseCall, OnPostTimeoutCall, PostRequest, PostResponse as SolPostResponse,
-        StorageValue as SolStorageValue,
-    },
-    precompiles::u256_to_u64,
+use crate::abi::{
+    GetRequest as SolGetRequest, GetResponse as SolGetResponse, OnAcceptCall, OnGetResponseCall,
+    OnGetTimeoutCall, OnPostResponseCall, OnPostTimeoutCall, PostRequest,
+    PostResponse as SolPostResponse, StorageValue as SolStorageValue,
 };
 use alloc::{format, string::ToString};
 use alloy_primitives::U256;
-use alloy_sol_types::{SolCall, SolType};
+use alloy_sol_types::SolCall;
 use core::marker::PhantomData;
 use fp_evm::{ExitReason, FeeCalculator};
 use ismp_rs::{
@@ -19,7 +15,7 @@ use ismp_rs::{
     router::{Post, Request, Response},
 };
 use pallet_evm::GasWeightMapping;
-use pallet_ismp::{primitives::ModuleId, GasLimits, WeightConsumed};
+use pallet_ismp::{primitives::ModuleId, WeightConsumed};
 use sp_core::H160;
 use sp_std::prelude::*;
 
@@ -38,12 +34,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> Default for EvmContractHandler
 impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHandler<T> {
     fn on_accept(&self, request: Post) -> Result<(), Error> {
         let target_contract = parse_contract_id(&request.to)?;
-        let contract_data = SolContractData::decode(&request.data, true).map_err(|_| {
-            Error::ImplementationSpecific(
-                "Failed to decode request data to the standard format".to_string(),
-            )
-        })?;
-        let gas_limit = u256_to_u64(contract_data.gasLimit);
+        let gas_limit = request.gas_limit;
         let post = PostRequest {
             source: request.source.to_string().as_bytes().to_vec(),
             dest: request.dest.to_string().as_bytes().to_vec(),
@@ -51,7 +42,8 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
             timeoutTimestamp: u64_to_u256(request.timeout_timestamp)?,
             from: request.from,
             to: request.to,
-            data: contract_data,
+            data: request.data,
+            gasLimit: u64_to_u256(gas_limit)?,
         };
         let call_data = OnAcceptCall { request: post }.encode();
         execute_call::<T>(target_contract, call_data, gas_limit)
@@ -65,13 +57,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
                 // we set the gas limit for executing the contract to be the same as used in the
                 // request. we assume the request was dispatched with a gas limit
                 // that accounts for execution of the response on this source chain
-                let contract_data =
-                    SolContractData::decode(&response.post.data, true).map_err(|_| {
-                        Error::ImplementationSpecific(
-                            "Failed to decode request data to the standard format".to_string(),
-                        )
-                    })?;
-                let gas_limit = u256_to_u64(contract_data.gasLimit);
+                let gas_limit = response.post.gas_limit;
                 let post_response = SolPostResponse {
                     request: PostRequest {
                         source: response.post.source.to_string().as_bytes().to_vec(),
@@ -80,16 +66,15 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
                         timeoutTimestamp: u64_to_u256(response.post.timeout_timestamp)?,
                         from: response.post.from,
                         to: response.post.to,
-                        data: contract_data,
+                        data: response.post.data,
+                        gasLimit: u64_to_u256(gas_limit)?,
                     },
                     response: response.response,
                 };
                 (OnPostResponseCall { response: post_response }.encode(), gas_limit)
             }
             Response::Get(response) => {
-                let gas_limit = GasLimits::<T>::get(response.get.nonce)
-                    .ok_or(Error::ImplementationSpecific("Gas limit not found".to_string()))?;
-                GasLimits::<T>::remove(response.get.nonce);
+                let gas_limit = response.get.gas_limit;
                 let get_response = SolGetResponse {
                     request: SolGetRequest {
                         source: response.get.source.to_string().as_bytes().to_vec(),
@@ -99,6 +84,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
                         timeoutTimestamp: u64_to_u256(response.get.timeout_timestamp)?,
                         from: response.get.from,
                         keys: response.get.keys,
+                        gasLimit: u64_to_u256(gas_limit)?,
                     },
                     values: response
                         .values
@@ -120,12 +106,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
         let target_contract = parse_contract_id(&request.source_module())?;
         let (call_data, gas_limit) = match request {
             Request::Post(post) => {
-                let contract_data = SolContractData::decode(&post.data, true).map_err(|_| {
-                    Error::ImplementationSpecific(
-                        "Failed to decode request data to the standard format".to_string(),
-                    )
-                })?;
-                let gas_limit = u256_to_u64(contract_data.gasLimit);
+                let gas_limit = post.gas_limit;
                 let request = PostRequest {
                     source: post.source.to_string().as_bytes().to_vec(),
                     dest: post.dest.to_string().as_bytes().to_vec(),
@@ -133,14 +114,13 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
                     timeoutTimestamp: u64_to_u256(post.timeout_timestamp)?,
                     from: post.from,
                     to: post.to,
-                    data: contract_data,
+                    data: post.data,
+                    gasLimit: u64_to_u256(gas_limit)?,
                 };
                 (OnPostTimeoutCall { request }.encode(), gas_limit)
             }
             Request::Get(get) => {
-                let gas_limit = GasLimits::<T>::get(get.nonce)
-                    .ok_or(Error::ImplementationSpecific("Gas limit not found".to_string()))?;
-                GasLimits::<T>::remove(get.nonce);
+                let gas_limit = get.gas_limit;
                 let request = SolGetRequest {
                     source: get.source.to_string().as_bytes().to_vec(),
                     dest: get.dest.to_string().as_bytes().to_vec(),
@@ -149,6 +129,7 @@ impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHand
                     timeoutTimestamp: u64_to_u256(get.timeout_timestamp)?,
                     from: get.from,
                     keys: get.keys,
+                    gasLimit: u64_to_u256(gas_limit)?,
                 };
                 (OnGetTimeoutCall { request }.encode(), gas_limit)
             }

@@ -1,5 +1,4 @@
 use crate::{
-    abi::ContractData,
     handler::{u64_to_u256, EvmContractHandler},
     mocks::*,
 };
@@ -18,7 +17,7 @@ use ismp_rs::{
     router::{Post, PostResponse, Response},
 };
 use pallet_evm::{runner::Runner, FixedGasWeightMapping, GasWeightMapping};
-use pallet_ismp::{Event, GasLimits};
+use pallet_ismp::Event;
 use sp_core::{
     offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
     H160, U256,
@@ -230,8 +229,6 @@ fn get_dispatch() {
             &<Test as pallet_evm::Config>::config().clone(),
         )
         .expect("call succeeds");
-
-        GasLimits::<Test>::get(0).expect("Gas limit should be set after get dispatch");
         // Check
         assert_event_was_emitted::<Test>(
             Event::Request {
@@ -257,11 +254,6 @@ fn on_accept_callback() {
 
         let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
 
-        let contract_data = ContractData {
-            data: Payload::encode(&payload),
-            gasLimit: u64_to_u256(gas_limit).unwrap(),
-        };
-
         let post = Post {
             source: <Test as pallet_ismp::Config>::StateMachine::get(),
             dest: StateMachine::Polkadot(2000),
@@ -269,7 +261,8 @@ fn on_accept_callback() {
             from: contract_address.as_bytes().to_vec(),
             to: contract_address.as_bytes().to_vec(),
             timeout_timestamp: 1000,
-            data: ContractData::encode(&contract_data),
+            data: Payload::encode(&payload),
+            gas_limit,
         };
 
         handler.on_accept(post).unwrap();
@@ -298,11 +291,6 @@ fn on_post_response() {
 
         let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
 
-        let contract_data = ContractData {
-            data: Payload::encode(&payload),
-            gasLimit: u64_to_u256(gas_limit).unwrap(),
-        };
-
         let post = Post {
             source: <Test as pallet_ismp::Config>::StateMachine::get(),
             dest: StateMachine::Polkadot(2000),
@@ -310,7 +298,8 @@ fn on_post_response() {
             from: contract_address.as_bytes().to_vec(),
             to: contract_address.as_bytes().to_vec(),
             timeout_timestamp: 1000,
-            data: ContractData::encode(&contract_data),
+            data: Payload::encode(&payload),
+            gas_limit,
         };
 
         let response = PostResponse { post, response: H160::from_low_u64_be(30).0.to_vec() };

@@ -19,7 +19,9 @@ sol! {
             // timestamp by which this request times out.
             uint256 timeoutTimestamp;
             // request body
-            ContractData data;
+            bytes data;
+            // Gas limit that should be used to execute the request on destination
+            uint256 gasLimit;
         }
 
         struct GetRequest {
@@ -37,6 +39,8 @@ sol! {
             bytes[] keys;
             // height at which to read destination state machine
             uint256 height;
+            // Gas limit that should be used to execute the response or timeout for this request
+            uint256 gasLimit;
         }
 
         struct StorageValue {
@@ -66,9 +70,11 @@ sol! {
             // the destination module
             bytes to;
             // the request body
-            ContractData data;
+            bytes data;
             // Timeout
             uint256 timeoutTimestamp;
+            // Gas limit that should be used to execute the request on destination
+            uint256 gasLimit;
         }
 
         // An object for dispatching post requests to the IsmpDispatcher
@@ -84,17 +90,6 @@ sol! {
             // Gas limit that should be used to execute the response or timeout for this request
             uint256 gasLimit;
         }
-
-        // An object that represents the standard data format for contract post request bodies
-        // To be abi encoded as the bytes for a request
-        // This is the data structure expected by all EVM contracts executing on substrate chains
-        struct ContractData {
-            // Actual contract data to that would be abi decoded by contract internally
-            bytes data;
-            // Gas limit to be used to execute the contract call back on destination chain
-            uint256 gasLimit;
-        }
-
 
         function OnAccept(PostRequest memory request) external;
         function OnPostResponse(PostResponse memory response) external;

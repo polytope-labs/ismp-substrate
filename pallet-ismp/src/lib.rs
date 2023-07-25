@@ -79,7 +79,7 @@ pub mod pallet {
     use crate::{
         dispatcher::Receipt,
         errors::HandlingError,
-        primitives::{ConsensusClientProvider, WeightUsed, ISMP_ID},
+        primitives::{ConsensusClientProvider, WeightUsed},
         weight_info::{WeightInfo, WeightProvider},
     };
     use alloc::collections::BTreeSet;
@@ -268,12 +268,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn weight_consumed)]
     pub type WeightConsumed<T: Config> = StorageValue<_, WeightUsed, ValueQuery>;
-
-    /// Gas limits for executing responses got get requests
-    /// The key is the request nonce
-    #[pallet::storage]
-    #[pallet::getter(fn gas_limits)]
-    pub type GasLimits<T: Config> = StorageMap<_, Blake2_128Concat, u64, u64, OptionQuery>;
 
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
     #[pallet::hooks]
@@ -714,11 +708,6 @@ where
         let pos = mmr.push(leaf)?;
         Pallet::<T>::store_leaf_index_offchain(offchain_key, pos);
         Some(pos)
-    }
-
-    /// It returns the nonce used for the last known dispatch
-    pub fn previous_nonce() -> u64 {
-        Nonce::<T>::get() - 1
     }
 }
 

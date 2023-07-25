@@ -1,13 +1,12 @@
 //! IsmpDispatcher precompiles for pallet-evm
 
-use pallet_ismp::{dispatcher::Dispatcher, weight_info::WeightInfo, GasLimits, Pallet};
+use pallet_ismp::{dispatcher::Dispatcher, weight_info::WeightInfo};
 
 use crate::abi::{
-    ContractData, DispatchGet as SolDispatchGet, DispatchPost as SolDispatchPost,
-    PostRequest as SolPostRequest,
+    DispatchGet as SolDispatchGet, DispatchPost as SolDispatchPost, PostResponse as SolPostResponse,
 };
 use alloc::{format, str::FromStr, string::String};
-use alloy_sol_types::{sol_data::Bytes, SolType};
+use alloy_sol_types::SolType;
 use core::marker::PhantomData;
 use fp_evm::{
     ExitError, ExitSucceed, Precompile, PrecompileFailure, PrecompileHandle, PrecompileOutput,
@@ -52,7 +51,8 @@ where
             from: context.caller.0.to_vec(),
             to: post_dispatch.to,
             timeout_timestamp: u256_to_u64(post_dispatch.timeoutTimestamp),
-            data: ContractData::encode(&post_dispatch.data),
+            data: post_dispatch.data,
+            gas_limit: u256_to_u64(post_dispatch.gasLimit),
         };
 
         handle.record_cost(cost)?;
@@ -93,22 +93,18 @@ where
             SolDispatchGet::decode(input, true).map_err(|e| PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
             })?;
-        let gas_limit = u256_to_u64(get_dispatch.gasLimit);
         let get_dispatch = DispatchGet {
             dest: parse_state_machine(get_dispatch.dest)?,
             from: context.caller.0.to_vec(),
             keys: get_dispatch.keys,
             height: u256_to_u64(get_dispatch.height),
             timeout_timestamp: u256_to_u64(get_dispatch.timeoutTimestamp),
+            gas_limit: u256_to_u64(get_dispatch.gasLimit),
         };
 
         handle.record_cost(cost)?;
         match dispatcher.dispatch_request(DispatchRequest::Get(get_dispatch)) {
-            Ok(_) => {
-                let nonce = Pallet::<T>::previous_nonce();
-                GasLimits::<T>::insert(nonce, gas_limit);
-                Ok(PrecompileOutput { exit_status: ExitSucceed::Returned, output: vec![] })
-            }
+            Ok(_) => Ok(PrecompileOutput { exit_status: ExitSucceed::Returned, output: vec![] }),
             Err(e) => Err(PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("dispatch execution failed: {:?}", e).into()),
             }),
@@ -134,26 +130,22 @@ where
         let cost = <T as pallet_evm::Config>::GasWeightMapping::weight_to_gas(weight);
 
         let dispatcher = Dispatcher::<T>::default();
-        let (request, response) =
-            <(Bytes, Bytes)>::decode(input, true).map_err(|e| PrecompileFailure::Error {
+        let response =
+            SolPostResponse::decode(input, true).map_err(|e| PrecompileFailure::Error {
                 exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
             })?;
-        let request = SolPostRequest::decode(request.as_ref(), true).map_err(|e| {
-            PrecompileFailure::Error {
-                exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
-            }
-        })?;
         let post_response = PostResponse {
             post: Post {
-                source: parse_state_machine(request.source)?,
-                dest: parse_state_machine(request.dest)?,
-                nonce: u256_to_u64(request.nonce),
-                from: request.from,
-                to: request.to,
-                timeout_timestamp: u256_to_u64(request.timeoutTimestamp),
-                data: ContractData::encode(&request.data),
+                source: parse_state_machine(response.request.source)?,
+                dest: parse_state_machine(response.request.dest)?,
+                nonce: u256_to_u64(response.request.nonce),
+                from: response.request.from,
+                to: response.request.to,
+                timeout_timestamp: u256_to_u64(response.request.timeoutTimestamp),
+                data: response.request.data,
+                gas_limit: u256_to_u64(response.request.gasLimit),
             },
-            response,
+            response: response.response,
         };
         handle.record_cost(cost)?;
 
