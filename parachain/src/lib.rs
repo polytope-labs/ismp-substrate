@@ -36,9 +36,7 @@ pub mod pallet {
     use cumulus_primitives_core::relay_chain;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
-    use ismp::{
-        messaging::{ConsensusMessage, CreateConsensusState, Message},
-    };
+    use ismp::messaging::{ConsensusMessage, CreateConsensusState, Message};
     use parachain_system::{RelaychainDataProvider, RelaychainStateProvider};
     use primitive_types::H256;
 
