@@ -111,6 +111,7 @@ pub mod benchmarks {
             to: MODULE_ID.to_bytes(),
             timeout_timestamp: 5000,
             data: "handle_request_message".as_bytes().to_vec(),
+            gas_limit: 0,
         };
 
         let msg =
@@ -139,6 +140,7 @@ pub mod benchmarks {
             gas_limit: 0,
 
             data: "handle_response_message".as_bytes().to_vec(),
+            gas_limit: 0,
         };
         let request = Request::Post(post.clone());
 
@@ -176,6 +178,7 @@ pub mod benchmarks {
             to: MODULE_ID.to_bytes(),
             timeout_timestamp: 500,
             data: "handle_timeout_message".as_bytes().to_vec(),
+            gas_limit: 0,
         };
         let request = Request::Post(post.clone());
 
@@ -209,6 +212,7 @@ pub mod benchmarks {
                 to: vec![1u8; 32],
                 timeout_timestamp: 100,
                 data: vec![2u8; 64],
+                gas_limit: 0,
             };
 
             let request = Request::Post(post);
@@ -231,6 +235,7 @@ pub mod benchmarks {
             to: vec![1u8; 32],
             timeout_timestamp: 100,
             data: vec![2u8; 64],
+            gas_limit: 0,
         };
 
         let dispatcher = Dispatcher::<T>::default();
@@ -248,6 +253,7 @@ pub mod benchmarks {
             keys: vec![vec![1u8; 32]; 32],
             height: 20,
             timeout_timestamp: 100,
+            gas_limit: 0,
         };
 
         let dispatcher = Dispatcher::<T>::default();
@@ -267,6 +273,7 @@ pub mod benchmarks {
             to: vec![1u8; 32],
             timeout_timestamp: 100,
             data: vec![2u8; 64],
+            gas_limit: 0,
         };
 
         let response = PostResponse { post, response: vec![1u8; 64] };
