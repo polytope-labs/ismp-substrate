@@ -26,8 +26,6 @@ pub mod benchmarking;
 pub mod dispatcher;
 mod errors;
 pub mod events;
-#[cfg(feature = "evm")]
-pub mod evm;
 pub mod handlers;
 pub mod host;
 mod mmr;
@@ -61,16 +59,14 @@ use sp_core::{offchain::StorageKind, H256};
 use crate::{
     errors::{HandlingError, ModuleCallbackResult},
     mmr::mmr::Mmr,
-    primitives::extract_total_gas,
     weight_info::get_weight,
 };
 use ismp_primitives::{
     mmr::{DataOrHash, Leaf, LeafIndex, NodeIndex},
     LeafIndexQuery,
 };
-use ismp_rs::{contracts::Gas, host::IsmpHost, messaging::Message};
+use ismp_rs::{host::IsmpHost, messaging::Message};
 pub use pallet::*;
-use pallet_evm::GasWeightMapping;
 use sp_std::prelude::*;
 
 // Definition of the pallet logic, to be aggregated at runtime definition through
@@ -83,7 +79,7 @@ pub mod pallet {
     use crate::{
         dispatcher::Receipt,
         errors::HandlingError,
-        primitives::ConsensusClientProvider,
+        primitives::{ConsensusClientProvider, WeightUsed, ISMP_ID},
         weight_info::{WeightInfo, WeightProvider},
     };
     use alloc::collections::BTreeSet;
@@ -103,7 +99,6 @@ pub mod pallet {
         messaging::Message,
         router::IsmpRouter,
     };
-    use pallet_evm::GasWeightMapping;
     use sp_core::H256;
 
     #[pallet::config]
@@ -142,9 +137,6 @@ pub mod pallet {
 
         /// Weight provider for consensus clients and module callbacks
         type WeightProvider: WeightProvider;
-
-        /// EVM Gas to weight mapping implementation
-        type GasWeightMapping: GasWeightMapping;
     }
 
     // Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and
@@ -271,12 +263,17 @@ pub mod pallet {
     #[pallet::getter(fn nonce)]
     pub type Nonce<T> = StorageValue<_, u64, ValueQuery>;
 
-    #[cfg(feature = "evm")]
-    /// Gas limits for executing responses and timeouts for evm contracts
+    /// Contains a tuple of the weight consumed and weight limit in executing contract callbacks in
+    /// a transaction
+    #[pallet::storage]
+    #[pallet::getter(fn weight_consumed)]
+    pub type WeightConsumed<T: Config> = StorageValue<_, WeightUsed, ValueQuery>;
+
+    /// Gas limits for executing responses got get requests
     /// The key is the request nonce
     #[pallet::storage]
     #[pallet::getter(fn gas_limits)]
-    pub(super) type GasLimits<T: Config> = StorageMap<_, Blake2_128Concat, u64, u64, OptionQuery>;
+    pub type GasLimits<T: Config> = StorageMap<_, Blake2_128Concat, u64, u64, OptionQuery>;
 
     // Pallet implements [`Hooks`] trait to define some logic to execute in some context.
     #[pallet::hooks]
@@ -470,11 +467,10 @@ where
     /// Provides a way to handle messages.
     pub fn handle_messages(messages: Vec<Message>) -> DispatchResultWithPostInfo {
         // Define a host
+        WeightConsumed::<T>::kill();
         let host = Host::<T>::default();
         let mut errors: Vec<HandlingError> = vec![];
         let total_weight = get_weight::<T>(&messages);
-        let (mut evm_gas_used, mut evm_gas_limit, mut ink_gas_used, mut ink_gas_limit) =
-            (0, 0, 0, 0);
         for message in messages {
             match handle_incoming_message(&host, message) {
                 Ok(MessageResult::ConsensusMessage(res)) => {
@@ -516,36 +512,12 @@ where
                     }
                 }
                 Ok(MessageResult::Response(res)) => {
-                    ((evm_gas_used, evm_gas_limit), (ink_gas_used, ink_gas_limit)) =
-                        extract_total_gas(
-                            &res,
-                            evm_gas_used,
-                            evm_gas_limit,
-                            ink_gas_used,
-                            ink_gas_limit,
-                        );
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Response(res));
                 }
                 Ok(MessageResult::Request(res)) => {
-                    ((evm_gas_used, evm_gas_limit), (ink_gas_used, ink_gas_limit)) =
-                        extract_total_gas(
-                            &res,
-                            evm_gas_used,
-                            evm_gas_limit,
-                            ink_gas_used,
-                            ink_gas_limit,
-                        );
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Request(res));
                 }
                 Ok(MessageResult::Timeout(res)) => {
-                    ((evm_gas_used, evm_gas_limit), (ink_gas_used, ink_gas_limit)) =
-                        extract_total_gas(
-                            &res,
-                            evm_gas_used,
-                            evm_gas_limit,
-                            ink_gas_used,
-                            ink_gas_limit,
-                        );
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Timeout(res));
                 }
                 Err(err) => {
@@ -562,12 +534,8 @@ where
 
         Ok(PostDispatchInfo {
             actual_weight: {
-                // Only support EVM for now
-                let non_contract_weight = total_weight -
-                    <<T as Config>::GasWeightMapping>::gas_to_weight(evm_gas_limit, true);
-                let actual_weight_used =
-                    <<T as Config>::GasWeightMapping>::gas_to_weight(evm_gas_used, true);
-                Some(non_contract_weight.saturating_add(actual_weight_used))
+                let acc_weight = WeightConsumed::<T>::get();
+                Some((total_weight - acc_weight.weight_limit) + acc_weight.weight_limit)
             },
             pays_fee: Pays::Yes,
         })
@@ -747,9 +715,9 @@ where
         Pallet::<T>::store_leaf_index_offchain(offchain_key, pos);
         Some(pos)
     }
-    #[cfg(feature = "evm")]
+
     /// It returns the nonce used for the last known dispatch
-    pub(crate) fn previous_nonce() -> u64 {
+    pub fn previous_nonce() -> u64 {
         Nonce::<T>::get() - 1
     }
 }

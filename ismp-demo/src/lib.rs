@@ -23,7 +23,6 @@ extern crate alloc;
 use alloc::string::ToString;
 use frame_support::{traits::fungible::Mutate, PalletId};
 use ismp::{
-    contracts::Gas,
     error::Error as IsmpError,
     module::IsmpModule,
     router::{Post, Request, Response},
@@ -139,8 +138,8 @@ pub mod pallet {
             };
             let post = DispatchPost {
                 dest,
-                from: PALLET_ID.encode(),
-                to: PALLET_ID.encode(),
+                from: PALLET_ID.to_bytes(),
+                to: PALLET_ID.to_bytes(),
                 timeout_timestamp: params.timeout,
                 data: payload.encode(),
                 gas_limit: 0,
@@ -177,7 +176,7 @@ pub mod pallet {
 
             let get = DispatchGet {
                 dest,
-                from: PALLET_ID.encode(),
+                from: PALLET_ID.to_bytes(),
                 keys: params.keys,
                 height: params.height as u64,
                 timeout_timestamp: params.timeout,
@@ -267,10 +266,10 @@ impl<T: Config> IsmpModule for IsmpModuleCallback<T> {
             amount: payload.amount,
             source_chain,
         });
-        Ok(().into())
+        Ok(())
     }
 
-    fn on_response(&self, response: Response) -> Result<Gas, IsmpError> {
+    fn on_response(&self, response: Response) -> Result<(), IsmpError> {
         match response {
             Response::Post(_) => Err(IsmpError::ImplementationSpecific(
                 "Balance transfer protocol does not accept post responses".to_string(),
@@ -280,10 +279,10 @@ impl<T: Config> IsmpModule for IsmpModuleCallback<T> {
             )),
         };
 
-        Ok(().into())
+        Ok(())
     }
 
-    fn on_timeout(&self, request: Request) -> Result<Gas, IsmpError> {
+    fn on_timeout(&self, request: Request) -> Result<(), IsmpError> {
         let source_chain = request.source_chain();
         let data = match request {
             Request::Post(post) => post.data,
@@ -307,6 +306,6 @@ impl<T: Config> IsmpModule for IsmpModuleCallback<T> {
             amount: payload.amount,
             source_chain,
         });
-        Ok(().into())
+        Ok(())
     }
 }

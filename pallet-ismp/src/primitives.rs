@@ -14,12 +14,10 @@
 // limitations under the License.
 
 //! Pallet primitives
-use frame_support::{PalletId, RuntimeDebug};
+use codec::{Decode, Encode};
+use frame_support::{weights::Weight, PalletId, RuntimeDebug};
 use ismp_primitives::mmr::{LeafIndex, NodeIndex};
-use ismp_rs::{
-    consensus::{ConsensusClient, ConsensusClientId},
-    module::DispatchResult,
-};
+use ismp_rs::consensus::{ConsensusClient, ConsensusClientId};
 use scale_info::TypeInfo;
 use sp_core::{crypto::AccountId32, ByteArray, H160};
 use sp_std::prelude::*;
@@ -70,6 +68,7 @@ pub enum ModuleId {
     /// Evm contract
     Evm(H160),
 }
+
 impl ModuleId {
     /// Convert module id to raw bytes
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -96,74 +95,11 @@ impl ModuleId {
     }
 }
 
-/// Creates a distinction between the types of gas
-pub enum GasType {
-    /// EVM gas consumption
-    Evm {
-        /// Gas used in executing
-        gas_used: u64,
-        /// Gas limit provided
-        gas_limit: u64,
-    },
-    /// Ink gas consumption
-    Ink {
-        /// Gas used in executing
-        gas_used: u64,
-        /// Gas limit provided
-        gas_limit: u64,
-    },
-}
-
-/// A helper function that accumulates the total gas used and total gas limit from a slice of module
-/// dispatch results It return results for both evm and ink
-pub fn extract_total_gas(
-    res: &[DispatchResult],
-    evm_used_total: u64,
-    evm_limit_total: u64,
-    ink_used_total: u64,
-    ink_limit_total: u64,
-) -> ((u64, u64), (u64, u64)) {
-    let gas = res
-        .iter()
-        .filter_map(|res| match res {
-            Ok(success) => {
-                if success.gas.gas_used.is_some() && success.gas.gas_limit.is_some() {
-                    let module_id = ModuleId::from_bytes(&success.module_id).ok()?;
-                    match module_id {
-                        ModuleId::Pallet(_) => None,
-                        ModuleId::Contract(_) => Some(GasType::Ink {
-                            gas_used: success.gas.gas_used.expect("Infallible"),
-                            gas_limit: success.gas.gas_limit.expect("Infallible"),
-                        }),
-                        ModuleId::Evm(_) => Some(GasType::Evm {
-                            gas_used: success.gas.gas_used.expect("Infallible"),
-                            gas_limit: success.gas.gas_limit.expect("Infallible"),
-                        }),
-                    }
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        })
-        .collect::<Vec<GasType>>();
-
-    let (mut evm_gas_used, mut evm_gas_limit, mut ink_gas_used, mut ink_gas_limit) = (0, 0, 0, 0);
-    for gas_type in gas {
-        match gas_type {
-            GasType::Ink { gas_used, gas_limit } => {
-                ink_gas_used += gas_used;
-                ink_gas_limit += gas_limit;
-            }
-            GasType::Evm { gas_used, gas_limit } => {
-                evm_gas_used += gas_used;
-                evm_gas_limit += gas_limit;
-            }
-        }
-    }
-
-    (
-        (evm_gas_used + evm_used_total, evm_gas_limit + evm_limit_total),
-        (ink_gas_used + ink_used_total, ink_gas_limit + ink_limit_total),
-    )
+/// Accumulated Weight consumed by contract callbacks in a transaction
+#[derive(Default, scale_info::TypeInfo, Encode, Decode)]
+pub struct WeightUsed {
+    /// Total weight used in executing contract callbacks in a transaction
+    pub weight_used: Weight,
+    /// Total weight limit used in executing contract callbacks in a transaction
+    pub weight_limit: Weight,
 }
