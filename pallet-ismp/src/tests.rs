@@ -279,7 +279,6 @@ fn should_handle_get_request_timeouts_correctly() {
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],
                     height: 2,
                     timeout_timestamp: 1000,
-                    gas_limit: 0,
                 };
 
                 let dispatcher = Dispatcher::<Test>::default();
@@ -328,7 +327,6 @@ fn should_handle_get_request_responses_correctly() {
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],
                     height: 3,
                     timeout_timestamp: 1000,
-                    gas_limit: 0,
                 };
 
                 let dispatcher = Dispatcher::<Test>::default();
@@ -342,7 +340,6 @@ fn should_handle_get_request_responses_correctly() {
                     keys: vec![vec![1u8; 32], vec![1u8; 32]],
                     height: 3,
                     timeout_timestamp: 1000,
-                    gas_limit: 0,
                 };
                 ismp_rs::router::Request::Get(get)
             })

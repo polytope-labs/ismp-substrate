@@ -29,7 +29,7 @@ pub mod events;
 pub mod handlers;
 pub mod host;
 mod mmr;
-#[cfg(any(feature = "runtime-benchmarks", test))]
+#[cfg(any(feature = "runtime-benchmarks", feature = "testing", test))]
 pub mod mocks;
 pub mod primitives;
 #[cfg(test)]

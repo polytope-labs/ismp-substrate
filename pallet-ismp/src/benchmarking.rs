@@ -137,8 +137,6 @@ pub mod benchmarks {
             from: MODULE_ID.to_bytes(),
             to: MODULE_ID.to_bytes(),
             timeout_timestamp: 5000,
-            gas_limit: 0,
-
             data: "handle_response_message".as_bytes().to_vec(),
             gas_limit: 0,
         };
@@ -208,7 +206,6 @@ pub mod benchmarks {
                 dest: StateMachine::Kusama(2001),
                 nonce: nonce.into(),
                 from: vec![0u8; 32],
-                gas_limit: 0,
                 to: vec![1u8; 32],
                 timeout_timestamp: 100,
                 data: vec![2u8; 64],
@@ -285,5 +282,5 @@ pub mod benchmarks {
         }
     }
 
-    impl_benchmark_test_suite!(Pallet, crate::tests::new_test_ext(), crate::mock::Test);
+    impl_benchmark_test_suite!(Pallet, crate::tests::new_test_ext(), crate::mocks::Test);
 }

@@ -36,7 +36,7 @@ use crate::{
     precompiles::{IsmpGetDispatcher, IsmpPostDispatcher, IsmpResponseDispatcher},
 };
 use pallet_ismp::{
-    ismp_mocks::MockConsensusClient,
+    mocks::ismp::MockConsensusClient,
     primitives::{ConsensusClientProvider, ModuleId},
 };
 use sp_core::{H160, H256, U256};
