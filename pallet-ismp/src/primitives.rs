@@ -19,7 +19,10 @@ use frame_support::{weights::Weight, PalletId, RuntimeDebug};
 use ismp_primitives::mmr::{LeafIndex, NodeIndex};
 use ismp_rs::consensus::{ConsensusClient, ConsensusClientId};
 use scale_info::TypeInfo;
-use sp_core::{crypto::AccountId32, ByteArray, H160};
+use sp_core::{
+    crypto::{AccountId32, ByteArray},
+    H160,
+};
 use sp_std::prelude::*;
 
 /// An MMR proof data for a group of leaves.
@@ -74,7 +77,7 @@ impl ModuleId {
     pub fn to_bytes(&self) -> Vec<u8> {
         match self {
             ModuleId::Pallet(pallet_id) => pallet_id.0.to_vec(),
-            ModuleId::Contract(account_id) => account_id.to_raw_vec(),
+            ModuleId::Contract(account_id) => account_id.as_slice().to_vec(),
             ModuleId::Evm(account_id) => account_id.0.to_vec(),
         }
     }

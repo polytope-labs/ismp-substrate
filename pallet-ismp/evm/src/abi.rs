@@ -1,6 +1,6 @@
 //! Solidity rust bindings
 #![allow(missing_docs)]
-use alloy_sol_macro::sol;
+use alloy_sol_types::sol;
 sol! {
         struct PostRequest {
             // the source state machine of this request as utf8 string bytes

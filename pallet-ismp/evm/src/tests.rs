@@ -1,7 +1,6 @@
 use crate::{handler::u64_to_u256, mocks::*};
 use alloy_primitives::Address;
-use alloy_sol_macro::sol;
-use alloy_sol_types::SolCall;
+use alloy_sol_types::{sol, SolCall};
 use fp_evm::{CreateInfo, FeeCalculator, GenesisAccount};
 use frame_support::{
     traits::{GenesisBuild, Get},

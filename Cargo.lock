@@ -3411,7 +3411,6 @@ name = "ismp-evm"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives",
- "alloy-sol-macro",
  "alloy-sol-types",
  "fp-evm",
  "frame-support",
