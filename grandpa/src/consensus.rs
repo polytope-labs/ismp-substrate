@@ -19,7 +19,8 @@ use core::marker::PhantomData;
 use finality_grandpa::Chain;
 use ismp::{
     consensus::{
-        ConsensusClient, ConsensusStateId, StateCommitment, StateMachineClient, VerifiedCommitments,
+        ConsensusClient, ConsensusClientId, ConsensusStateId, StateCommitment, StateMachineClient,
+        VerifiedCommitments,
     },
     error::Error,
     host::{IsmpHost, StateMachine},
@@ -37,8 +38,14 @@ use verifier::{
     verify_grandpa_finality_proof, verify_parachain_headers_with_grandpa_finality_proof,
 };
 
-pub const POLKADOT_CONSENSUS_STATE_ID: [u8; 8] = *b"polkadot";
-pub const KUSAMA_CONSENSUS_STATE_ID: [u8; 8] = *b"_kusama_";
+/// [`ConsensusStateId`] for the polkadot relay chain
+pub const POLKADOT_CONSENSUS_STATE_ID: ConsensusStateId = *b"polk";
+
+/// [`ConsensusStateId`] for the kusama relay chain
+pub const KUSAMA_CONSENSUS_STATE_ID: ConsensusStateId = *b"sama";
+
+/// [`ConsensusClientId`] for GRANDPA consensus
+pub const GRANDPA_CONSENSUS_ID: ConsensusClientId = *b"GRAN";
 
 pub struct GrandpaConsensusClient<T>(PhantomData<T>);
 
