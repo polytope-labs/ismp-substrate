@@ -197,15 +197,15 @@ where
                 ))
             })?;
 
-        let first_proof: FinalityProof<T::Header> =
-            codec::Decode::decode(&mut &proof_1[..]).map_err(|e| {
+        let first_proof: FinalityProof<T::Header> = codec::Decode::decode(&mut &proof_1[..])
+            .map_err(|e| {
                 Error::ImplementationSpecific(format!(
                     "Cannot decode first finality proof from proof_1 bytes: {e:?}",
                 ))
             })?;
 
-        let second_proof: FinalityProof<T::Header> =
-            codec::Decode::decode(&mut &proof_2[..]).map_err(|e| {
+        let second_proof: FinalityProof<T::Header> = codec::Decode::decode(&mut &proof_2[..])
+            .map_err(|e| {
                 Error::ImplementationSpecific(format!(
                     "Cannot decode second finality proof from proof_2 bytes: {e:?}",
                 ))
@@ -261,14 +261,16 @@ where
         }
 
         let first_justification =
-            GrandpaJustification::<T::Header>::decode(&mut &first_proof.justification[..]).map_err(
-                |_| Error::ImplementationSpecific(format!("Could not decode first justification")),
-            )?;
+            GrandpaJustification::<T::Header>::decode(&mut &first_proof.justification[..])
+                .map_err(|_| {
+                    Error::ImplementationSpecific(format!("Could not decode first justification"))
+                })?;
 
         let second_justification =
-            GrandpaJustification::<T::Header>::decode(&mut &second_proof.justification[..]).map_err(
-                |_| Error::ImplementationSpecific(format!("Could not decode second justification")),
-            )?;
+            GrandpaJustification::<T::Header>::decode(&mut &second_proof.justification[..])
+                .map_err(|_| {
+                    Error::ImplementationSpecific(format!("Could not decode second justification"))
+                })?;
 
         if first_proof.block != first_justification.commit.target_hash ||
             second_proof.block != second_justification.commit.target_hash
