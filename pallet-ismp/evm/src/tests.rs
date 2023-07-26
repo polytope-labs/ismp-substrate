@@ -150,7 +150,8 @@ fn deploy_contract(gas_limit: u64, weight_limit: Option<Weight>) -> CreateInfo {
 
 #[test]
 fn post_dispatch() {
-    new_test_ext().execute_with(|| {
+    let mut ext = new_test_ext();
+    let contract_address = ext.execute_with(|| {
         let gas_limit: u64 = 1_500_000_000;
         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
         let result = deploy_contract(gas_limit, Some(weight_limit));
@@ -192,12 +193,22 @@ fn post_dispatch() {
             }
             .into(),
         );
+        contract_address
     });
+
+    ext.persist_offchain_overlay();
+
+    ext.execute_with(|| {
+        // Assert that the source module for the request is the contract address
+        let req = pallet_ismp::Pallet::<Test>::get_request(0).unwrap();
+        assert_eq!(req.source_module().to_vec(), contract_address.as_bytes().to_vec())
+    })
 }
 
 #[test]
 fn get_dispatch() {
-    new_test_ext().execute_with(|| {
+    let mut ext = new_test_ext();
+    let contract_address = ext.execute_with(|| {
         let gas_limit: u64 = 1_500_000_000;
         let weight_limit = FixedGasWeightMapping::<Test>::gas_to_weight(gas_limit, true);
         let result = deploy_contract(gas_limit, Some(weight_limit));
@@ -239,7 +250,16 @@ fn get_dispatch() {
             }
             .into(),
         );
+        contract_address
     });
+
+    ext.persist_offchain_overlay();
+
+    ext.execute_with(|| {
+        // Assert that the source module for the request is the contract address
+        let req = pallet_ismp::Pallet::<Test>::get_request(0).unwrap();
+        assert_eq!(req.source_module().to_vec(), contract_address.as_bytes().to_vec())
+    })
 }
 
 #[test]
