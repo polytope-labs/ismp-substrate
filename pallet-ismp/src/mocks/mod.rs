@@ -19,9 +19,8 @@ pub mod ismp;
 
 use crate as pallet_ismp;
 use crate::*;
-use frame_support::dispatch::Weight;
 
-use crate::primitives::{ConsensusClientProvider, ModuleId};
+use crate::primitives::ConsensusClientProvider;
 use frame_support::traits::{ConstU32, ConstU64, Get};
 use frame_system::EnsureRoot;
 use ismp_rs::{consensus::ConsensusClient, module::IsmpModule, router::IsmpRouter};
