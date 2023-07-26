@@ -3418,14 +3418,42 @@ dependencies = [
  "frame-system",
  "ismp",
  "ismp-primitives",
+ "ismp-testsuite",
+ "pallet-balances",
  "pallet-evm",
  "pallet-ismp",
+ "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
  "sp-core 7.0.0",
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
+]
+
+[[package]]
+name = "ismp-grandpa"
+version = "0.1.0"
+dependencies = [
+ "ckb-merkle-mountain-range",
+ "cumulus-primitives-core",
+ "finality-grandpa",
+ "frame-support",
+ "frame-system",
+ "ismp",
+ "ismp-grandpa-primitives",
+ "ismp-grandpa-verifier",
+ "ismp-primitives",
+ "pallet-ismp",
+ "parity-scale-codec",
+ "primitive-types",
+ "scale-info",
+ "sp-consensus-aura",
+ "sp-core 7.0.0",
+ "sp-io 7.0.0",
+ "sp-runtime 7.0.0",
+ "sp-trie 7.0.0",
+ "substrate-state-machine",
 ]
 
 [[package]]
@@ -5235,31 +5263,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-grandpa-client"
-version = "0.1.0"
-dependencies = [
- "ckb-merkle-mountain-range",
- "cumulus-primitives-core",
- "finality-grandpa",
- "frame-support",
- "frame-system",
- "ismp",
- "ismp-grandpa-primitives",
- "ismp-grandpa-verifier",
- "ismp-primitives",
- "pallet-ismp",
- "parity-scale-codec",
- "primitive-types",
- "scale-info",
- "sp-consensus-aura",
- "sp-core 7.0.0",
- "sp-io 7.0.0",
- "sp-runtime 7.0.0",
- "sp-trie 7.0.0",
- "substrate-state-machine",
-]
-
-[[package]]
 name = "pallet-ismp"
 version = "0.1.0"
 dependencies = [
@@ -5267,6 +5270,7 @@ dependencies = [
  "derive_more",
  "enum-as-inner",
  "env_logger 0.10.0",
+ "fp-evm",
  "frame-benchmarking",
  "frame-support",
  "frame-system",

@@ -62,6 +62,7 @@ std = [
     "pallet-evm/std"
 ]
 
+testing = ["pallet-timestamp/std"]
 
 runtime-benchmarks = [
     "frame-benchmarking/runtime-benchmarks",

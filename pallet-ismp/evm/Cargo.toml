@@ -32,7 +32,10 @@ ismp-primitives = { path = "../primitives", default-features = false }
 pallet-ismp = { path = "../", default-features = false }
 
 [dev-dependencies]
-
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.42" }
+ismp-testsuite = { git = "https://github.com/polytope-labs/ismp-rs", branch = "main" }
+pallet-ismp = { path = "../", features = ["testing"] }
 
 [features]
 default = ["std"]

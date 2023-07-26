@@ -19,8 +19,11 @@
 #![deny(missing_docs)]
 
 extern crate alloc;
+extern crate core;
 
 pub mod abi;
 pub mod handler;
 pub mod ismp_dispatcher_precompiles;
+#[cfg(test)]
+mod mocks;
 pub mod weight;
