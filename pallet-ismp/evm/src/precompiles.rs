@@ -13,18 +13,26 @@ use fp_evm::{
     PrecompileResult,
 };
 use frame_support::traits::Get;
+use hex_literal::hex;
 use ismp_rs::{
     host::StateMachine,
     router::{DispatchGet, DispatchPost, DispatchRequest, IsmpDispatcher, Post, PostResponse},
 };
 use pallet_evm::GasWeightMapping;
-use sp_core::{H256, U256};
+use sp_core::{H160, H256, U256};
 use sp_std::prelude::*;
 
 /// Ismp Request Dispatcher precompile for evm contracts
 pub struct IsmpPostDispatcher<T> {
     _marker: PhantomData<T>,
 }
+
+/// Address for the post request precompile
+pub const POST_REQUEST_DISPATCHER: H160 = H160(hex!("222a98a2832ae77e72a768bf5be1f82d8959f4ec"));
+/// Address for the post response precompile
+pub const POST_RESPONSE_DISPATCHER: H160 = H160(hex!("eb928e2de75cb5ab60abe75f539c5312aeb46f38"));
+/// Address for the get request precompile
+pub const GET_REQUEST_DISPATCHER: H160 = H160(hex!("f2d8dc5239ddc053ba5151302483fc48d7e24e60"));
 
 impl<T> Precompile for IsmpPostDispatcher<T>
 where
