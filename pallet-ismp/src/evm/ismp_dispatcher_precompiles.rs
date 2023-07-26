@@ -6,6 +6,7 @@ use crate::{
         DispatchGet as SolDispatchGet, DispatchPost as SolDispatchPost,
         PostResponse as SolPostResponse,
     },
+    weight_info::WeightInfo,
     Config, GasLimits, Pallet,
 };
 use alloc::str::FromStr;
@@ -15,7 +16,7 @@ use fp_evm::{
     ExitError, ExitSucceed, Precompile, PrecompileFailure, PrecompileHandle, PrecompileOutput,
     PrecompileResult,
 };
-use frame_support::weights::Weight;
+use frame_support::{traits::Get, weights::Weight};
 use ismp_rs::{
     host::StateMachine,
     router::{DispatchGet, DispatchPost, DispatchRequest, IsmpDispatcher, Post, PostResponse},
@@ -36,11 +37,13 @@ where
     fn execute(handle: &mut impl PrecompileHandle) -> PrecompileResult {
         let input = handle.input();
         let context = handle.context();
+        let weight = <T as Config>::WeightInfo::dispatch_post_request();
 
-        // todo:  benchmark dispatcher and use weight info here
-        let weight = Weight::zero();
-
-        let cost = T::GasWeightMapping::weight_to_gas(weight);
+        // The cost of a dispatch is the weight of calling the dispatcher plus an extra storage read
+        // and write
+        let cost = T::GasWeightMapping::weight_to_gas(
+            weight.saturating_add(<T as frame_system::Config>::DbWeight::get().reads_writes(1, 1)),
+        );
 
         let dispatcher = Dispatcher::<T>::default();
         let post_dispatch =
@@ -83,10 +86,13 @@ where
         let input = handle.input();
         let context = handle.context();
 
-        // todo:  benchmark dispatcher and use weight here
-        let weight = Weight::zero();
+        let weight = <T as Config>::WeightInfo::dispatch_get_request();
 
-        let cost = T::GasWeightMapping::weight_to_gas(weight);
+        // The cost of a dispatch is the weight of calling the dispatcher plus an extra storage read
+        // and write
+        let cost = T::GasWeightMapping::weight_to_gas(
+            weight.saturating_add(<T as frame_system::Config>::DbWeight::get().reads_writes(1, 1)),
+        );
 
         let dispatcher = Dispatcher::<T>::default();
 
@@ -129,8 +135,7 @@ where
     fn execute(handle: &mut impl PrecompileHandle) -> PrecompileResult {
         let input = handle.input();
 
-        // todo:  benchmark dispatcher and use weight here
-        let weight = Weight::zero();
+        let weight = <T as Config>::WeightInfo::dispatch_response();
 
         let cost = T::GasWeightMapping::weight_to_gas(weight);
 

@@ -141,6 +141,12 @@ pub trait WeightInfo {
     fn handle_response_message() -> Weight;
     /// Returns the weight consumed in handling a timeout
     fn handle_timeout_message() -> Weight;
+    /// Returns the weight consumed in dispatching a post request
+    fn dispatch_post_request() -> Weight;
+    /// Returns the weight consumed in dispatching a get request
+    fn dispatch_get_request() -> Weight;
+    /// Returns the weight consumed in dispatching a response
+    fn dispatch_response() -> Weight;
 }
 
 impl WeightInfo for () {
@@ -165,6 +171,18 @@ impl WeightInfo for () {
     }
 
     fn handle_timeout_message() -> Weight {
+        Weight::zero()
+    }
+
+    fn dispatch_post_request() -> Weight {
+        Weight::zero()
+    }
+
+    fn dispatch_get_request() -> Weight {
+        Weight::zero()
+    }
+
+    fn dispatch_response() -> Weight {
         Weight::zero()
     }
 }

@@ -20,11 +20,13 @@
 #![deny(missing_docs)]
 
 extern crate alloc;
+extern crate core;
 
 pub mod benchmarking;
 pub mod dispatcher;
 mod errors;
 pub mod events;
+#[cfg(feature = "evm")]
 pub mod evm;
 pub mod handlers;
 pub mod host;
@@ -258,6 +260,7 @@ pub mod pallet {
     #[pallet::getter(fn nonce)]
     pub type Nonce<T> = StorageValue<_, u64, ValueQuery>;
 
+    #[cfg(feature = "evm")]
     /// Gas limits for executing responses and timeouts for evm contracts
     /// The key is the request nonce
     #[pallet::storage]
@@ -697,6 +700,7 @@ where
         Pallet::<T>::store_leaf_index_offchain(offchain_key, pos);
         Some(pos)
     }
+    #[cfg(feature = "evm")]
     /// It returns the nonce used for the last known dispatch
     pub(crate) fn previous_nonce() -> u64 {
         Nonce::<T>::get() - 1
