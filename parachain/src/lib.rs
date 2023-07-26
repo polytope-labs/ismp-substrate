@@ -118,7 +118,7 @@ pub mod pallet {
         }
 
         /// Remove some parachains from the list of parachains we care about
-        #[pallet::call_index(1)]
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as frame_system::Config>::DbWeight::get().writes(para_ids.len() as u64))]
         pub fn remove_parachain(origin: OriginFor<T>, para_ids: Vec<u32>) -> DispatchResult {
             T::AdminOrigin::ensure_origin(origin)?;
