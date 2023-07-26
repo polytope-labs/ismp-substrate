@@ -40,17 +40,17 @@ use verifier::{
 pub const POLKADOT_CONSENSUS_STATE_ID: [u8; 8] = *b"polkadot";
 pub const KUSAMA_CONSENSUS_STATE_ID: [u8; 8] = *b"_kusama_";
 
-pub struct GrandpaConsensusClient<T, H>(PhantomData<(T, H)>);
+pub struct GrandpaConsensusClient<T>(PhantomData<T>);
 
-impl<T, H> Default for GrandpaConsensusClient<T, H> {
+impl<T> Default for GrandpaConsensusClient<T> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<T, H> ConsensusClient for GrandpaConsensusClient<T, H>
+impl<T> ConsensusClient for GrandpaConsensusClient<T>
 where
-    H: Header<Hash = H256, Number = u32>,
+    T::Header: Header<Hash = H256, Number = u32>,
     T: pallet_ismp::Config + super::Config,
     T::BlockNumber: Into<u32>,
     T::Hash: From<H256>,
@@ -197,14 +197,14 @@ where
                 ))
             })?;
 
-        let first_proof: FinalityProof<H> =
+        let first_proof: FinalityProof<T::Header> =
             codec::Decode::decode(&mut &proof_1[..]).map_err(|e| {
                 Error::ImplementationSpecific(format!(
                     "Cannot decode first finality proof from proof_1 bytes: {e:?}",
                 ))
             })?;
 
-        let second_proof: FinalityProof<H> =
+        let second_proof: FinalityProof<T::Header> =
             codec::Decode::decode(&mut &proof_2[..]).map_err(|e| {
                 Error::ImplementationSpecific(format!(
                     "Cannot decode second finality proof from proof_2 bytes: {e:?}",
@@ -217,13 +217,13 @@ where
             )))
         }
 
-        let first_headers = AncestryChain::<H>::new(&first_proof.unknown_headers);
+        let first_headers = AncestryChain::<T::Header>::new(&first_proof.unknown_headers);
         let first_target =
             first_proof.unknown_headers.iter().max_by_key(|h| *h.number()).ok_or_else(|| {
                 Error::ImplementationSpecific(format!("Unknown headers can't be empty!"))
             })?;
 
-        let second_headers = AncestryChain::<H>::new(&second_proof.unknown_headers);
+        let second_headers = AncestryChain::<T::Header>::new(&second_proof.unknown_headers);
         let second_target =
             second_proof.unknown_headers.iter().max_by_key(|h| *h.number()).ok_or_else(|| {
                 Error::ImplementationSpecific(format!("Unknown headers can't be empty!"))
@@ -261,12 +261,12 @@ where
         }
 
         let first_justification =
-            GrandpaJustification::<H>::decode(&mut &first_proof.justification[..]).map_err(
+            GrandpaJustification::<T::Header>::decode(&mut &first_proof.justification[..]).map_err(
                 |_| Error::ImplementationSpecific(format!("Could not decode first justification")),
             )?;
 
         let second_justification =
-            GrandpaJustification::<H>::decode(&mut &second_proof.justification[..]).map_err(
+            GrandpaJustification::<T::Header>::decode(&mut &second_proof.justification[..]).map_err(
                 |_| Error::ImplementationSpecific(format!("Could not decode second justification")),
             )?;
 
