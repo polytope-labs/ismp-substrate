@@ -23,16 +23,17 @@ use sp_std::prelude::*;
 /// Handler host address
 /// Contracts should only allow ismp module callbacks to be executed by this address
 pub const EVM_HOST_ADDRESS: [u8; 20] = hex!("843b131bd76419934dae248f6e5a195c0a3c324d");
-/// EVM contract handler
-pub struct EvmContractHandler<T: pallet_ismp::Config + pallet_evm::Config>(PhantomData<T>);
 
-impl<T: pallet_ismp::Config + pallet_evm::Config> Default for EvmContractHandler<T> {
+/// [`IsmpModule`] implementation that routes requests & responses to EVM contracts.
+pub struct EvmIsmpModule<T: pallet_ismp::Config + pallet_evm::Config>(PhantomData<T>);
+
+impl<T: pallet_ismp::Config + pallet_evm::Config> Default for EvmIsmpModule<T> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmContractHandler<T> {
+impl<T: pallet_ismp::Config + pallet_evm::Config> IsmpModule for EvmIsmpModule<T> {
     fn on_accept(&self, request: Post) -> Result<(), Error> {
         let target_contract = parse_contract_id(&request.to)?;
         let gas_limit = request.gas_limit;

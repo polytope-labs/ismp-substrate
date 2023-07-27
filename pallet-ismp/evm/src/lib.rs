@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Implementation of the ismp module contracts for solidity contracts on substrate
+//! Implementation of the [`IsmpModule`] for solidity contracts on substrate
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
@@ -21,9 +21,9 @@
 extern crate alloc;
 
 pub mod abi;
-pub mod handler;
 #[cfg(test)]
 mod mocks;
+pub mod module;
 pub mod precompiles;
 #[cfg(test)]
 mod tests;

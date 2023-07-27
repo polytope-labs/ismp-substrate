@@ -32,7 +32,7 @@ use ismp_rs::{
 use pallet_evm::{EnsureAddressNever, EnsureAddressRoot, IdentityAddressMapping};
 
 use crate::{
-    handler::EvmContractHandler,
+    module::EvmIsmpModule,
     precompiles::{IsmpGetDispatcher, IsmpPostDispatcher, IsmpResponseDispatcher},
 };
 use pallet_ismp::{
@@ -151,7 +151,7 @@ impl IsmpRouter for ModuleRouter {
     fn module_for_id(&self, bytes: Vec<u8>) -> Result<Box<dyn IsmpModule>, Error> {
         let module_id = ModuleId::from_bytes(&bytes).unwrap();
         match module_id {
-            ModuleId::Evm(_) => Ok(Box::new(EvmContractHandler::<Test>::default())),
+            ModuleId::Evm(_) => Ok(Box::new(EvmIsmpModule::<Test>::default())),
             _ => Err(Error::ImplementationSpecific("Module handler not found".to_string())),
         }
     }

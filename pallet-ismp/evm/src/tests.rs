@@ -1,6 +1,6 @@
 use crate::{
-    handler::{u64_to_u256, EvmContractHandler, EVM_HOST_ADDRESS},
     mocks::*,
+    module::{u64_to_u256, EvmIsmpModule, EVM_HOST_ADDRESS},
 };
 use alloy_primitives::Address;
 use alloy_sol_types::{sol, SolCall, SolType};
@@ -271,7 +271,7 @@ fn on_accept_callback() {
 
         let contract_address = result.value;
 
-        let handler = EvmContractHandler::<Test>::default();
+        let handler = EvmIsmpModule::<Test>::default();
 
         let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
 
@@ -308,7 +308,7 @@ fn on_post_response() {
 
         let contract_address = result.value;
 
-        let handler = EvmContractHandler::<Test>::default();
+        let handler = EvmIsmpModule::<Test>::default();
 
         let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
 
@@ -338,7 +338,7 @@ fn on_get_response() {
 
         let contract_address = result.value;
 
-        let handler = EvmContractHandler::<Test>::default();
+        let handler = EvmIsmpModule::<Test>::default();
 
         let get = GetRequest {
             source: <Test as pallet_ismp::Config>::StateMachine::get(),
@@ -378,7 +378,7 @@ fn on_get_timeout() {
 
         let contract_address = result.value;
 
-        let handler = EvmContractHandler::<Test>::default();
+        let handler = EvmIsmpModule::<Test>::default();
 
         let get = GetRequest {
             source: <Test as pallet_ismp::Config>::StateMachine::get(),
@@ -407,7 +407,7 @@ fn on_post_timeout() {
 
         let contract_address = result.value;
 
-        let handler = EvmContractHandler::<Test>::default();
+        let handler = EvmIsmpModule::<Test>::default();
         let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
         let post = Post {
             source: <Test as pallet_ismp::Config>::StateMachine::get(),
