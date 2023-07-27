@@ -79,49 +79,16 @@ where
             }
         };
 
-        let commitment = hash_request::<Host<T>>(&request).0.to_vec();
+        Pallet::<T>::dispatch_request(request)?;
 
-        let (dest_chain, source_chain, nonce) =
-            (request.dest_chain(), request.source_chain(), request.nonce());
-        Pallet::<T>::mmr_push(Leaf::Request(request)).ok_or_else(|| {
-            IsmpError::ImplementationSpecific("Failed to push request into mmr".to_string())
-        })?;
-        // Deposit Event
-        Pallet::<T>::deposit_event(Event::Request {
-            request_nonce: nonce,
-            source_chain,
-            dest_chain,
-        });
-        // We need this step since it's not trivial to check the mmr for commitments on chain
-        RequestCommitments::<T>::insert(
-            commitment,
-            LeafIndexQuery { source_chain, dest_chain, nonce },
-        );
         Ok(())
     }
 
     fn dispatch_response(&self, response: PostResponse) -> Result<(), IsmpError> {
         let response = Response::Post(response);
 
-        let commitment = hash_response::<Host<T>>(&response).0.to_vec();
+        Pallet::<T>::dispatch_response(response)?;
 
-        if ResponseCommitments::<T>::contains_key(commitment.clone()) {
-            Err(IsmpError::ImplementationSpecific("Duplicate response".to_string()))?
-        }
-
-        let (dest_chain, source_chain, nonce) =
-            (response.dest_chain(), response.source_chain(), response.nonce());
-
-        Pallet::<T>::mmr_push(Leaf::Response(response)).ok_or_else(|| {
-            IsmpError::ImplementationSpecific("Failed to push response into mmr".to_string())
-        })?;
-
-        Pallet::<T>::deposit_event(Event::Response {
-            request_nonce: nonce,
-            dest_chain,
-            source_chain,
-        });
-        ResponseCommitments::<T>::insert(commitment, Receipt::Ok);
         Ok(())
     }
 }
