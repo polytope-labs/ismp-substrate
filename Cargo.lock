@@ -3511,7 +3511,6 @@ dependencies = [
  "finality-grandpa",
  "frame-support",
  "futures",
- "hash-db 0.16.0",
  "hex",
  "hex-literal 0.3.4",
  "ismp",
@@ -3526,10 +3525,10 @@ dependencies = [
  "sp-core 7.0.0",
  "sp-io 7.0.0",
  "sp-runtime 7.0.0",
- "sp-state-machine 0.13.0",
  "sp-std 5.0.0",
  "sp-storage 7.0.0",
  "sp-trie 7.0.0",
+ "substrate-state-machine",
  "subxt",
  "tokio",
 ]
@@ -3538,12 +3537,10 @@ dependencies = [
 name = "ismp-parachain"
 version = "0.1.0"
 dependencies = [
- "ckb-merkle-mountain-range",
  "cumulus-pallet-parachain-system",
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
- "hash-db 0.16.0",
  "hex-literal 0.4.1",
  "ismp",
  "ismp-primitives",
@@ -10456,6 +10453,7 @@ dependencies = [
  "ckb-merkle-mountain-range",
  "frame-support",
  "frame-system",
+ "hash-db 0.16.0",
  "ismp",
  "ismp-primitives",
  "pallet-ismp",

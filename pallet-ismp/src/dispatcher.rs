@@ -14,16 +14,13 @@
 // limitations under the License.
 
 //! Implementation for the ISMP Router
-use crate::{host::Host, Config, Event, Pallet, RequestCommitments, ResponseCommitments};
-use alloc::string::ToString;
+use crate::{host::Host, Config, Pallet};
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use ismp_primitives::{mmr::Leaf, LeafIndexQuery};
 use ismp_rs::{
     error::Error as IsmpError,
     host::IsmpHost,
     router::{DispatchRequest, Get, IsmpDispatcher, Post, PostResponse, Request, Response},
-    util::{hash_request, hash_response},
 };
 use sp_core::H256;
 
