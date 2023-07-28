@@ -1,6 +1,6 @@
 use crate::{
     mocks::*,
-    module::{u64_to_u256, EvmIsmpModule, EVM_HOST_ADDRESS},
+    module::{EvmIsmpModule, EVM_HOST_ADDRESS},
 };
 use alloy_primitives::Address;
 use alloy_sol_types::{sol, SolCall, SolType};
@@ -30,25 +30,25 @@ sol! {
     function transfer(
         address to,
         bytes memory dest,
-        uint256 amount,
-        uint256 timeout,
-        uint256 gasLimit
+        uint64 amount,
+        uint64 timeout,
+        uint64 gasLimit
     ) public;
 
     function dispatchGet(
         bytes memory dest,
         bytes[] memory keys,
-        uint256 height,
-        uint256 timeout,
-        uint256 gasLimit
+        uint64 height,
+        uint64 timeout,
+        uint64 gasLimit
     ) public;
 
-    function mintTo(address who, uint256 amount) public;
+    function mintTo(address who, uint64 amount) public;
 
     struct Payload {
         address to;
         address from;
-        uint256 amount;
+        uint64 amount;
     }
 }
 
@@ -126,7 +126,7 @@ fn deploy_contract(gas_limit: u64, weight_limit: Option<Weight>) -> CreateInfo {
     )
     .expect("Deploy succeeds");
 
-    let call_data = mintToCall { who: USER, amount: u64_to_u256(1_000_000_000).unwrap() }.encode();
+    let call_data = mintToCall { who: USER, amount: 1_000_000_000 }.encode();
 
     let contract_address = info.value;
 
@@ -163,9 +163,9 @@ fn post_dispatch() {
         let call_data = transferCall {
             to: USER,
             dest: StateMachine::Polkadot(1000).to_string().as_bytes().to_vec(),
-            amount: u64_to_u256(10_000).unwrap(),
-            timeout: u64_to_u256(223311228889).unwrap(),
-            gasLimit: u64_to_u256(gas_limit).unwrap(),
+            amount: 10_000,
+            timeout: 223311228889,
+            gasLimit: gas_limit,
         }
         .encode();
 
@@ -220,9 +220,9 @@ fn get_dispatch() {
         let call_data = dispatchGetCall {
             dest: StateMachine::Polkadot(2000).to_string().as_bytes().to_vec(),
             keys: vec![vec![1u8; 64]],
-            height: u64_to_u256(10).unwrap(),
-            timeout: u64_to_u256(2000).unwrap(),
-            gasLimit: u64_to_u256(gas_limit).unwrap(),
+            height: 10,
+            timeout: 2000,
+            gasLimit: gas_limit,
         }
         .encode();
 
@@ -275,7 +275,7 @@ fn on_accept_callback() {
 
         let handler = EvmIsmpModule::<Test>::default();
 
-        let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
+        let payload = Payload { to: USER, from: USER, amount: 50000 };
 
         let post = Post {
             source: <Test as pallet_ismp::Config>::StateMachine::get(),
@@ -318,7 +318,7 @@ fn on_post_response() {
 
         let handler = EvmIsmpModule::<Test>::default();
 
-        let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
+        let payload = Payload { to: USER, from: USER, amount: 50000 };
 
         let post = Post {
             source: <Test as pallet_ismp::Config>::StateMachine::get(),
@@ -416,7 +416,7 @@ fn on_post_timeout() {
         let contract_address = result.value;
 
         let handler = EvmIsmpModule::<Test>::default();
-        let payload = Payload { to: USER, from: USER, amount: u64_to_u256(50000).unwrap() };
+        let payload = Payload { to: USER, from: USER, amount: 50000 };
         let post = Post {
             source: <Test as pallet_ismp::Config>::StateMachine::get(),
             dest: StateMachine::Polkadot(2000),

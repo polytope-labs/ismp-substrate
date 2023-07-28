@@ -3,9 +3,9 @@
 
 pragma solidity ^0.8.2;
 
-import "../../../ismp-solidity/src/SubstrateHost.sol";
-import "../../../ismp-solidity/src/interfaces/IIsmpDispatcher.sol";
-import "../../../ismp-solidity/lib/solidity-merkle-trees/src/MerklePatricia.sol";
+import "ismp-solidity/SubstrateHost.sol";
+import "ismp-solidity/interfaces/IIsmpDispatcher.sol";
+import "solidity-merkle-trees/MerklePatricia.sol";
 
 address constant HOST = 0x843b131BD76419934dae248F6e5a195c0A3C324D;
 
@@ -19,6 +19,7 @@ struct Payload {
 }
 
 contract IsmpDemo is IIsmpModule {
+    using SubstrateHost for *;
     uint64 totalSupply;
 
     // Mapping of user address to balance
@@ -41,27 +42,25 @@ contract IsmpDemo is IIsmpModule {
         totalSupply = 1000000000;
     }
 
-    function OnAccept(PostRequest memory request) public onlyIsmpHost {
-        Payload memory payload = decodePayload(request.data);
+    function onAccept(PostRequest memory request) public onlyIsmpHost {
+        Payload memory payload = decodePayload(request.body);
         PostResponse memory response = PostResponse({
             request: request,
             response: abi.encodePacked(msg.sender)
         });
         _mint(payload.to, payload.amount);
-        // For this test we expect the ismp post dispatch precompile to be at the  address 0x03
-        // In production you would use the precompile address provided by the chain to make the dispatch
-        bytes memory input = dispatch(response);
+        SubstrateHost.dispatch(response);
         emit BalanceMinted();
       
     }
 
-    function OnPostResponse(PostResponse memory response) public onlyIsmpHost {
+    function onPostResponse(PostResponse memory response) public onlyIsmpHost {
         // In this callback just try to decode the payload of the corresponding request
-        Payload memory payload = decodePayload(response.request.data);
+        Payload memory payload = decodePayload(response.request.body);
         emit ResponseReceived();
     }
 
-    function OnGetResponse(GetResponse memory response) public onlyIsmpHost {
+    function onGetResponse(GetResponse memory response) public onlyIsmpHost {
         // For the purpose of this test
         // we just validate the responses in this callback
         for (uint256 index = 0; index < response.values.length; index++) {
@@ -73,7 +72,7 @@ contract IsmpDemo is IIsmpModule {
         emit ResponseReceived();
     }
 
-    function OnGetTimeout(GetRequest memory request) public onlyIsmpHost {
+    function onGetTimeout(GetRequest memory request) public onlyIsmpHost {
         // We validate the keys in this callback
         for (uint256 index = 0; index < request.keys.length; index++) {
             bytes memory key = request.keys[index];
@@ -85,8 +84,8 @@ contract IsmpDemo is IIsmpModule {
         emit TimeoutReceived();
     }
 
-    function OnPostTimeout(PostRequest memory request) public onlyIsmpHost {
-        Payload memory payload = decodePayload(request.data);
+    function onPostTimeout(PostRequest memory request) public onlyIsmpHost {
+        Payload memory payload = decodePayload(request.body);
         _mint(payload.from, payload.amount);
         emit BalanceMinted();
     }
@@ -112,15 +111,13 @@ contract IsmpDemo is IIsmpModule {
             amount: amount
         });
         DispatchPost memory dispatchPost = DispatchPost({
-            data: abi.encode(payload.from, payload.to, payload.amount),
-            dest: dest,
+            body: abi.encode(payload.from, payload.to, payload.amount),
+            destChain: dest,
             timeoutTimestamp: timeout,
             to: abi.encodePacked(address(12)),
-            gasLimit: gasLimit
+            gaslimit: gasLimit
         });
-        // For this test we expect the ismp post dispatch precompile to be at the  address 0x01
-        // In production you would use the precompile address provided by the chain to make the dispatch
-        bytes memory input = dispatch(dispatchPost);
+        SubstrateHost.dispatch(dispatchPost);
         emit BalanceBurnt();
     }
 
@@ -133,14 +130,12 @@ contract IsmpDemo is IIsmpModule {
     ) public {
         DispatchGet memory get = DispatchGet({
             keys: keys,
-            dest: dest,
+            destChain: dest,
             height: height,
             timeoutTimestamp: timeout,
-            gasLimit: gasLimit
+            gaslimit: gasLimit
         });
-        // For this test we expect the ismp get dispatch precompile to be at the  address 0x02
-        // In production you would use the precompile address provided by the chain to make the dispatch
-        bytes memory input = dispatch(get);
+        SubstrateHost.dispatch(get);
         emit GetDispatched();
     
     }

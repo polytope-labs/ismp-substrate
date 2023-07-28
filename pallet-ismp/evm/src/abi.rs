@@ -4,95 +4,96 @@ use alloy_sol_types::sol;
 use sp_std::prelude::*;
 
 sol! {
-        struct PostRequest {
-            // the source state machine of this request as utf8 string bytes
-            bytes source;
-            // the destination state machine of this request as utf8 string bytes
-            bytes dest;
-            // request nonce
-            uint256 nonce;
-            // Module Id of this request origin
-            bytes from;
-            // destination module id
-            bytes to;
-            // timestamp by which this request times out.
-            uint256 timeoutTimestamp;
-            // request body
-            bytes data;
-            // Gas limit that should be used to execute the request on destination
-            uint256 gasLimit;
-        }
 
-        struct GetRequest {
-            // the source state machine of this request as utf8 string bytes
-            bytes source;
-            // the destination state machine of this request as utf8 string bytes
-            bytes dest;
-            // request nonce
-            uint256 nonce;
-            // Module Id of this request origin
-            bytes from;
-            // timestamp by which this request times out.
-            uint256 timeoutTimestamp;
-            // raw storage keys
-            bytes[] keys;
-            // height at which to read destination state machine
-            uint256 height;
-            // Gas limit that should be used to execute the response or timeout for this request
-            uint256 gasLimit;
-        }
+struct PostRequest {
+    // the source state machine of this request
+    bytes source;
+    // the destination state machine of this request
+    bytes dest;
+    // request nonce
+    uint64 nonce;
+    // Module Id of this request origin
+    bytes from;
+    // destination module id
+    bytes to;
+    // timestamp by which this request times out.
+    uint64 timeoutTimestamp;
+    // request body
+    bytes body;
+    // gas limit for executing this request on destination & its response (if any) on the source.
+    uint64 gaslimit;
+}
 
-        struct StorageValue {
-            bytes key;
-            bytes value;
-        }
+struct GetRequest {
+    // the source state machine of this request
+    bytes source;
+    // the destination state machine of this request
+    bytes dest;
+    // request nonce
+    uint64 nonce;
+    // Module Id of this request origin
+    bytes from;
+    // timestamp by which this request times out.
+    uint64 timeoutTimestamp;
+    // Storage keys to read.
+    bytes[] keys;
+    // height at which to read destination state machine
+    uint64 height;
+    // gas limit for executing this request on destination & its response (if any) on the source.
+    uint64 gaslimit;
+}
+
+struct StorageValue {
+    bytes key;
+    bytes value;
+}
+
+struct GetResponse {
+    // The request that initiated this response
+    GetRequest request;
+    // storage values for get response
+    StorageValue[] values;
+}
+
+struct PostResponse {
+    // The request that initiated this response
+    PostRequest request;
+    // bytes for post response
+    bytes response;
+}
+
+// An object for dispatching post requests to the IsmpDispatcher
+struct DispatchPost {
+    // bytes representation of the destination chain
+    bytes destChain;
+    // the detination module
+    bytes to;
+    // the request body
+    bytes body;
+    // the timestamp at which this request should timeout
+    uint64 timeoutTimestamp;
+    // gas limit for executing this request on destination & its response (if any) on the source.
+    uint64 gaslimit;
+}
+
+// An object for dispatching get requests to the IsmpDispatcher
+struct DispatchGet {
+    // bytes representation of the destination chain
+    bytes destChain;
+    // height at which to read the state machine
+    uint64 height;
+    // Storage keys to read
+    bytes[] keys;
+    // the timestamp at which this request should timeout
+    uint64 timeoutTimestamp;
+    // gas limit for executing this request on destination & its response (if any) on the source.
+    uint64 gaslimit;
+}
 
 
-        struct GetResponse {
-            // The request that initiated this response
-            GetRequest request;
-            // storage values for get response
-            StorageValue[] values;
-        }
-
-        struct PostResponse {
-            // The request that initiated this response
-            PostRequest request;
-            // bytes for post response
-            bytes response;
-        }
-
-        // An object for dispatching post requests to the IsmpDispatcher
-        struct DispatchPost {
-            // bytes representation of the destination chain as utf8 string bytes
-            bytes dest;
-            // the destination module
-            bytes to;
-            // the request body
-            bytes data;
-            // Timeout
-            uint256 timeoutTimestamp;
-            // Gas limit that should be used to execute the request on destination
-            uint256 gasLimit;
-        }
-
-        // An object for dispatching post requests to the IsmpDispatcher
-        struct DispatchGet {
-            // bytes representation of the destination chain as utf8 string bytes
-            bytes dest;
-            // Height
-            uint256 height;
-            // the request body
-            bytes[] keys;
-            // Timeout
-            uint256 timeoutTimestamp;
-            // Gas limit that should be used to execute the response or timeout for this request
-            uint256 gasLimit;
-        }
-
-        function OnAccept(PostRequest memory request) external;
-        function OnPostResponse(PostResponse memory response) external;
-        function OnGetResponse(GetResponse memory response) external;
-        function OnPostTimeout(PostRequest memory request) external;
-        function OnGetTimeout(GetRequest memory request) external;
+function onAccept(PostRequest memory request) external;
+function onPostResponse(PostResponse memory response) external;
+function onGetResponse(GetResponse memory response) external;
+function onPostTimeout(PostRequest memory request) external;
+function onGetTimeout(GetRequest memory request) external;
 }

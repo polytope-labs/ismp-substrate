@@ -19,7 +19,7 @@ use ismp_rs::{
     router::{DispatchGet, DispatchPost, DispatchRequest, IsmpDispatcher, Post, PostResponse},
 };
 use pallet_evm::GasWeightMapping;
-use sp_core::{H160, H256, U256};
+use sp_core::{H160, H256};
 use sp_std::prelude::*;
 
 /// Ismp Request Dispatcher precompile for evm contracts
@@ -55,12 +55,12 @@ where
             })?;
 
         let post_dispatch = DispatchPost {
-            dest: parse_state_machine(post_dispatch.dest)?,
+            dest: parse_state_machine(post_dispatch.destChain)?,
             from: context.caller.0.to_vec(),
             to: post_dispatch.to,
-            timeout_timestamp: u256_to_u64(post_dispatch.timeoutTimestamp),
-            data: post_dispatch.data,
-            gas_limit: u256_to_u64(post_dispatch.gasLimit),
+            timeout_timestamp: post_dispatch.timeoutTimestamp,
+            data: post_dispatch.body,
+            gas_limit: post_dispatch.gaslimit,
         };
 
         handle.record_cost(cost)?;
@@ -102,12 +102,12 @@ where
                 exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
             })?;
         let get_dispatch = DispatchGet {
-            dest: parse_state_machine(get_dispatch.dest)?,
+            dest: parse_state_machine(get_dispatch.destChain)?,
             from: context.caller.0.to_vec(),
             keys: get_dispatch.keys,
-            height: u256_to_u64(get_dispatch.height),
-            timeout_timestamp: u256_to_u64(get_dispatch.timeoutTimestamp),
-            gas_limit: u256_to_u64(get_dispatch.gasLimit),
+            height: get_dispatch.height,
+            timeout_timestamp: get_dispatch.timeoutTimestamp,
+            gas_limit: get_dispatch.gaslimit,
         };
 
         handle.record_cost(cost)?;
@@ -146,12 +146,12 @@ where
             post: Post {
                 source: parse_state_machine(response.request.source)?,
                 dest: parse_state_machine(response.request.dest)?,
-                nonce: u256_to_u64(response.request.nonce),
+                nonce: response.request.nonce,
                 from: response.request.from,
                 to: response.request.to,
-                timeout_timestamp: u256_to_u64(response.request.timeoutTimestamp),
-                data: response.request.data,
-                gas_limit: u256_to_u64(response.request.gasLimit),
+                timeout_timestamp: response.request.timeoutTimestamp,
+                data: response.request.body,
+                gas_limit: response.request.gaslimit,
             },
             response: response.response,
         };
@@ -164,11 +164,6 @@ where
             }),
         }
     }
-}
-
-/// Convert u256 to u64 without overflow check
-pub fn u256_to_u64(value: alloy_primitives::U256) -> u64 {
-    U256::from_big_endian(value.to_be_bytes::<32>().as_slice()).low_u64()
 }
 
 /// Parse state machine from utf8 bytes

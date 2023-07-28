@@ -33,7 +33,10 @@ use pallet_evm::{EnsureAddressNever, EnsureAddressRoot, IdentityAddressMapping};
 
 use crate::{
     module::EvmIsmpModule,
-    precompiles::{IsmpGetDispatcher, IsmpPostDispatcher, IsmpResponseDispatcher},
+    precompiles::{
+        IsmpGetDispatcher, IsmpPostDispatcher, IsmpResponseDispatcher, GET_REQUEST_DISPATCHER,
+        POST_REQUEST_DISPATCHER, POST_RESPONSE_DISPATCHER,
+    },
 };
 use pallet_ismp::{
     mocks::ismp::MockConsensusClient,
@@ -216,11 +219,11 @@ impl PrecompileSet for MockPrecompileSet {
     /// If the provided address is not a precompile, returns None.
     fn execute(&self, handle: &mut impl PrecompileHandle) -> Option<PrecompileResult> {
         let address = handle.code_address();
-        if address == H160::from_low_u64_be(1) {
+        if address == POST_REQUEST_DISPATCHER {
             return Some(IsmpPostDispatcher::<Test>::execute(handle))
-        } else if address == H160::from_low_u64_be(2) {
+        } else if address == GET_REQUEST_DISPATCHER {
             return Some(IsmpGetDispatcher::<Test>::execute(handle))
-        } else if address == H160::from_low_u64_be(3) {
+        } else if address == POST_RESPONSE_DISPATCHER {
             return Some(IsmpResponseDispatcher::<Test>::execute(handle))
         }
 
@@ -232,9 +235,9 @@ impl PrecompileSet for MockPrecompileSet {
     /// `execute` already performs a check internally.
     fn is_precompile(&self, address: H160, _gas: u64) -> IsPrecompileResult {
         IsPrecompileResult::Answer {
-            is_precompile: address == H160::from_low_u64_be(1) ||
-                address == H160::from_low_u64_be(2) ||
-                address == H160::from_low_u64_be(3),
+            is_precompile: address == POST_REQUEST_DISPATCHER ||
+                address == GET_REQUEST_DISPATCHER ||
+                address == POST_RESPONSE_DISPATCHER,
             extra_cost: 0,
         }
     }
