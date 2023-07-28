@@ -55,7 +55,7 @@ where
             })?;
 
         let post_dispatch = DispatchPost {
-            dest: parse_state_machine(post_dispatch.destChain)?,
+            dest: parse_state_machine(post_dispatch.dest)?,
             from: context.caller.0.to_vec(),
             to: post_dispatch.to,
             timeout_timestamp: post_dispatch.timeoutTimestamp,
@@ -102,7 +102,7 @@ where
                 exit_status: ExitError::Other(format!("Failed to decode input: {:?}", e).into()),
             })?;
         let get_dispatch = DispatchGet {
-            dest: parse_state_machine(get_dispatch.destChain)?,
+            dest: parse_state_machine(get_dispatch.dest)?,
             from: context.caller.0.to_vec(),
             keys: get_dispatch.keys,
             height: get_dispatch.height,

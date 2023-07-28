@@ -112,7 +112,7 @@ contract IsmpDemo is IIsmpModule {
         });
         DispatchPost memory dispatchPost = DispatchPost({
             body: abi.encode(payload.from, payload.to, payload.amount),
-            destChain: dest,
+            dest: dest,
             timeoutTimestamp: timeout,
             to: abi.encodePacked(address(12)),
             gaslimit: gasLimit
@@ -130,7 +130,7 @@ contract IsmpDemo is IIsmpModule {
     ) public {
         DispatchGet memory get = DispatchGet({
             keys: keys,
-            destChain: dest,
+            dest: dest,
             height: height,
             timeoutTimestamp: timeout,
             gaslimit: gasLimit
