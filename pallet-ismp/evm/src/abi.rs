@@ -66,7 +66,7 @@ struct PostResponse {
 struct DispatchPost {
     // bytes representation of the destination chain
     bytes dest;
-    // the detination module
+    // the destination module
     bytes to;
     // the request body
     bytes body;
