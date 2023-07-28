@@ -190,8 +190,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-primitives"
-version = "0.2.0"
-source = "git+https://github.com/alloy-rs/core.git?rev=3d89ec51a9400ae1f323dc508f609699284afe11#3d89ec51a9400ae1f323dc508f609699284afe11"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ffce219323b389e69f7448bc41a1913cc96dc584ca4bdae98bc46440fffdd3e"
 dependencies = [
  "alloy-rlp",
  "bytes",
@@ -201,7 +202,7 @@ dependencies = [
  "hex-literal 0.4.1",
  "itoa",
  "proptest",
- "ruint2",
+ "ruint",
  "serde",
  "tiny-keccak",
 ]
@@ -219,8 +220,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-sol-macro"
-version = "0.2.0"
-source = "git+https://github.com/alloy-rs/core.git?rev=3d89ec51a9400ae1f323dc508f609699284afe11#3d89ec51a9400ae1f323dc508f609699284afe11"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eec1ae936329818ebb681464819d01d4d4381039505775baa476bec440b3a95c"
 dependencies = [
  "dunce",
  "heck",
@@ -233,8 +235,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-sol-types"
-version = "0.2.0"
-source = "git+https://github.com/alloy-rs/core.git?rev=3d89ec51a9400ae1f323dc508f609699284afe11#3d89ec51a9400ae1f323dc508f609699284afe11"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6871798f0c7ae860604b1bbbefb27593eb397094b3536a167c02ff25cd6b788b"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-macro",
@@ -6517,22 +6520,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "ruint2"
+name = "ruint"
 version = "1.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b066b8e4fcea7fae86b6932d2449670b6b5545b7e8407841b2d3a916ff2a9f86"
+source = "git+https://github.com/recmo/uint.git?rev=e34200e114ac8fe93cf8e815e92601860ae4d7b8#e34200e114ac8fe93cf8e815e92601860ae4d7b8"
 dependencies = [
- "derive_more",
- "ruint2-macro",
- "rustc_version",
- "thiserror",
+ "ruint-macro",
 ]
 
 [[package]]
-name = "ruint2-macro"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89dc553bc0cf4512a8b96caa2e21ed5f6e4b66bf28a1bd08fd9eb07c0b39b28c"
+name = "ruint-macro"
+version = "1.1.0"
+source = "git+https://github.com/recmo/uint.git?rev=e34200e114ac8fe93cf8e815e92601860ae4d7b8#e34200e114ac8fe93cf8e815e92601860ae4d7b8"
 
 [[package]]
 name = "rustc-demangle"
@@ -10584,8 +10582,9 @@ dependencies = [
 
 [[package]]
 name = "syn-solidity"
-version = "0.2.0"
-source = "git+https://github.com/alloy-rs/core.git?rev=3d89ec51a9400ae1f323dc508f609699284afe11#3d89ec51a9400ae1f323dc508f609699284afe11"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "008a3d3dd194a54c0577395903600f51c5bcbf23d95b0243805caa7003dacfcf"
 dependencies = [
  "proc-macro2",
  "quote",

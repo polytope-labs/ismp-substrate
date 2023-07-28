@@ -11,13 +11,15 @@ use frame_support::{
 };
 use frame_system::EventRecord;
 use hex_literal::hex;
+use ismp_primitives::LeafIndexQuery;
 use ismp_rs::{
     host::StateMachine,
     module::IsmpModule,
     router::{Get as GetRequest, GetResponse, Post, PostResponse, Request, Response},
+    util::hash_request,
 };
 use pallet_evm::{runner::Runner, FixedGasWeightMapping, GasWeightMapping};
-use pallet_ismp::Event;
+use pallet_ismp::{host::Host, Event, RequestCommitments};
 use sp_core::{
     offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
     H160, U256,
@@ -285,6 +287,12 @@ fn on_accept_callback() {
             data: Payload::encode(&payload),
             gas_limit,
         };
+
+        let request_commitment = hash_request::<Host<Test>>(&Request::Post(post.clone()));
+        RequestCommitments::<Test>::insert(
+            request_commitment.0.to_vec(),
+            LeafIndexQuery { source_chain: post.source, dest_chain: post.dest, nonce: 0 },
+        );
 
         handler.on_accept(post).expect("Call succeeds");
 

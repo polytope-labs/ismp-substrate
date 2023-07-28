@@ -19,3 +19,6 @@ members = [
 
 [workspace.dependencies]
 enum-as-inner = "=0.5.1"
+
+[patch.crates-io]
+ruint = { git = "https://github.com/recmo/uint.git", rev = "e34200e114ac8fe93cf8e815e92601860ae4d7b8" }

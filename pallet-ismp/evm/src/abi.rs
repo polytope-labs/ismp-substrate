@@ -1,6 +1,5 @@
 //! Solidity rust bindings
 #![allow(missing_docs)]
-use alloc::string::String;
 use alloy_sol_types::sol;
 use sp_std::prelude::*;
 
