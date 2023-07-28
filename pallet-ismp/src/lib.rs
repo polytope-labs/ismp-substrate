@@ -369,6 +369,18 @@ pub mod pallet {
 
             Ok(())
         }
+
+        /// Set the allowed proxies
+        #[pallet::weight(<T as frame_system::Config>::DbWeight::get().writes(1))]
+        #[pallet::call_index(3)]
+        pub fn set_config(origin: OriginFor<T>, allowed: Vec<StateMachine>) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            let host = Host::<T>::default();
+            host.store_allowed_proxies(allowed);
+
+            Ok(())
+        }
     }
 
     #[pallet::event]
