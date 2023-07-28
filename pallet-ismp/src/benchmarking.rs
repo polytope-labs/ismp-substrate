@@ -272,6 +272,11 @@ pub mod benchmarks {
             data: vec![2u8; 64],
             gas_limit: 0,
         };
+        let request_commitment = hash_request::<Host<T>>(&Request::Post(post.clone()));
+        RequestCommitments::<T>::insert(
+            request_commitment.0.to_vec(),
+            LeafIndexQuery { source_chain: post.source, dest_chain: post.dest, nonce: 0 },
+        );
 
         let response = PostResponse { post, response: vec![1u8; 64] };
 
