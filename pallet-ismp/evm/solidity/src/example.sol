@@ -3,7 +3,11 @@
 
 pragma solidity ^0.8.2;
 
-import "./ismp_defs.sol";
+import "../../../ismp-solidity/src/SubstrateHost.sol";
+import "../../../ismp-solidity/src/interfaces/IIsmpDispatcher.sol";
+import "../../../ismp-solidity/lib/solidity-merkle-trees/src/MerklePatricia.sol";
+
+address constant HOST = 0x843b131BD76419934dae248F6e5a195c0A3C324D;
 
 error NotIsmpHost();
 error ExecutionFailed();
@@ -11,14 +15,14 @@ error ExecutionFailed();
 struct Payload {
     address to;
     address from;
-    uint256 amount;
+    uint64 amount;
 }
 
 contract IsmpDemo is IIsmpModule {
-    uint256 totalSupply;
+    uint64 totalSupply;
 
     // Mapping of user address to balance
-    mapping(address => uint256) public balances;
+    mapping(address => uint64) public balances;
     event ResponseReceived();
     event TimeoutReceived();
     event BalanceMinted();
@@ -46,13 +50,9 @@ contract IsmpDemo is IIsmpModule {
         _mint(payload.to, payload.amount);
         // For this test we expect the ismp post dispatch precompile to be at the  address 0x03
         // In production you would use the precompile address provided by the chain to make the dispatch
-        bytes memory input = encodePostResponse(response);
-        (bool ok, bytes memory out) = address(3).staticcall(input);
-        if (ok) {
-            emit BalanceMinted();
-        } else {
-            revert ExecutionFailed();
-        }
+        bytes memory input = dispatch(response);
+        emit BalanceMinted();
+      
     }
 
     function OnPostResponse(PostResponse memory response) public onlyIsmpHost {
@@ -101,9 +101,9 @@ contract IsmpDemo is IIsmpModule {
     function transfer(
         address to,
         bytes memory dest,
-        uint256 amount,
-        uint256 timeout,
-        uint256 gasLimit
+        uint64 amount,
+        uint64 timeout,
+        uint64 gasLimit
     ) public {
         _burn(msg.sender, amount);
         Payload memory payload = Payload({
@@ -120,21 +120,16 @@ contract IsmpDemo is IIsmpModule {
         });
         // For this test we expect the ismp post dispatch precompile to be at the  address 0x01
         // In production you would use the precompile address provided by the chain to make the dispatch
-        bytes memory input = encodePostDispatch(dispatchPost);
-        (bool ok, bytes memory out) = address(1).staticcall(input);
-        if (ok) {
-            emit BalanceBurnt();
-        } else {
-            revert ExecutionFailed();
-        }
+        bytes memory input = dispatch(dispatchPost);
+        emit BalanceBurnt();
     }
 
     function dispatchGet(
         bytes memory dest,
         bytes[] memory keys,
-        uint256 height,
-        uint256 timeout,
-        uint256 gasLimit
+        uint64 height,
+        uint64 timeout,
+        uint64 gasLimit
     ) public {
         DispatchGet memory get = DispatchGet({
             keys: keys,
@@ -145,25 +140,21 @@ contract IsmpDemo is IIsmpModule {
         });
         // For this test we expect the ismp get dispatch precompile to be at the  address 0x02
         // In production you would use the precompile address provided by the chain to make the dispatch
-        bytes memory input = encodeGetDispatch(get);
-        (bool ok, bytes memory out) = address(2).staticcall(input);
-        if (ok) {
-            emit GetDispatched();
-        } else {
-            revert ExecutionFailed();
-        }
+        bytes memory input = dispatch(get);
+        emit GetDispatched();
+    
     }
 
-    function mintTo(address who, uint256 amount) public onlyIsmpHost {
+    function mintTo(address who, uint64 amount) public onlyIsmpHost {
         _mint(who, amount);
     }
 
-    function _mint(address who, uint256 amount) internal {
+    function _mint(address who, uint64 amount) internal {
         totalSupply = totalSupply + amount;
         balances[who] = balances[who] + amount;
     }
 
-    function _burn(address who, uint256 amount) internal {
+    function _burn(address who, uint64 amount) internal {
         totalSupply = totalSupply - amount;
         balances[who] = balances[who] - amount;
     }

@@ -1,0 +1,3 @@
+[submodule "ismp-solidity"]
+	path = ismp-solidity
+	url = https://github.com/polytope-labs/ismp-solidity.git
