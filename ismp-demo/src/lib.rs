@@ -27,9 +27,9 @@ use ismp::{
     module::IsmpModule,
     router::{Post, Request, Response},
 };
-use sp_core::H160;
 pub use pallet::*;
 use pallet_ismp::primitives::ModuleId;
+use sp_core::H160;
 
 /// Constant Pallet ID
 pub const PALLET_ID: ModuleId = ModuleId::Pallet(PalletId(*b"ismp-ast"));
