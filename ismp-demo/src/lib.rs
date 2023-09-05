@@ -20,7 +20,10 @@
 
 extern crate alloc;
 
-use alloc::string::ToString;
+use alloc::{
+    format,
+    string::{String, ToString},
+};
 use frame_support::{traits::fungible::Mutate, PalletId};
 use ismp::{
     error::Error as IsmpError,
