@@ -13,6 +13,8 @@ concurrency:
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-C link-args=-Wl,--allow-multiple-definition"
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -43,7 +45,7 @@ jobs:
 
       - name: Test
         run: |
-          RUSTFLAGS="-C link-args=-Wl,--allow-multiple-definition" cargo +nightly-2023-08-23 test -p pallet-ismp --all-targets --all-features --verbose --locked
+          cargo +nightly-2023-08-23 test -p pallet-ismp --all-targets --all-features --verbose --locked
 
   lint:
     runs-on: ubuntu-latest
