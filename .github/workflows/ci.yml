@@ -26,10 +26,6 @@ jobs:
           toolchain: nightly-2023-08-23
           targets: wasm32-unknown-unknown
 
-      - name: Set RUSTFLAGS environment variable
-        run: |
-            echo 'export RUSTFLAGS="-C link-args=-Wl,--allow-multiple-definition"' >> $GITHUB_ENV
-
       - name: Install Protoc
         uses: arduino/setup-protoc@v1
         with:
@@ -47,7 +43,7 @@ jobs:
 
       - name: Test
         run: |
-          cargo +nightly-2023-08-23 test -p pallet-ismp --all-targets --all-features --verbose --locked
+          RUSTFLAGS="-C link-args=-Wl,--allow-multiple-definition" cargo +nightly-2023-08-23 test -p pallet-ismp --all-targets --all-features --verbose --locked
 
   lint:
     runs-on: ubuntu-latest
