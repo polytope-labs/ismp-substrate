@@ -217,20 +217,12 @@ pub mod pallet {
                 gas_limit: 10_000_000,
             };
             let dispatcher = T::IsmpDispatcher::default();
-            // dispatch multiple requests to other ethereum execution layers
             for _ in 0..params.count {
                 // dispatch the request
-                let mut post = post.clone();
-                post.dest = StateMachine::Ethereum(Ethereum::Arbitrum);
-
                 dispatcher
-                    .dispatch_request(DispatchRequest::Post(post))
+                    .dispatch_request(DispatchRequest::Post(post.clone()))
                     .map_err(|_| Error::<T>::TransferFailed)?;
             }
-
-            dispatcher
-                .dispatch_request(DispatchRequest::Post(post))
-                .map_err(|_| Error::<T>::TransferFailed)?;
             Ok(())
         }
     }
