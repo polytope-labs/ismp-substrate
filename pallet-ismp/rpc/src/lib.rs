@@ -302,10 +302,10 @@ where
         &self,
         block_numbers: Vec<BlockNumberOrHash<Block::Hash>>,
     ) -> Result<HashMap<String, Vec<Event>>> {
-        let mut api = self.client.runtime_api();
-        api.register_extension(OffchainDbExt::new(self.offchain_db.clone()));
         let mut events = HashMap::new();
         for block_number_or_hash in block_numbers {
+            let mut api = self.client.runtime_api();
+            api.register_extension(OffchainDbExt::new(self.offchain_db.clone()));
             let at = match block_number_or_hash {
                 BlockNumberOrHash::Hash(block_hash) => block_hash,
                 BlockNumberOrHash::Number(block_number) => {
@@ -319,8 +319,9 @@ where
             let mut response_indices = vec![];
             let mut temp: Vec<Event> = api
                 .block_events(at)
-                .ok()
-                .ok_or_else(|| runtime_error_into_rpc_error("failed to read block events"))?
+                .map_err(|e| {
+                    runtime_error_into_rpc_error(format!("failed to read block events {:?}", e))
+                })?
                 .into_iter()
                 .filter_map(|event| match event {
                     pallet_ismp::events::Event::Request {
