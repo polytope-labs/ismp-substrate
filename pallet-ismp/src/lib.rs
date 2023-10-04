@@ -515,7 +515,7 @@ impl<T: Config> Pallet<T> {
                 }
                 Ok(MessageResult::Response(res)) => {
                     let StateMachineHeight { id, height } = match message {
-                        Message::Response(ref request) => request.proof.height.clone(),
+                        Message::Response(ref response) => response.proof().height.clone(),
                         _ => unreachable!(),
                     };
                     // update the messaging heights
