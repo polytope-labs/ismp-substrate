@@ -515,11 +515,11 @@ impl<T: Config> Pallet<T> {
                 }
                 Ok(MessageResult::Response(res)) => {
                     let StateMachineHeight { id, height } = match message {
-                        Message::Request(ref request) => request.proof.height.clone(),
+                        Message::Response(ref request) => request.proof.height.clone(),
                         _ => unreachable!(),
                     };
                     // update the messaging heights
-                    if LatestMessagingHeight::<T>::get(&id) > height {
+                    if LatestMessagingHeight::<T>::get(&id) < height {
                         LatestMessagingHeight::<T>::insert(id, height);
                     }
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Response(res));
@@ -530,7 +530,7 @@ impl<T: Config> Pallet<T> {
                         _ => unreachable!(),
                     };
                     // update the messaging heights
-                    if LatestMessagingHeight::<T>::get(&id) > height {
+                    if LatestMessagingHeight::<T>::get(&id) < height {
                         LatestMessagingHeight::<T>::insert(id, height);
                     }
                     debug!(target: "ismp-modules", "Module Callback Results {:?}", ModuleCallbackResult::Request(res));
