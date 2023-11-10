@@ -4,6 +4,10 @@ Implementation of the Interoperable State Machine Protocol for substrate runtime
 
 <img src="assets/web3 foundation_grants_badge_white.png"  style="max-width: 100%; height: auto;">
 
+## Deprecation 
+
+This repo has been moved to the [hyperbridge repo](https://github.com/polytope-labs/hyperbridge)
+
 ## Overview
 
 This repo holds the foundational components substrate runtimes need to interoperate together using [ISMP](https://github.com/polytope-labs/ismp)
